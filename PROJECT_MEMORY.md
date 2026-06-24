@@ -63,6 +63,8 @@ Recommended sequence:
 | 2026-06-24 | Started Phase 2 synthetic data generator branch. | Branch `codex/phase-2-synthetic-data-generator`, stacked on Phase 0/1 foundation until that PR merges. |
 | 2026-06-24 | Completed Phase 2 synthetic data generator. | Generator creates relational CSVs, synthetic documents, labels, tests, and documentation. |
 | 2026-06-24 | Verified Phase 2 locally. | Python generator tests passed; sample and default datasets generated successfully; backend tests still passed. |
+| 2026-06-25 | Fixed Phase 2 review findings. | Added regression coverage so generated police/medical documents cannot contradict claim facts; updated root README Python commands. |
+| 2026-06-25 | Re-verified Phase 2 after fixes. | `./scripts/run-tests.sh` passed: backend 2 tests and generator 10 tests. |
 
 ## Known Issues And Caveats
 
@@ -76,10 +78,10 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Complete detailed Phase 2 synthetic data generator plan.
-2. Implement Phase 2 on `codex/phase-2-synthetic-data-generator`.
-3. Verify generator tests, generated files, and loader behavior.
-4. Push the Phase 2 branch after Phase 0/1 dependency is clear.
+1. Push `codex/phase-2-synthetic-data-generator`.
+2. Open/merge the Phase 0/1 PR first.
+3. Retarget or rebase Phase 2 onto `main` after Phase 0/1 merges.
+4. Open the Phase 2 PR.
 
 ## Memory Update Rules
 
