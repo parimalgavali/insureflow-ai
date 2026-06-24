@@ -51,6 +51,16 @@ cd backend
 mvn test
 ```
 
+## Synthetic Data
+
+```bash
+cd synthetic-data-generator
+python3 -m venv ../.venv
+../.venv/bin/python -m pip install ".[dev]"
+../.venv/bin/python -m pytest
+../.venv/bin/python -m generator --customers 500 --policies 650 --claims 200 --adjusters 25 --seed 42 --output-dir ../data/synthetic
+```
+
 ## Documentation
 
 - [Project Memory](PROJECT_MEMORY.md)

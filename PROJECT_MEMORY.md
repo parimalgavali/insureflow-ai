@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `codex/project-memory-and-phase-plans`
+- **Current branch:** `codex/phase-2-synthetic-data-generator`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -60,6 +60,12 @@ Recommended sequence:
 | 2026-06-24 | Completed Phase 0/1 repository and backend foundation. | Local infra, backend skeleton, Flyway schema, CI, and tests added on `codex/project-memory-and-phase-plans`. |
 | 2026-06-24 | Verified Phase 0/1 foundation locally. | Docker Compose PostgreSQL/RabbitMQ healthy; `mvn test` and `./scripts/run-tests.sh` passed with 2 backend tests. |
 | 2026-06-24 | Completed spec and quality review for Phase 0/1. | Spec compliant after push; quality review passed with no blocking issues. |
+| 2026-06-24 | Started Phase 2 synthetic data generator branch. | Branch `codex/phase-2-synthetic-data-generator`, stacked on Phase 0/1 foundation until that PR merges. |
+| 2026-06-24 | Completed Phase 2 synthetic data generator. | Generator creates relational CSVs, synthetic documents, labels, tests, and documentation. |
+| 2026-06-24 | Verified Phase 2 locally. | Python generator tests passed; sample and default datasets generated successfully; backend tests still passed. |
+| 2026-06-25 | Fixed Phase 2 review findings. | Added regression coverage so generated police/medical documents cannot contradict claim facts; updated root README Python commands. |
+| 2026-06-25 | Re-verified Phase 2 after fixes. | `./scripts/run-tests.sh` passed: backend 2 tests and generator 10 tests. |
+| 2026-06-25 | Pushed Phase 2 synthetic data generator branch to GitHub. | Remote branch `origin/codex/phase-2-synthetic-data-generator`. |
 
 ## Known Issues And Caveats
 
@@ -73,9 +79,10 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Open a PR from `codex/project-memory-and-phase-plans` to `main`.
-2. Review GitHub Actions on the PR.
-3. After merge, create the detailed Phase 2 synthetic data generator plan.
+1. Push `codex/phase-2-synthetic-data-generator`.
+2. Open/merge the Phase 0/1 PR first.
+3. Retarget or rebase Phase 2 onto `main` after Phase 0/1 merges.
+4. Open the Phase 2 PR.
 
 ## Memory Update Rules
 
