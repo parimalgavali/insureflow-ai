@@ -65,6 +65,7 @@ Recommended sequence:
 | 2026-06-24 | Verified Phase 2 locally. | Python generator tests passed; sample and default datasets generated successfully; backend tests still passed. |
 | 2026-06-25 | Fixed Phase 2 review findings. | Added regression coverage so generated police/medical documents cannot contradict claim facts; updated root README Python commands. |
 | 2026-06-25 | Re-verified Phase 2 after fixes. | `./scripts/run-tests.sh` passed: backend 2 tests and generator 10 tests. |
+| 2026-06-25 | Pushed Phase 2 synthetic data generator branch to GitHub. | Remote branch `origin/codex/phase-2-synthetic-data-generator`. |
 
 ## Known Issues And Caveats
 
