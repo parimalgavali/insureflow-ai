@@ -22,6 +22,7 @@ def test_generated_dataset_preserves_relationships(tmp_path):
     customer_ids = {customer.customer_id for customer in dataset.customers}
     policy_ids = {policy.policy_id for policy in dataset.policies}
     claim_ids = {claim.claim_id for claim in dataset.claims}
+    adjuster_ids = {adjuster.adjuster_id for adjuster in dataset.adjusters}
 
     assert len(dataset.customers) == 10
     assert len(dataset.policies) == 14
@@ -36,6 +37,29 @@ def test_generated_dataset_preserves_relationships(tmp_path):
     assert all(event.claim_id in claim_ids for event in dataset.claim_events)
     assert all(label.claim_id in claim_ids for label in dataset.ai_triage_labels)
     assert all(payment.claim_id in claim_ids for payment in dataset.payments)
+    assert all(claim.adjuster_id in adjuster_ids for claim in dataset.claims)
+    assert all(note.adjuster_id in adjuster_ids for note in dataset.claim_notes)
+
+
+def test_generated_documents_do_not_contradict_claim_facts(tmp_path):
+    config = GeneratorConfig(
+        customers=500,
+        policies=650,
+        claims=200,
+        adjusters=25,
+        seed=42,
+        output_dir=tmp_path,
+    )
+
+    dataset = generate_dataset(config)
+    claims_by_id = {claim.claim_id: claim for claim in dataset.claims}
+
+    for document in dataset.claim_documents:
+        claim = claims_by_id[document.claim_id]
+        if document.document_type == "POLICE_REPORT":
+            assert claim.police_report_available
+        if document.document_type == "MEDICAL_REPORT":
+            assert claim.injury_reported
 
 
 def test_generation_is_deterministic_for_same_seed(tmp_path):

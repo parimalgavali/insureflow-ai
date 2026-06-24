@@ -25,7 +25,6 @@ from generator.reference_data import (
     CLAIM_STATUSES,
     CLAIM_TYPES,
     COVERAGE_TYPES,
-    DOCUMENT_TYPES,
     FIRST_NAMES,
     LAST_NAMES,
     PRODUCT_TYPES,
@@ -139,6 +138,20 @@ def _claim_description(
     )
 
 
+def _eligible_document_types(claim: Claim) -> list[str]:
+    document_types = [
+        "FNOL_STATEMENT",
+        "REPAIR_INVOICE",
+        "CUSTOMER_EMAIL",
+        "ADJUSTER_NOTE",
+    ]
+    if claim.police_report_available:
+        document_types.append("POLICE_REPORT")
+    if claim.injury_reported:
+        document_types.append("MEDICAL_REPORT")
+    return document_types
+
+
 def _generate_claims(
     config: GeneratorConfig,
     rng: random.Random,
@@ -235,7 +248,8 @@ def _generate_claims(
             )
         )
 
-        document_types = rng.sample(DOCUMENT_TYPES, rng.randint(1, 3))
+        eligible_document_types = _eligible_document_types(claim)
+        document_types = rng.sample(eligible_document_types, rng.randint(1, min(3, len(eligible_document_types))))
         for document_type in document_types:
             claim_document = ClaimDocument(
                 document_id=_uuid(rng),

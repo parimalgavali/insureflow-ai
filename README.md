@@ -55,8 +55,8 @@ mvn test
 
 ```bash
 cd synthetic-data-generator
-python -m pytest
-python -m generator --customers 500 --policies 650 --claims 200 --adjusters 25 --seed 42 --output-dir ../data/synthetic
+python3 -m pytest
+python3 -m generator --customers 500 --policies 650 --claims 200 --adjusters 25 --seed 42 --output-dir ../data/synthetic
 ```
 
 ## Documentation
