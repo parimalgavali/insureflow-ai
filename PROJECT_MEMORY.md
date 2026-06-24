@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `main`
+- **Current branch:** `codex/project-memory-and-phase-plans`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -43,6 +43,7 @@ Recommended sequence:
 | 2026-06-24 | Start with phase-based agents before splitting into permanent frontend/backend/AI agents. | The repo starts empty, so foundation and contracts must come before parallel feature work. |
 | 2026-06-24 | Keep the GitHub repository public. | This is a professional portfolio project intended for recruiters and hiring managers. |
 | 2026-06-24 | Use the master build plan as the roadmap and create detailed phase plans as work begins. | Prevents the large blueprint from becoming an unmanageable single implementation pass. |
+| 2026-06-24 | Keep feature work off `main`; use `codex/` feature branches. | Keeps the public portfolio branch stable while implementation work is reviewed. |
 
 ## Completed Work
 
@@ -52,6 +53,8 @@ Recommended sequence:
 | 2026-06-24 | Created the master build plan. | `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md` |
 | 2026-06-24 | Connected the project to GitHub. | `https://github.com/parimalgavali/insureflow-ai` |
 | 2026-06-24 | Confirmed master build plan exists on GitHub. | `main` contains commit `f68ed27`. |
+| 2026-06-24 | Created feature branch for memory and Phase 0/1 planning. | Branch `codex/project-memory-and-phase-plans`. |
+| 2026-06-24 | Created detailed Phase 0/1 implementation plan. | `docs/superpowers/plans/2026-06-24-phase-0-1-repository-and-domain-foundation.md` |
 
 ## Known Issues And Caveats
 
@@ -61,11 +64,12 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Create the detailed Phase 0/1 implementation plan.
-2. Implement repository structure, README, `.gitignore`, `.env.example`, Docker Compose, CI skeleton, and docs starter files.
-3. Add backend Spring Boot skeleton and database/Flyway foundation.
-4. Verify local infrastructure and schema tests.
-5. Commit and push Phase 0/1 work.
+1. Commit the memory and Phase 0/1 planning updates on `codex/project-memory-and-phase-plans`.
+2. Execute the detailed Phase 0/1 implementation plan.
+3. Implement repository structure, README, `.gitignore`, `.env.example`, Docker Compose, CI skeleton, and docs starter files.
+4. Add backend Spring Boot skeleton and database/Flyway foundation.
+5. Verify local infrastructure and schema tests.
+6. Commit, push, and open a PR back to `main`.
 
 ## Memory Update Rules
 
@@ -80,4 +84,3 @@ Update this file whenever:
 - A deployment, demo, or portfolio artifact is published.
 
 Keep entries concise and dated. Prefer links to documents, commits, PRs, and local files instead of long explanations.
-
