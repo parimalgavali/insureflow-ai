@@ -61,6 +61,8 @@ Recommended sequence:
 | 2026-06-24 | Verified Phase 0/1 foundation locally. | Docker Compose PostgreSQL/RabbitMQ healthy; `mvn test` and `./scripts/run-tests.sh` passed with 2 backend tests. |
 | 2026-06-24 | Completed spec and quality review for Phase 0/1. | Spec compliant after push; quality review passed with no blocking issues. |
 | 2026-06-24 | Started Phase 2 synthetic data generator branch. | Branch `codex/phase-2-synthetic-data-generator`, stacked on Phase 0/1 foundation until that PR merges. |
+| 2026-06-24 | Completed Phase 2 synthetic data generator. | Generator creates relational CSVs, synthetic documents, labels, tests, and documentation. |
+| 2026-06-24 | Verified Phase 2 locally. | Python generator tests passed; sample and default datasets generated successfully; backend tests still passed. |
 
 ## Known Issues And Caveats
 
