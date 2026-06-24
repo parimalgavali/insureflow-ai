@@ -24,8 +24,14 @@ venv/
 
 data/raw/
 data/processed/
+data/sample/*.csv
+data/sample/*.json
+data/sample/*.jsonl
 data/synthetic/*.csv
 data/synthetic/*.json
+data/synthetic/*.jsonl
+!data/sample/.gitkeep
+!data/synthetic/.gitkeep
 
 .worktrees/
 worktrees/
