@@ -588,13 +588,10 @@ git commit -m "feat: add synthetic insurance data generator"
 ```
 
 ## Final Output From Implementer
-
 Return:
-
 - Branch name.
 - Commit SHAs created.
 - Files changed.
 - Verification commands and results.
 - Generated output counts from `generation_summary.json`.
 - Any blockers or concerns.
-
