@@ -6,7 +6,7 @@ This folder contains project documentation that supports implementation, onboard
 
 1. [`../PROJECT_MEMORY.md`](../PROJECT_MEMORY.md) - living project memory and current status.
 2. [`superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`](superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md) - phase-by-phase master build plan.
-3. `PROJECT_BLUEPRINT.md` - full blueprint, to be added during Phase 0.
+3. [`../PROJECT_BLUEPRINT.md`](../PROJECT_BLUEPRINT.md) - full project blueprint copied into the repository during Phase 0.
 
 ## Planned Documentation Areas
 
@@ -22,4 +22,3 @@ This folder contains project documentation that supports implementation, onboard
 ## Documentation Practice
 
 Docs should be updated as part of each meaningful implementation step. Keep them practical: explain what exists, how to run it, why the design choice was made, and where the next agent should continue.
-

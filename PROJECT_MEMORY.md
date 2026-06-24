@@ -58,23 +58,23 @@ Recommended sequence:
 | 2026-06-24 | Pushed memory and Phase 0/1 planning branch to GitHub. | Remote branch `origin/codex/project-memory-and-phase-plans`. |
 | 2026-06-24 | Started Phase 0/1 foundation branch. | Branch `codex/project-memory-and-phase-plans`. |
 | 2026-06-24 | Completed Phase 0/1 repository and backend foundation. | Local infra, backend skeleton, Flyway schema, CI, and tests added on `codex/project-memory-and-phase-plans`. |
+| 2026-06-24 | Verified Phase 0/1 foundation locally. | Docker Compose PostgreSQL/RabbitMQ healthy; `mvn test` and `./scripts/run-tests.sh` passed with 2 backend tests. |
 
 ## Known Issues And Caveats
 
 - `gh auth status` previously reported an invalid token even though the first project commit reached GitHub. Recheck GitHub CLI auth before future push/PR workflows.
 - The local workspace now contains the Phase 0/1 project scaffold, backend Maven skeleton, and Flyway schema foundation.
 - The blueprint file has been copied into the repo as `PROJECT_BLUEPRINT.md`; the original source remains `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`.
-- Local verification on 2026-06-24 could not run Docker services because the Docker daemon was unreachable at `unix:///Users/parimal_gavali/.docker/run/docker.sock`.
-- Local backend test execution on 2026-06-24 could not run because Maven was not installed or not on `PATH` (`mvn: command not found`).
+- Maven was installed with Homebrew during Phase 0/1 verification and is now available as Maven 3.9.16.
+- Docker Desktop was started during Phase 0/1 verification and local Compose/Testcontainers verification passed.
+- Local Java is currently OpenJDK 26. The project is configured for Java 21 compatibility, and CI uses Temurin 21.
 
 ## Near-Term Next Steps
 
-1. Commit the memory and Phase 0/1 planning updates on `codex/project-memory-and-phase-plans`.
-2. Execute the detailed Phase 0/1 implementation plan.
-3. Implement repository structure, README, `.gitignore`, `.env.example`, Docker Compose, CI skeleton, and docs starter files.
-4. Add backend Spring Boot skeleton and database/Flyway foundation.
-5. Verify local infrastructure and schema tests.
-6. Commit, push, and open a PR back to `main`.
+1. Push the completed Phase 0/1 branch.
+2. Open a PR from `codex/project-memory-and-phase-plans` to `main`.
+3. Review GitHub Actions on the PR.
+4. After merge, create the detailed Phase 2 synthetic data generator plan.
 
 ## Memory Update Rules
 
