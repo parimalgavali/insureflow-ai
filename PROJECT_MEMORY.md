@@ -57,12 +57,15 @@ Recommended sequence:
 | 2026-06-24 | Created detailed Phase 0/1 implementation plan. | `docs/superpowers/plans/2026-06-24-phase-0-1-repository-and-domain-foundation.md` |
 | 2026-06-24 | Pushed memory and Phase 0/1 planning branch to GitHub. | Remote branch `origin/codex/project-memory-and-phase-plans`. |
 | 2026-06-24 | Started Phase 0/1 foundation branch. | Branch `codex/project-memory-and-phase-plans`. |
+| 2026-06-24 | Completed Phase 0/1 repository and backend foundation. | Local infra, backend skeleton, Flyway schema, CI, and tests added on `codex/project-memory-and-phase-plans`. |
 
 ## Known Issues And Caveats
 
 - `gh auth status` previously reported an invalid token even though the first project commit reached GitHub. Recheck GitHub CLI auth before future push/PR workflows.
-- The local workspace currently contains planning/memory artifacts, not the full project scaffold yet.
-- The blueprint file lives outside the repo. It should be copied into the repo as `PROJECT_BLUEPRINT.md` during Phase 0 if licensing/privacy is acceptable.
+- The local workspace now contains the Phase 0/1 project scaffold, backend Maven skeleton, and Flyway schema foundation.
+- The blueprint file has been copied into the repo as `PROJECT_BLUEPRINT.md`; the original source remains `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`.
+- Local verification on 2026-06-24 could not run Docker services because the Docker daemon was unreachable at `unix:///Users/parimal_gavali/.docker/run/docker.sock`.
+- Local backend test execution on 2026-06-24 could not run because Maven was not installed or not on `PATH` (`mvn: command not found`).
 
 ## Near-Term Next Steps
 
