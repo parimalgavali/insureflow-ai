@@ -55,6 +55,7 @@ Recommended sequence:
 | 2026-06-24 | Confirmed master build plan exists on GitHub. | `main` contains commit `f68ed27`. |
 | 2026-06-24 | Created feature branch for memory and Phase 0/1 planning. | Branch `codex/project-memory-and-phase-plans`. |
 | 2026-06-24 | Created detailed Phase 0/1 implementation plan. | `docs/superpowers/plans/2026-06-24-phase-0-1-repository-and-domain-foundation.md` |
+| 2026-06-24 | Pushed memory and Phase 0/1 planning branch to GitHub. | Remote branch `origin/codex/project-memory-and-phase-plans`. |
 
 ## Known Issues And Caveats
 
