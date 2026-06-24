@@ -59,6 +59,7 @@ Recommended sequence:
 | 2026-06-24 | Started Phase 0/1 foundation branch. | Branch `codex/project-memory-and-phase-plans`. |
 | 2026-06-24 | Completed Phase 0/1 repository and backend foundation. | Local infra, backend skeleton, Flyway schema, CI, and tests added on `codex/project-memory-and-phase-plans`. |
 | 2026-06-24 | Verified Phase 0/1 foundation locally. | Docker Compose PostgreSQL/RabbitMQ healthy; `mvn test` and `./scripts/run-tests.sh` passed with 2 backend tests. |
+| 2026-06-24 | Completed spec and quality review for Phase 0/1. | Spec compliant after push; quality review passed with no blocking issues. |
 
 ## Known Issues And Caveats
 
@@ -68,13 +69,13 @@ Recommended sequence:
 - Maven was installed with Homebrew during Phase 0/1 verification and is now available as Maven 3.9.16.
 - Docker Desktop was started during Phase 0/1 verification and local Compose/Testcontainers verification passed.
 - Local Java is currently OpenJDK 26. The project is configured for Java 21 compatibility, and CI uses Temurin 21.
+- GitHub connector could not create a PR for this repository, returning `403 Resource not accessible by integration`; create the PR manually or fix GitHub app write permissions.
 
 ## Near-Term Next Steps
 
-1. Push the completed Phase 0/1 branch.
-2. Open a PR from `codex/project-memory-and-phase-plans` to `main`.
-3. Review GitHub Actions on the PR.
-4. After merge, create the detailed Phase 2 synthetic data generator plan.
+1. Open a PR from `codex/project-memory-and-phase-plans` to `main`.
+2. Review GitHub Actions on the PR.
+3. After merge, create the detailed Phase 2 synthetic data generator plan.
 
 ## Memory Update Rules
 
