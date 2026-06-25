@@ -84,6 +84,7 @@ Recommended sequence:
 | 2026-06-25 | Implemented Phase 6 ML training and triage serving. | Added `ml/` package, severity/fraud-risk training workflow, model artifact loader, ML model cards, and triage service ML fallback behavior. |
 | 2026-06-25 | Verified Phase 6 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, and ML package 3 tests. Local `ml/artifacts/` output is ignored by Git and can be regenerated. |
 | 2026-06-25 | Opened Phase 6 pull request. | PR #6: `https://github.com/parimalgavali/insureflow-ai/pull/6` from `ml-triage-model-training` into `main`. |
+| 2026-06-26 | Started Phase 7 LLM document intelligence. | Branch `llm-document-intelligence`; design and implementation plan created for the document intelligence FastAPI service. |
 
 ## Known Issues And Caveats
 
@@ -98,9 +99,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Open and merge the Phase 6 pull request from `ml-triage-model-training`.
-2. After Phase 6 merges, begin Phase 7: LLM document intelligence.
-3. Keep the rule-based triage service as the fallback and explainability reference while adding document intelligence.
+1. Implement Phase 7 on `llm-document-intelligence`.
+2. Keep Phase 7 focused on document extraction, summaries, missing-document checks, prompt validation, and audit.
+3. Start Phase 8 RAG only after the document intelligence service contract is stable.
 
 ## Memory Update Rules
 
