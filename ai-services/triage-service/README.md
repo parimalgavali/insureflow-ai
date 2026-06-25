@@ -10,10 +10,10 @@ Install runtime and test dependencies in a Python 3.12+ environment:
 python3 -m pip install -e ".[test]"
 ```
 
-Run the health endpoint test:
+Run the service tests:
 
 ```bash
-python3 -m pytest tests/test_api.py -q
+python3 -m pytest
 ```
 
 Run the development server:
@@ -22,4 +22,9 @@ Run the development server:
 python3 -m uvicorn triage_service.app:app --reload
 ```
 
-The service exposes `GET /health` for a lightweight readiness check.
+The service exposes:
+
+- `GET /health` for a lightweight readiness check.
+- `POST /ai/v1/triage/score` for rule-based severity, fraud, and litigation triage scoring.
+
+The backend workflow contract is documented in `../../docs/api/ai-triage.md`.
