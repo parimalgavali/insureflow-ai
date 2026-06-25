@@ -80,6 +80,10 @@ Recommended sequence:
 | 2026-06-25 | Integrated backend claim triage workflow. | Added `POST /api/v1/claims/{claimNumber}/triage`, `GET /api/v1/claims/{claimNumber}/triage`, feature assembly, timeline event `TRIAGE_COMPLETED`, and outage handling with HTTP 503. |
 | 2026-06-25 | Documented Phase 5 AI triage contracts. | `docs/api/ai-triage.md`, README links, docs index updates, triage service README updates, and `scripts/run-tests.sh` now includes triage service tests. |
 | 2026-06-25 | Verified Phase 5 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 8 tests. |
+| 2026-06-25 | Started Phase 6 ML triage model training. | Branch `ml-triage-model-training`; synthetic-data-first design spec created at `docs/superpowers/specs/2026-06-25-phase-6-ml-triage-model-training-design.md` and implementation plan created at `docs/superpowers/plans/2026-06-25-phase-6-ml-triage-model-training.md`. |
+| 2026-06-25 | Implemented Phase 6 ML training and triage serving. | Added `ml/` package, severity/fraud-risk training workflow, model artifact loader, ML model cards, and triage service ML fallback behavior. |
+| 2026-06-25 | Verified Phase 6 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, and ML package 3 tests. Local `ml/artifacts/` output is ignored by Git and can be regenerated. |
+| 2026-06-25 | Opened Phase 6 pull request. | PR #6: `https://github.com/parimalgavali/insureflow-ai/pull/6` from `ml-triage-model-training` into `main`. |
 
 ## Known Issues And Caveats
 
@@ -94,9 +98,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Push `rule-based-triage-service` and open/merge the Phase 5 pull request.
-2. After merge, begin Phase 6: ML severity and fraud model training.
-3. Keep the rule-based triage service as a baseline model and explainability reference for Phase 6.
+1. Open and merge the Phase 6 pull request from `ml-triage-model-training`.
+2. After Phase 6 merges, begin Phase 7: LLM document intelligence.
+3. Keep the rule-based triage service as the fallback and explainability reference while adding document intelligence.
 
 ## Memory Update Rules
 

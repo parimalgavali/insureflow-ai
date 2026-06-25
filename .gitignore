@@ -21,6 +21,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+*.egg-info/
 
 data/raw/
 data/processed/
@@ -32,6 +33,8 @@ data/synthetic/*.json
 data/synthetic/*.jsonl
 !data/sample/.gitkeep
 !data/synthetic/.gitkeep
+
+ml/artifacts/
 
 .worktrees/
 worktrees/
