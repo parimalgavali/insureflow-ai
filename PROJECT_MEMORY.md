@@ -85,6 +85,7 @@ Recommended sequence:
 | 2026-06-25 | Verified Phase 6 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, and ML package 3 tests. Local `ml/artifacts/` output is ignored by Git and can be regenerated. |
 | 2026-06-25 | Opened Phase 6 pull request. | PR #6: `https://github.com/parimalgavali/insureflow-ai/pull/6` from `ml-triage-model-training` into `main`. |
 | 2026-06-26 | Started Phase 7 LLM document intelligence. | Branch `llm-document-intelligence`; design and implementation plan created for the document intelligence FastAPI service. |
+| 2026-06-26 | Implemented Phase 7 document intelligence service. | Added `ai-services/document-intelligence-service` with extraction, missing-document checks, summaries, prompt registry, retry-on-invalid-JSON, in-memory audit, tests, and API docs. |
 
 ## Known Issues And Caveats
 

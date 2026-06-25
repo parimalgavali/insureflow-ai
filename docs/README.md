@@ -15,6 +15,8 @@ This folder contains project documentation that supports implementation, onboard
 9. [`ml/model-training.md`](ml/model-training.md) - Phase 6 local ML training workflow.
 10. [`ml/severity-model-card.md`](ml/severity-model-card.md) - severity model card.
 11. [`ml/fraud-risk-model-card.md`](ml/fraud-risk-model-card.md) - fraud-risk model card.
+12. [`superpowers/plans/2026-06-26-phase-7-llm-document-intelligence.md`](superpowers/plans/2026-06-26-phase-7-llm-document-intelligence.md) - implementation plan for document intelligence.
+13. [`api/document-intelligence.md`](api/document-intelligence.md) - Phase 7 document intelligence API contract.
 
 ## Planned Documentation Areas
 
