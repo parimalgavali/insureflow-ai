@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `codex/phase-2-synthetic-data-generator`
+- **Current branch:** `policy-claims-workflow`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -66,6 +66,8 @@ Recommended sequence:
 | 2026-06-25 | Fixed Phase 2 review findings. | Added regression coverage so generated police/medical documents cannot contradict claim facts; updated root README Python commands. |
 | 2026-06-25 | Re-verified Phase 2 after fixes. | `./scripts/run-tests.sh` passed: backend 2 tests and generator 10 tests. |
 | 2026-06-25 | Pushed Phase 2 synthetic data generator branch to GitHub. | Remote branch `origin/codex/phase-2-synthetic-data-generator`. |
+| 2026-06-25 | Created Phase 3/4 planning branch. | Branch `policy-claims-workflow`, stacked on Phase 2 until earlier PRs merge. |
+| 2026-06-25 | Created detailed Phase 3/4 implementation plan. | `docs/superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md` |
 
 ## Known Issues And Caveats
 
@@ -79,10 +81,11 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Push `codex/phase-2-synthetic-data-generator`.
-2. Open/merge the Phase 0/1 PR first.
-3. Retarget or rebase Phase 2 onto `main` after Phase 0/1 merges.
-4. Open the Phase 2 PR.
+1. Open/merge the Phase 0/1 PR first.
+2. Retarget or rebase Phase 2 onto `main` after Phase 0/1 merges.
+3. Open/merge the Phase 2 PR.
+4. Rebase `policy-claims-workflow` onto `main`.
+5. Implement Phase 3/4 from `docs/superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md`.
 
 ## Memory Update Rules
 

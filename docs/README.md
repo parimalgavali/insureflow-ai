@@ -7,6 +7,7 @@ This folder contains project documentation that supports implementation, onboard
 1. [`../PROJECT_MEMORY.md`](../PROJECT_MEMORY.md) - living project memory and current status.
 2. [`superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`](superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md) - phase-by-phase master build plan.
 3. [`../PROJECT_BLUEPRINT.md`](../PROJECT_BLUEPRINT.md) - full project blueprint copied into the repository during Phase 0.
+4. [`superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md`](superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md) - next implementation plan for the policy and FNOL workflow.
 
 ## Planned Documentation Areas
 
