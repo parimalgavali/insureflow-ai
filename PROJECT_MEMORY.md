@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `policy-claims-workflow`
+- **Current branch:** `policy-claims-workflow-implementation`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -43,7 +43,8 @@ Recommended sequence:
 | 2026-06-24 | Start with phase-based agents before splitting into permanent frontend/backend/AI agents. | The repo starts empty, so foundation and contracts must come before parallel feature work. |
 | 2026-06-24 | Keep the GitHub repository public. | This is a professional portfolio project intended for recruiters and hiring managers. |
 | 2026-06-24 | Use the master build plan as the roadmap and create detailed phase plans as work begins. | Prevents the large blueprint from becoming an unmanageable single implementation pass. |
-| 2026-06-24 | Keep feature work off `main`; use `codex/` feature branches. | Keeps the public portfolio branch stable while implementation work is reviewed. |
+| 2026-06-24 | Keep feature work off `main`; use feature branches. | Keeps the public portfolio branch stable while implementation work is reviewed. |
+| 2026-06-25 | Use readable feature branch names without the `codex/` prefix. | The user prefers names such as `policy-claims-workflow-implementation`. |
 
 ## Completed Work
 
@@ -68,6 +69,10 @@ Recommended sequence:
 | 2026-06-25 | Pushed Phase 2 synthetic data generator branch to GitHub. | Remote branch `origin/codex/phase-2-synthetic-data-generator`. |
 | 2026-06-25 | Created Phase 3/4 planning branch. | Branch `policy-claims-workflow`, stacked on Phase 2 until earlier PRs merge. |
 | 2026-06-25 | Created detailed Phase 3/4 implementation plan. | `docs/superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md` |
+| 2026-06-25 | Started Phase 3/4 implementation branch. | Branch `policy-claims-workflow-implementation`, created from updated `main` after Phase 0/1, Phase 2, and planning PRs merged. |
+| 2026-06-25 | Implemented Phase 3/4 policy and claims workflow. | Customer/policy/coverage APIs, lifecycle transitions, coverage validation, FNOL, claim timeline, status transitions, notes, document metadata, and integration tests. |
+| 2026-06-25 | Addressed Phase 3/4 review findings. | Added claim-number collision retry through a fresh transaction attempt service, persisted FNOL coverage snapshots on claim reads, coverage effective-date validation, and 422 handling for database constraint violations. |
+| 2026-06-25 | Verified Phase 3/4 review fixes locally. | `./scripts/run-tests.sh` passed with 24 backend tests and 10 synthetic generator tests; `git diff --check` passed. |
 
 ## Known Issues And Caveats
 
@@ -81,11 +86,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Open/merge the Phase 0/1 PR first.
-2. Retarget or rebase Phase 2 onto `main` after Phase 0/1 merges.
-3. Open/merge the Phase 2 PR.
-4. Rebase `policy-claims-workflow` onto `main`.
-5. Implement Phase 3/4 from `docs/superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md`.
+1. Finish verification for `policy-claims-workflow-implementation`.
+2. Push the branch and open a PR.
+3. After merge, begin Phase 5: rule-based AI triage service.
 
 ## Memory Update Rules
 

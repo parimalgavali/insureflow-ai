@@ -8,6 +8,7 @@ This folder contains project documentation that supports implementation, onboard
 2. [`superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`](superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md) - phase-by-phase master build plan.
 3. [`../PROJECT_BLUEPRINT.md`](../PROJECT_BLUEPRINT.md) - full project blueprint copied into the repository during Phase 0.
 4. [`superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md`](superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md) - next implementation plan for the policy and FNOL workflow.
+5. [`api/policy-claims-workflow.md`](api/policy-claims-workflow.md) - implemented API workflow for policy, coverage validation, FNOL, and claim operations.
 
 ## Planned Documentation Areas
 
