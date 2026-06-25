@@ -50,7 +50,7 @@ class RestTriageClientTest {
                             "coverageLimitAmount": 50000.00,
                             "deductibleAmount": 500.00,
                             "coverageValid": true,
-                            "coverageReasons": ["active-policy"]
+                            "coverageReasons": []
                           },
                           "claimFeatures": {
                             "claimType": "AUTO_COLLISION",
@@ -75,7 +75,7 @@ class RestTriageClientTest {
                           "severity": {
                             "label": "HIGH",
                             "score": 0.82,
-                            "reasonCodes": ["INJURY_REPORTED", "HIGH_ESTIMATED_LOSS"]
+                            "reasonCodes": ["INJURY_REPORTED", "HIGH_ESTIMATED_DAMAGE"]
                           },
                           "fraud": {
                             "label": "LOW",
@@ -87,7 +87,7 @@ class RestTriageClientTest {
                             "score": 0.46,
                             "reasonCodes": ["THIRD_PARTY_INVOLVED"]
                           },
-                          "recommendedQueue": "complex_claims",
+                          "recommendedQueue": "COMPLEX_CLAIMS",
                           "humanReviewRequired": true,
                           "explanation": "Injury and high estimated loss require review."
                         }
@@ -101,14 +101,14 @@ class RestTriageClientTest {
         assertThat(response.modelVersion()).isEqualTo("2026.06.1");
         assertThat(response.severity().label()).isEqualTo(TriageRiskLabel.HIGH);
         assertThat(response.severity().score()).isEqualByComparingTo("0.82");
-        assertThat(response.severity().reasonCodes()).containsExactly("INJURY_REPORTED", "HIGH_ESTIMATED_LOSS");
+        assertThat(response.severity().reasonCodes()).containsExactly("INJURY_REPORTED", "HIGH_ESTIMATED_DAMAGE");
         assertThat(response.fraud().label()).isEqualTo(TriageRiskLabel.LOW);
         assertThat(response.fraud().score()).isEqualByComparingTo("0.18");
         assertThat(response.fraud().reasonCodes()).containsExactly("PROMPT_REPORTING");
         assertThat(response.litigation().label()).isEqualTo(TriageRiskLabel.MEDIUM);
         assertThat(response.litigation().score()).isEqualByComparingTo("0.46");
         assertThat(response.litigation().reasonCodes()).containsExactly("THIRD_PARTY_INVOLVED");
-        assertThat(response.recommendedQueue()).isEqualTo("complex_claims");
+        assertThat(response.recommendedQueue()).isEqualTo("COMPLEX_CLAIMS");
         assertThat(response.humanReviewRequired()).isTrue();
         assertThat(response.explanation()).isEqualTo("Injury and high estimated loss require review.");
         server.verify();
@@ -136,7 +136,7 @@ class RestTriageClientTest {
                         new BigDecimal("50000.00"),
                         new BigDecimal("500.00"),
                         true,
-                        List.of("active-policy")),
+                        List.of()),
                 new TriageScoreRequest.ClaimFeatures(
                         "AUTO_COLLISION",
                         new BigDecimal("12500.00"),
