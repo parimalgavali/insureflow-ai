@@ -4,7 +4,10 @@ FastAPI service area for InsureFlow AI intelligence features.
 
 ## Current Status
 
-Implementation starts in Phase 5.
+Implemented services:
+
+- `triage-service` for rule-based triage and optional local ML inference.
+- `document-intelligence-service` for offline LLM-style extraction, missing-document checks, summaries, prompt validation, and audit.
 
 ## Planned Responsibilities
 

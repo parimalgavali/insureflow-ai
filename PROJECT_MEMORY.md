@@ -84,6 +84,10 @@ Recommended sequence:
 | 2026-06-25 | Implemented Phase 6 ML training and triage serving. | Added `ml/` package, severity/fraud-risk training workflow, model artifact loader, ML model cards, and triage service ML fallback behavior. |
 | 2026-06-25 | Verified Phase 6 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, and ML package 3 tests. Local `ml/artifacts/` output is ignored by Git and can be regenerated. |
 | 2026-06-25 | Opened Phase 6 pull request. | PR #6: `https://github.com/parimalgavali/insureflow-ai/pull/6` from `ml-triage-model-training` into `main`. |
+| 2026-06-26 | Started Phase 7 LLM document intelligence. | Branch `llm-document-intelligence`; design and implementation plan created for the document intelligence FastAPI service. |
+| 2026-06-26 | Implemented Phase 7 document intelligence service. | Added `ai-services/document-intelligence-service` with extraction, missing-document checks, summaries, prompt registry, retry-on-invalid-JSON, in-memory audit, tests, and API docs. |
+| 2026-06-26 | Verified Phase 7 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, and ML package 3 tests. |
+| 2026-06-26 | Opened Phase 7 pull request. | PR #7: `https://github.com/parimalgavali/insureflow-ai/pull/7` from `llm-document-intelligence` into `main`. |
 
 ## Known Issues And Caveats
 
@@ -98,9 +102,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Open and merge the Phase 6 pull request from `ml-triage-model-training`.
-2. After Phase 6 merges, begin Phase 7: LLM document intelligence.
-3. Keep the rule-based triage service as the fallback and explainability reference while adding document intelligence.
+1. Open and merge the Phase 7 pull request from `llm-document-intelligence`.
+2. After Phase 7 merges, start Phase 8 RAG adjuster assistant.
+3. Use the Phase 7 document intelligence service contract as the input boundary for Phase 8 ingestion and retrieval planning.
 
 ## Memory Update Rules
 
