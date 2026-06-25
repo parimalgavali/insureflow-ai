@@ -50,6 +50,7 @@ class FlywayMigrationTest {
                         "claims",
                         "claim_documents",
                         "claim_events",
+                        "claim_notes",
                         "adjusters",
                         "ai_triage_results",
                         "human_reviews",
