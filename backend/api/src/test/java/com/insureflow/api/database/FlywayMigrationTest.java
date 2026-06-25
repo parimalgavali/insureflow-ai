@@ -57,5 +57,30 @@ class FlywayMigrationTest {
                         "audit_logs",
                         "model_versions",
                         "prompt_versions"));
+
+        Set<String> aiTriageResultColumnNames = new HashSet<>();
+        try (Connection connection = DriverManager.getConnection(
+                        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+                ResultSet resultSet = connection
+                        .createStatement()
+                        .executeQuery("""
+                                select column_name
+                                from information_schema.columns
+                                where table_schema = 'public'
+                                  and table_name = 'ai_triage_results'
+                                """)) {
+            while (resultSet.next()) {
+                aiTriageResultColumnNames.add(resultSet.getString("column_name"));
+            }
+        }
+
+        assertThat(aiTriageResultColumnNames)
+                .containsAll(Set.of(
+                        "model_name",
+                        "model_version",
+                        "severity_label",
+                        "fraud_risk_label",
+                        "litigation_risk_label",
+                        "human_review_required"));
     }
 }
