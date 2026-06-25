@@ -87,6 +87,7 @@ Recommended sequence:
 | 2026-06-26 | Started Phase 7 LLM document intelligence. | Branch `llm-document-intelligence`; design and implementation plan created for the document intelligence FastAPI service. |
 | 2026-06-26 | Implemented Phase 7 document intelligence service. | Added `ai-services/document-intelligence-service` with extraction, missing-document checks, summaries, prompt registry, retry-on-invalid-JSON, in-memory audit, tests, and API docs. |
 | 2026-06-26 | Verified Phase 7 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, and ML package 3 tests. |
+| 2026-06-26 | Opened Phase 7 pull request. | PR #7: `https://github.com/parimalgavali/insureflow-ai/pull/7` from `llm-document-intelligence` into `main`. |
 
 ## Known Issues And Caveats
 
