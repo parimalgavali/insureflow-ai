@@ -71,6 +71,8 @@ Recommended sequence:
 | 2026-06-25 | Created detailed Phase 3/4 implementation plan. | `docs/superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md` |
 | 2026-06-25 | Started Phase 3/4 implementation branch. | Branch `policy-claims-workflow-implementation`, created from updated `main` after Phase 0/1, Phase 2, and planning PRs merged. |
 | 2026-06-25 | Implemented Phase 3/4 policy and claims workflow. | Customer/policy/coverage APIs, lifecycle transitions, coverage validation, FNOL, claim timeline, status transitions, notes, document metadata, and integration tests. |
+| 2026-06-25 | Addressed Phase 3/4 review findings. | Added claim-number collision retry through a fresh transaction attempt service, persisted FNOL coverage snapshots on claim reads, coverage effective-date validation, and 422 handling for database constraint violations. |
+| 2026-06-25 | Verified Phase 3/4 review fixes locally. | `./scripts/run-tests.sh` passed with 24 backend tests and 10 synthetic generator tests; `git diff --check` passed. |
 
 ## Known Issues And Caveats
 

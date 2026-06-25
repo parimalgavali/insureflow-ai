@@ -55,6 +55,11 @@ public class CoverageValidationService {
                     warnings);
         }
 
+        if (request.lossDate().isBefore(coverage.getEffectiveDate())
+                || !request.lossDate().isBefore(coverage.getExpirationDate())) {
+            reasons.add("COVERAGE_NOT_ACTIVE_ON_LOSS_DATE");
+        }
+
         if (request.estimatedLossAmount().compareTo(coverage.getLimitAmount()) > 0) {
             warnings.add("ESTIMATED_LOSS_EXCEEDS_LIMIT");
         }

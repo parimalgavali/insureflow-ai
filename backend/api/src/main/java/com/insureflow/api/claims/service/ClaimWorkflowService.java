@@ -4,14 +4,20 @@ import com.insureflow.api.claims.api.dto.ChangeClaimStatusRequest;
 import com.insureflow.api.claims.api.dto.ClaimEventResponse;
 import com.insureflow.api.claims.api.dto.ClaimResponse;
 import com.insureflow.api.claims.domain.Claim;
+import com.insureflow.api.claims.domain.ClaimEvent;
 import com.insureflow.api.claims.domain.ClaimEventType;
 import com.insureflow.api.claims.domain.ClaimStatus;
 import com.insureflow.api.claims.repository.ClaimEventRepository;
 import com.insureflow.api.claims.repository.ClaimRepository;
+import com.insureflow.api.policy.api.dto.CoverageCheckResponse;
+import com.insureflow.api.policy.domain.CoverageType;
+import com.insureflow.api.policy.domain.PolicyStatus;
 import com.insureflow.api.shared.error.BusinessRuleViolationException;
 import com.insureflow.api.shared.error.ResourceNotFoundException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +51,7 @@ public class ClaimWorkflowService {
 
     @Transactional(readOnly = true)
     public ClaimResponse getClaim(String claimNumber) {
-        return ClaimResponse.from(findClaim(claimNumber), null);
+        return ClaimResponse.from(findClaim(claimNumber), coverageValidationSnapshot(claimNumber).orElse(null));
     }
 
     @Transactional(readOnly = true)
@@ -84,5 +90,40 @@ public class ClaimWorkflowService {
 
     private String reason(ChangeClaimStatusRequest request) {
         return request.reason() == null ? "" : request.reason();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Optional<CoverageCheckResponse> coverageValidationSnapshot(String claimNumber) {
+        return claimEventRepository.findByClaimClaimNumberOrderByCreatedAtAsc(claimNumber).stream()
+                .filter(event -> event.getEventType() == ClaimEventType.COVERAGE_VALIDATED)
+                .reduce((first, second) -> second)
+                .map(ClaimEvent::getPayload)
+                .map(payload -> new CoverageCheckResponse(
+                        Boolean.TRUE.equals(payload.get("covered")),
+                        enumValue(PolicyStatus.class, payload.get("policyStatus")),
+                        enumValue(CoverageType.class, payload.get("coverageType")),
+                        decimalValue(payload.get("limitAmount")),
+                        decimalValue(payload.get("deductibleAmount")),
+                        stringValue(payload.get("exclusions")),
+                        (List<String>) payload.getOrDefault("reasons", List.of()),
+                        (List<String>) payload.getOrDefault("warnings", List.of())));
+    }
+
+    private <T extends Enum<T>> T enumValue(Class<T> enumType, Object value) {
+        if (value == null) {
+            return null;
+        }
+        return Enum.valueOf(enumType, value.toString());
+    }
+
+    private BigDecimal decimalValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return new BigDecimal(value.toString());
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? null : value.toString();
     }
 }

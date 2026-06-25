@@ -6,6 +6,7 @@ import com.insureflow.api.support.ApiIntegrationTest;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -73,6 +74,19 @@ class ClaimOperationsIntegrationTest extends ApiIntegrationTest {
         assertThat(finalEvents.getBody())
                 .extracting(event -> event.get("eventType"))
                 .contains("STATUS_CHANGED", "NOTE_ADDED", "DOCUMENT_ADDED");
+    }
+
+    @Test
+    void noteWithUnknownAdjusterReturns422InsteadOfUnexpectedServerError() {
+        String claimNumber = createSubmittedClaim("CUST-OPS-1002", "POL-OPS-1002");
+
+        ResponseEntity<Map<String, Object>> response = post("/claims/" + claimNumber + "/notes", Map.of(
+                "adjusterId", UUID.randomUUID().toString(),
+                "noteType", "GENERAL",
+                "body", "This adjuster does not exist."));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat((String) response.getBody().get("message")).contains("database constraint");
     }
 
     private String createSubmittedClaim(String customerNumber, String policyNumber) {

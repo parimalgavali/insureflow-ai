@@ -88,6 +88,22 @@ class PolicyLifecycleAndCoverageValidationTest extends ApiIntegrationTest {
     }
 
     @Test
+    void coverageOutsideCoverageDatesReturnsNotCoveredReason() {
+        createAutoPolicyWithFutureCollisionCoverage("CUST-LIFE-1006", "POL-LIFE-1006");
+        post("/policies/POL-LIFE-1006/activate", Map.of());
+
+        ResponseEntity<Map<String, Object>> response = post("/policies/POL-LIFE-1006/coverage-check", Map.of(
+                "claimType", "AUTO_COLLISION",
+                "lossDate", "2026-06-01",
+                "estimatedLossAmount", new BigDecimal("9000.00")));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).containsEntry("covered", false);
+        assertThat(stringList(response, "reasons"))
+                .contains("COVERAGE_NOT_ACTIVE_ON_LOSS_DATE");
+    }
+
+    @Test
     void activePolicyCanRenewIntoDraftPolicyWithCopiedCoverage() {
         createAutoPolicyWithCollisionCoverage("CUST-LIFE-1005", "POL-LIFE-1005");
         post("/policies/POL-LIFE-1005/activate", Map.of());
@@ -124,6 +140,34 @@ class PolicyLifecycleAndCoverageValidationTest extends ApiIntegrationTest {
                 "limitAmount", new BigDecimal("25000.00"),
                 "deductibleAmount", new BigDecimal("500.00"),
                 "effectiveDate", "2026-01-01",
+                "expirationDate", "2027-01-01",
+                "exclusions", "[\"racing\"]"));
+    }
+
+    private void createAutoPolicyWithFutureCollisionCoverage(String customerNumber, String policyNumber) {
+        post("/customers", Map.of(
+                "customerNumber", customerNumber,
+                "firstName", "Riley",
+                "lastName", "Morgan",
+                "email", customerNumber.toLowerCase() + "@example.test",
+                "country", "US"));
+
+        post("/policies", Map.of(
+                "customerNumber", customerNumber,
+                "policyNumber", policyNumber,
+                "policyType", "PERSONAL_AUTO",
+                "effectiveDate", "2026-01-01",
+                "expirationDate", "2027-01-01",
+                "premiumAmount", new BigDecimal("1500.00"),
+                "currency", "USD"));
+
+        post("/policies/" + policyNumber + "/coverages", Map.of(
+                "coverageCode", "COLLISION",
+                "coverageName", "Collision Coverage",
+                "coverageType", "COLLISION",
+                "limitAmount", new BigDecimal("25000.00"),
+                "deductibleAmount", new BigDecimal("500.00"),
+                "effectiveDate", "2026-07-01",
                 "expirationDate", "2027-01-01",
                 "exclusions", "[\"racing\"]"));
     }

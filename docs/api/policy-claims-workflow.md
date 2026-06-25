@@ -40,9 +40,11 @@ Base URL: `http://localhost:8080/api/v1`
 - Policies start as `DRAFT`.
 - Only `DRAFT` policies can be activated.
 - Only `ACTIVE` policies can be cancelled, expired, or renewed.
-- Coverage validation checks policy active status, loss date, claim type mapping, coverage limit, deductible, and exclusions.
+- Coverage validation checks policy active status, policy loss date, coverage effective dates, claim type mapping, coverage limit, deductible, and exclusions.
 - FNOL creates a claim even when coverage has issues, but the response and timeline record those issues.
+- Claim reads include the latest persisted FNOL coverage validation snapshot.
 - Claim status transitions are constrained by the workflow table from the Phase 3/4 plan.
+- Requests that violate database constraints return a 422 response with a generic constraint message.
 
 ## Claim Type To Coverage Mapping
 
@@ -122,4 +124,3 @@ Submit FNOL:
   "estimatedLossAmount": 9000.00
 }
 ```
-

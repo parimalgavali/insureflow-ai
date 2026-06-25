@@ -61,6 +61,11 @@ class FnolWorkflowIntegrationTest extends ApiIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(coverageValidation(response)).containsEntry("covered", false);
         assertThat(reasons(response)).contains("POLICY_NOT_ACTIVE_ON_LOSS_DATE");
+
+        String claimNumber = (String) response.getBody().get("claimNumber");
+        ResponseEntity<Map<String, Object>> fetchedClaim = getClaim(claimNumber);
+        assertThat(coverageValidation(fetchedClaim)).containsEntry("covered", false);
+        assertThat(reasons(fetchedClaim)).contains("POLICY_NOT_ACTIVE_ON_LOSS_DATE");
     }
 
     @Test
@@ -115,6 +120,10 @@ class FnolWorkflowIntegrationTest extends ApiIntegrationTest {
 
     private ResponseEntity<Map<String, Object>> post(String path, Map<String, Object> request) {
         return restTemplate.exchange(baseUrl + path, HttpMethod.POST, new HttpEntity<>(request), MAP_RESPONSE);
+    }
+
+    private ResponseEntity<Map<String, Object>> getClaim(String claimNumber) {
+        return restTemplate.exchange(baseUrl + "/claims/" + claimNumber, HttpMethod.GET, HttpEntity.EMPTY, MAP_RESPONSE);
     }
 
     @SuppressWarnings("unchecked")
