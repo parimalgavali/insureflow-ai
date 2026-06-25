@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AiTriageResultRepository extends JpaRepository<AiTriageResult, UUID> {
 
-    List<AiTriageResult> findByClaimClaimNumberOrderByCreatedAtDesc(String claimNumber);
+    List<AiTriageResult> findByClaimClaimNumberOrderByCreatedAtDescResultSequenceDesc(String claimNumber);
 }

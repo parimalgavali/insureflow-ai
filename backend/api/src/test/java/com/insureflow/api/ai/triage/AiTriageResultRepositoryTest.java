@@ -60,7 +60,7 @@ class AiTriageResultRepositoryTest {
     }
 
     @Test
-    void findsTriageResultsByClaimNumberWithLatestFirstAndReasonCodesPreserved() throws Exception {
+    void findsTriageResultsByClaimNumberWithLatestFirstAndReasonCodesPreserved() {
         Customer customer = new Customer();
         customer.setCustomerNumber("CUST-TRIAGE-1001");
         customer.setFirstName("Maya");
@@ -106,8 +106,6 @@ class AiTriageResultRepositoryTest {
         firstResult.setExplanation("Low-risk claim.");
         aiTriageResultRepository.saveAndFlush(firstResult);
 
-        Thread.sleep(5);
-
         AiTriageResult secondResult = new AiTriageResult();
         secondResult.setClaim(claim);
         secondResult.setSeverityScore(new BigDecimal("0.8200"));
@@ -121,13 +119,25 @@ class AiTriageResultRepositoryTest {
         secondResult.setExplanation("Elevated triage risk.");
         secondResult.setHumanReviewRequired(true);
         aiTriageResultRepository.saveAndFlush(secondResult);
+        entityManager
+                .getEntityManager()
+                .createNativeQuery("""
+                        update ai_triage_results
+                        set created_at = '2026-06-25T10:30:00Z',
+                            updated_at = '2026-06-25T10:30:00Z'
+                        where claim_id = :claimId
+                        """)
+                .setParameter("claimId", claim.getId())
+                .executeUpdate();
         entityManager.clear();
 
         List<AiTriageResult> results =
-                aiTriageResultRepository.findByClaimClaimNumberOrderByCreatedAtDesc("CLM-TRIAGE-000001");
+                aiTriageResultRepository.findByClaimClaimNumberOrderByCreatedAtDescResultSequenceDesc(
+                        "CLM-TRIAGE-000001");
 
         assertThat(results).hasSize(2);
         assertThat(results.get(0).getId()).isEqualTo(secondResult.getId());
+        assertThat(results.get(0).getResultSequence()).isGreaterThan(results.get(1).getResultSequence());
         assertThat(results.get(0).getReasonCodes()).containsExactly("HIGH_LOSS_AMOUNT", "ATTORNEY_REPRESENTED");
         assertThat(results.get(0).isHumanReviewRequired()).isTrue();
         assertThat(results.get(1).getId()).isEqualTo(firstResult.getId());

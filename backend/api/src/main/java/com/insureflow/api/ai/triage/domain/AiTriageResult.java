@@ -30,6 +30,9 @@ public class AiTriageResult extends BaseEntity {
     @Column(name = "model_version", nullable = false, length = 80)
     private String modelVersion = "rules-v1";
 
+    @Column(name = "result_sequence", nullable = false, insertable = false, updatable = false)
+    private Long resultSequence;
+
     @Column(name = "severity_score", nullable = false, precision = 5, scale = 4)
     private BigDecimal severityScore;
 
@@ -86,6 +89,10 @@ public class AiTriageResult extends BaseEntity {
 
     public void setModelVersion(String modelVersion) {
         this.modelVersion = modelVersion;
+    }
+
+    public Long getResultSequence() {
+        return resultSequence;
     }
 
     public BigDecimal getSeverityScore() {
