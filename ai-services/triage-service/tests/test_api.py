@@ -43,6 +43,7 @@ def test_score_endpoint_returns_rule_based_triage():
 
     assert response.status_code == 200
     body = response.json()
+    assert body["modelName"] == "rule-based-triage"
     assert body["modelVersion"] == "rules-v1"
     assert body["severity"]["label"] == "HIGH"
     assert body["fraud"]["label"] in {"MEDIUM", "HIGH"}

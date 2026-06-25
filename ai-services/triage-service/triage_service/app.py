@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from triage_service.rules import score_triage
+from triage_service.ml_models import score_with_optional_ml
 from triage_service.schemas import TriageScoreRequest, TriageScoreResponse
 
 app = FastAPI(title="InsureFlow AI Triage Service", version="0.1.0")
@@ -13,4 +13,4 @@ def health() -> dict[str, str]:
 
 @app.post("/ai/v1/triage/score", response_model=TriageScoreResponse)
 def score(request: TriageScoreRequest) -> TriageScoreResponse:
-    return score_triage(request)
+    return score_with_optional_ml(request)
