@@ -90,6 +90,7 @@ Recommended sequence:
 | 2026-06-26 | Opened Phase 7 pull request. | PR #7: `https://github.com/parimalgavali/insureflow-ai/pull/7` from `llm-document-intelligence` into `main`. |
 | 2026-06-26 | Started Phase 8 RAG adjuster assistant. | Branch `rag-adjuster-assistant`; design and implementation plan created for the offline RAG service. |
 | 2026-06-26 | Implemented Phase 8 RAG adjuster assistant service. | Added `ai-services/rag-service` with ingestion, chunking, in-memory retrieval, grounded answers, source references, missing-evidence behavior, audit, tests, and API docs. |
+| 2026-06-26 | Verified Phase 8 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, RAG service 5 tests, and ML package 3 tests. |
 
 ## Known Issues And Caveats
 
@@ -104,9 +105,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Implement Phase 8 on `rag-adjuster-assistant`.
-2. Keep Phase 8 focused on ingestion, chunking, retrieval, source-grounded answers, missing-evidence behavior, and audit.
-3. Add pgvector persistence only after the offline RAG contract is stable.
+1. Open and merge the Phase 8 pull request from `rag-adjuster-assistant`.
+2. After Phase 8 merges, start Phase 9 adjuster workbench frontend planning.
+3. Add pgvector persistence only after the offline RAG contract is stable and the UI/API needs are clear.
 
 ## Memory Update Rules
 
