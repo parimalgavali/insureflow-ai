@@ -6,7 +6,7 @@ It is a professional portfolio project for demonstrating insurance domain unders
 
 ## Status
 
-Early foundation phase. The repository currently contains planning, documentation, local infrastructure, and backend schema bootstrapping work.
+The repository contains local infrastructure, synthetic data generation, and the first backend business workflow for policy management, coverage validation, FNOL claim intake, claim timeline events, notes, and document metadata.
 
 ## Important Boundary
 
@@ -51,6 +51,10 @@ cd backend
 mvn test
 ```
 
+Swagger UI is available at `http://localhost:8080/swagger-ui.html` when the API is running.
+
+The Phase 3/4 policy and claims workflow is documented in [docs/api/policy-claims-workflow.md](docs/api/policy-claims-workflow.md).
+
 ## Synthetic Data
 
 ```bash
@@ -65,6 +69,7 @@ python3 -m venv ../.venv
 
 - [Project Memory](PROJECT_MEMORY.md)
 - [Documentation Index](docs/README.md)
+- [Policy Claims Workflow API](docs/api/policy-claims-workflow.md)
 - [Master Build Plan](docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md)
 
 ## Responsible AI Statement
