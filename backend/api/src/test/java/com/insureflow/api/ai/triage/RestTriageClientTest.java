@@ -7,6 +7,7 @@ import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.insureflow.api.ai.triage.api.dto.TriageScoreRequest;
@@ -14,6 +15,7 @@ import com.insureflow.api.ai.triage.api.dto.TriageScoreResponse;
 import com.insureflow.api.ai.triage.client.RestTriageClient;
 import com.insureflow.api.ai.triage.config.AiTriageProperties;
 import com.insureflow.api.ai.triage.domain.TriageRiskLabel;
+import com.insureflow.api.shared.error.AiServiceUnavailableException;
 import com.insureflow.api.shared.error.BusinessRuleViolationException;
 import java.math.BigDecimal;
 import java.util.List;
@@ -123,6 +125,18 @@ class RestTriageClientTest {
         assertThatThrownBy(() -> client.score(request()))
                 .isInstanceOf(BusinessRuleViolationException.class)
                 .hasMessage("AI triage service returned an empty response");
+        server.verify();
+    }
+
+    @Test
+    void scoreWrapsAiServiceFailures() {
+        server.expect(once(), requestTo("https://triage.example/ai/v1/triage/score"))
+                .andExpect(method(POST))
+                .andRespond(withServerError());
+
+        assertThatThrownBy(() -> client.score(request()))
+                .isInstanceOf(AiServiceUnavailableException.class)
+                .hasMessage("AI triage service is unavailable");
         server.verify();
     }
 

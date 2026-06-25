@@ -10,12 +10,14 @@ import com.insureflow.api.claims.domain.Claim;
 import com.insureflow.api.claims.domain.ClaimEventType;
 import com.insureflow.api.claims.repository.ClaimRepository;
 import com.insureflow.api.claims.service.ClaimTimelineService;
+import com.insureflow.api.shared.error.AiServiceUnavailableException;
 import com.insureflow.api.shared.error.ResourceNotFoundException;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
 
 @Service
 public class ClaimTriageService {
@@ -42,7 +44,7 @@ public class ClaimTriageService {
     @Transactional
     public ClaimTriageResponse runTriage(String claimNumber) {
         Claim claim = findClaim(claimNumber);
-        TriageScoreResponse score = triageClient.score(featureAssembler.assemble(claim));
+        TriageScoreResponse score = scoreClaim(claim);
         AiTriageResult result = aiTriageResultRepository.save(toEntity(claim, score));
         claimTimelineService.record(
                 claim,
@@ -72,6 +74,14 @@ public class ClaimTriageService {
         return claimRepository
                 .findByClaimNumber(claimNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Claim " + claimNumber + " was not found"));
+    }
+
+    private TriageScoreResponse scoreClaim(Claim claim) {
+        try {
+            return triageClient.score(featureAssembler.assemble(claim));
+        } catch (RestClientException exception) {
+            throw new AiServiceUnavailableException("AI triage service is unavailable", exception);
+        }
     }
 
     private AiTriageResult toEntity(Claim claim, TriageScoreResponse score) {
