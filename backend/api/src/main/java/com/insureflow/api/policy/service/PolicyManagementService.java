@@ -10,6 +10,7 @@ import com.insureflow.api.policy.domain.Coverage;
 import com.insureflow.api.policy.domain.Customer;
 import com.insureflow.api.policy.domain.Policy;
 import com.insureflow.api.policy.domain.PolicyStatus;
+import com.insureflow.api.shared.error.BusinessRuleViolationException;
 import com.insureflow.api.policy.repository.CoverageRepository;
 import com.insureflow.api.policy.repository.CustomerRepository;
 import com.insureflow.api.policy.repository.PolicyRepository;
@@ -98,6 +99,62 @@ public class PolicyManagementService {
         return CoverageResponse.from(coverageRepository.save(coverage));
     }
 
+    @Transactional
+    public PolicyResponse activate(String policyNumber) {
+        Policy policy = findPolicy(policyNumber);
+        if (policy.getStatus() != PolicyStatus.DRAFT) {
+            throw new BusinessRuleViolationException("Only DRAFT policies can be activated");
+        }
+        policy.setStatus(PolicyStatus.ACTIVE);
+        return PolicyResponse.from(policyRepository.save(policy), coverageRepository.findByPolicyPolicyNumber(policyNumber));
+    }
+
+    @Transactional
+    public PolicyResponse cancel(String policyNumber) {
+        Policy policy = findPolicy(policyNumber);
+        if (policy.getStatus() != PolicyStatus.ACTIVE) {
+            throw new BusinessRuleViolationException("Only ACTIVE policies can be cancelled");
+        }
+        policy.setStatus(PolicyStatus.CANCELLED);
+        return PolicyResponse.from(policyRepository.save(policy), coverageRepository.findByPolicyPolicyNumber(policyNumber));
+    }
+
+    @Transactional
+    public PolicyResponse expire(String policyNumber) {
+        Policy policy = findPolicy(policyNumber);
+        if (policy.getStatus() != PolicyStatus.ACTIVE) {
+            throw new BusinessRuleViolationException("Only ACTIVE policies can be expired");
+        }
+        policy.setStatus(PolicyStatus.EXPIRED);
+        return PolicyResponse.from(policyRepository.save(policy), coverageRepository.findByPolicyPolicyNumber(policyNumber));
+    }
+
+    @Transactional
+    public PolicyResponse renew(String policyNumber) {
+        Policy policy = findPolicy(policyNumber);
+        if (policy.getStatus() != PolicyStatus.ACTIVE) {
+            throw new BusinessRuleViolationException("Only ACTIVE policies can be renewed");
+        }
+
+        Policy renewal = new Policy();
+        renewal.setCustomer(policy.getCustomer());
+        renewal.setPolicyNumber(policy.getPolicyNumber() + "-REN-" + policy.getExpirationDate().getYear());
+        renewal.setPolicyType(policy.getPolicyType());
+        renewal.setStatus(PolicyStatus.DRAFT);
+        renewal.setEffectiveDate(policy.getExpirationDate());
+        renewal.setExpirationDate(policy.getExpirationDate().plusYears(1));
+        renewal.setPremiumAmount(policy.getPremiumAmount());
+        renewal.setCurrency(policy.getCurrency());
+        Policy savedRenewal = policyRepository.save(renewal);
+
+        List<Coverage> copiedCoverages = coverageRepository.findByPolicyPolicyNumber(policyNumber).stream()
+                .map(existing -> copyCoverage(existing, savedRenewal))
+                .map(coverageRepository::save)
+                .toList();
+
+        return PolicyResponse.from(savedRenewal, copiedCoverages);
+    }
+
     private Customer findCustomer(String customerNumber) {
         return customerRepository
                 .findByCustomerNumber(customerNumber)
@@ -114,5 +171,19 @@ public class PolicyManagementService {
         if (!effectiveDate.isBefore(expirationDate)) {
             throw new IllegalArgumentException("effectiveDate must be before expirationDate");
         }
+    }
+
+    private Coverage copyCoverage(Coverage existing, Policy renewal) {
+        Coverage coverage = new Coverage();
+        coverage.setPolicy(renewal);
+        coverage.setCoverageCode(existing.getCoverageCode());
+        coverage.setCoverageName(existing.getCoverageName());
+        coverage.setCoverageType(existing.getCoverageType());
+        coverage.setLimitAmount(existing.getLimitAmount());
+        coverage.setDeductibleAmount(existing.getDeductibleAmount());
+        coverage.setEffectiveDate(renewal.getEffectiveDate());
+        coverage.setExpirationDate(renewal.getExpirationDate());
+        coverage.setExclusions(existing.getExclusions());
+        return coverage;
     }
 }
