@@ -85,3 +85,29 @@ def test_invalid_coverage_reasons_flow_to_fraud_and_require_human_review():
     assert rc.POLICY_NOT_ACTIVE_ON_LOSS_DATE in result.fraud.reason_codes
     assert rc.COVERAGE_NOT_ACTIVE_ON_LOSS_DATE in result.fraud.reason_codes
     assert result.human_review_required is True
+
+
+def test_unknown_coverage_reasons_are_filtered_from_fraud_reason_codes():
+    request = make_request()
+    request.policy_features.coverage_valid = False
+    request.policy_features.coverage_reasons = [
+        rc.POLICY_NOT_ACTIVE_ON_LOSS_DATE,
+        "UNSUPPORTED_COVERAGE_REASON",
+        rc.COVERAGE_NOT_ACTIVE_ON_LOSS_DATE,
+    ]
+
+    result = score_triage(request)
+
+    assert rc.POLICY_NOT_ACTIVE_ON_LOSS_DATE in result.fraud.reason_codes
+    assert rc.COVERAGE_NOT_ACTIVE_ON_LOSS_DATE in result.fraud.reason_codes
+    assert "UNSUPPORTED_COVERAGE_REASON" not in result.fraud.reason_codes
+
+
+def test_zero_coverage_limit_is_exceeded_by_positive_estimated_loss():
+    request = make_request(estimated_loss_amount=1.0)
+    request.policy_features.coverage_limit_amount = 0.0
+
+    result = score_triage(request)
+
+    assert rc.COVERAGE_LIMIT_EXCEEDED in result.severity.reason_codes
+    assert result.severity.score == 0.30

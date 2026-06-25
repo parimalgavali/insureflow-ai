@@ -2,6 +2,21 @@ from triage_service import reason_codes as rc
 from triage_service.schemas import RiskLabel, ScoreBlock, TriageScoreRequest, TriageScoreResponse
 
 
+SUPPORTED_REASON_CODES = {
+    rc.HIGH_ESTIMATED_DAMAGE,
+    rc.INJURY_REPORTED,
+    rc.THIRD_PARTY_INVOLVED,
+    rc.LATE_FNOL,
+    rc.MISSING_POLICE_REPORT,
+    rc.POLICY_RECENTLY_STARTED,
+    rc.PRIOR_CLAIMS_HIGH,
+    rc.LEGAL_KEYWORDS_DETECTED,
+    rc.COVERAGE_LIMIT_EXCEEDED,
+    rc.POLICY_NOT_ACTIVE_ON_LOSS_DATE,
+    rc.COVERAGE_NOT_ACTIVE_ON_LOSS_DATE,
+}
+
+
 def score_triage(request: TriageScoreRequest) -> TriageScoreResponse:
     severity = _score_severity(request)
     fraud = _score_fraud(request)
@@ -45,7 +60,7 @@ def _score_severity(request: TriageScoreRequest) -> ScoreBlock:
         score += 0.15
         reasons.append(rc.THIRD_PARTY_INVOLVED)
 
-    if policy.coverage_limit_amount and claim.estimated_loss_amount > policy.coverage_limit_amount:
+    if claim.estimated_loss_amount > policy.coverage_limit_amount:
         score += 0.20
         reasons.append(rc.COVERAGE_LIMIT_EXCEEDED)
 
@@ -76,7 +91,7 @@ def _score_fraud(request: TriageScoreRequest) -> ScoreBlock:
 
     if not policy.coverage_valid:
         score += 0.15
-        reasons.extend(policy.coverage_reasons)
+        reasons.extend(_known_reason_codes(policy.coverage_reasons))
 
     return ScoreBlock(label=_label(score), score=round(min(score, 1.0), 4), reason_codes=_dedupe(reasons))
 
@@ -127,3 +142,7 @@ def _explanation(severity: ScoreBlock, fraud: ScoreBlock, litigation: ScoreBlock
 
 def _dedupe(values: list[str]) -> list[str]:
     return list(dict.fromkeys(values))
+
+
+def _known_reason_codes(values: list[str]) -> list[str]:
+    return [value for value in values if value in SUPPORTED_REASON_CODES]
