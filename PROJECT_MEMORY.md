@@ -73,6 +73,7 @@ Recommended sequence:
 | 2026-06-25 | Implemented Phase 3/4 policy and claims workflow. | Customer/policy/coverage APIs, lifecycle transitions, coverage validation, FNOL, claim timeline, status transitions, notes, document metadata, and integration tests. |
 | 2026-06-25 | Addressed Phase 3/4 review findings. | Added claim-number collision retry through a fresh transaction attempt service, persisted FNOL coverage snapshots on claim reads, coverage effective-date validation, and 422 handling for database constraint violations. |
 | 2026-06-25 | Verified Phase 3/4 review fixes locally. | `./scripts/run-tests.sh` passed with 24 backend tests and 10 synthetic generator tests; `git diff --check` passed. |
+| 2026-06-25 | Started Phase 5 rule-based triage planning. | Branch `rule-based-triage-service`; detailed implementation plan created at `docs/superpowers/plans/2026-06-25-phase-5-rule-based-ai-triage-service.md`. |
 
 ## Known Issues And Caveats
 
@@ -86,9 +87,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Finish verification for `policy-claims-workflow-implementation`.
-2. Push the branch and open a PR.
-3. After merge, begin Phase 5: rule-based AI triage service.
+1. Review and approve the Phase 5 implementation plan.
+2. Implement Phase 5 on `rule-based-triage-service`.
+3. After merge, begin Phase 6: ML severity and fraud model training.
 
 ## Memory Update Rules
 
