@@ -1,5 +1,6 @@
 package com.insureflow.api.shared.api;
 
+import com.insureflow.api.shared.error.AiServiceUnavailableException;
 import com.insureflow.api.shared.error.BusinessRuleViolationException;
 import com.insureflow.api.shared.error.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +27,12 @@ public class ApiExceptionHandler {
     ResponseEntity<ApiErrorResponse> handleBusinessRuleViolation(
             BusinessRuleViolationException exception, HttpServletRequest request) {
         return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(AiServiceUnavailableException.class)
+    ResponseEntity<ApiErrorResponse> handleAiServiceUnavailable(
+            AiServiceUnavailableException exception, HttpServletRequest request) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

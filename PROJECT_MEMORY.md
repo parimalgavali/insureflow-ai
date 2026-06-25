@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `policy-claims-workflow-implementation`
+- **Current branch:** `rule-based-triage-service`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -45,6 +45,7 @@ Recommended sequence:
 | 2026-06-24 | Use the master build plan as the roadmap and create detailed phase plans as work begins. | Prevents the large blueprint from becoming an unmanageable single implementation pass. |
 | 2026-06-24 | Keep feature work off `main`; use feature branches. | Keeps the public portfolio branch stable while implementation work is reviewed. |
 | 2026-06-25 | Use readable feature branch names without the `codex/` prefix. | The user prefers names such as `policy-claims-workflow-implementation`. |
+| 2026-06-25 | Keep AI triage as a rule-based decision-support service before introducing ML models. | Phase 5 needs explainable, deterministic behavior and stable backend contracts before Phase 6 model training. |
 
 ## Completed Work
 
@@ -73,6 +74,12 @@ Recommended sequence:
 | 2026-06-25 | Implemented Phase 3/4 policy and claims workflow. | Customer/policy/coverage APIs, lifecycle transitions, coverage validation, FNOL, claim timeline, status transitions, notes, document metadata, and integration tests. |
 | 2026-06-25 | Addressed Phase 3/4 review findings. | Added claim-number collision retry through a fresh transaction attempt service, persisted FNOL coverage snapshots on claim reads, coverage effective-date validation, and 422 handling for database constraint violations. |
 | 2026-06-25 | Verified Phase 3/4 review fixes locally. | `./scripts/run-tests.sh` passed with 24 backend tests and 10 synthetic generator tests; `git diff --check` passed. |
+| 2026-06-25 | Started Phase 5 rule-based triage planning. | Branch `rule-based-triage-service`; detailed implementation plan created at `docs/superpowers/plans/2026-06-25-phase-5-rule-based-ai-triage-service.md`. |
+| 2026-06-25 | Implemented Phase 5 rule-based AI triage service foundation. | FastAPI service under `ai-services/triage-service` with health and `POST /ai/v1/triage/score` endpoints, deterministic scoring rules, reason codes, and tests. |
+| 2026-06-25 | Persisted AI triage results in the backend. | Added `ai_triage_results`, Flyway V3, JPA entity/repository, label backfill behavior, and deterministic latest-result ordering. |
+| 2026-06-25 | Integrated backend claim triage workflow. | Added `POST /api/v1/claims/{claimNumber}/triage`, `GET /api/v1/claims/{claimNumber}/triage`, feature assembly, timeline event `TRIAGE_COMPLETED`, and outage handling with HTTP 503. |
+| 2026-06-25 | Documented Phase 5 AI triage contracts. | `docs/api/ai-triage.md`, README links, docs index updates, triage service README updates, and `scripts/run-tests.sh` now includes triage service tests. |
+| 2026-06-25 | Verified Phase 5 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 8 tests. |
 
 ## Known Issues And Caveats
 
@@ -82,13 +89,14 @@ Recommended sequence:
 - Maven was installed with Homebrew during Phase 0/1 verification and is now available as Maven 3.9.16.
 - Docker Desktop was started during Phase 0/1 verification and local Compose/Testcontainers verification passed.
 - Local Java is currently OpenJDK 26. The project is configured for Java 21 compatibility, and CI uses Temurin 21.
-- GitHub connector could not create a PR for this repository, returning `403 Resource not accessible by integration`; create the PR manually or fix GitHub app write permissions.
+- GitHub connector could not create a PR for this repository, returning `403 Resource not accessible by integration`; create the PR manually or fix GitHub app write permissions if this recurs.
+- Local commits have used the auto-detected Git identity `Parimal Gavali <parimal_gavali@MacBookPro.fritz.box>`. Configure `git config user.name` and `git config user.email` if a different public identity is desired before future commits.
 
 ## Near-Term Next Steps
 
-1. Finish verification for `policy-claims-workflow-implementation`.
-2. Push the branch and open a PR.
-3. After merge, begin Phase 5: rule-based AI triage service.
+1. Push `rule-based-triage-service` and open/merge the Phase 5 pull request.
+2. After merge, begin Phase 6: ML severity and fraud model training.
+3. Keep the rule-based triage service as a baseline model and explainability reference for Phase 6.
 
 ## Memory Update Rules
 

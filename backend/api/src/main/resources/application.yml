@@ -18,3 +18,8 @@ server:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+insureflow:
+  ai:
+    triage:
+      base-url: ${INSUREFLOW_AI_TRIAGE_BASE_URL:http://localhost:8001}
