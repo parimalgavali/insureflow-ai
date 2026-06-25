@@ -1,4 +1,5 @@
 from triage_service.rules import score_triage
+from triage_service import reason_codes as rc
 from triage_service.schemas import (
     ClaimFeatures,
     PolicyFeatures,
@@ -69,3 +70,18 @@ def test_litigation_risk_for_legal_keywords():
     assert result.litigation.label in {"LOW", "MEDIUM"}
     assert result_with_legal_text.litigation.label == "HIGH"
     assert "LEGAL_KEYWORDS_DETECTED" in result_with_legal_text.litigation.reason_codes
+
+
+def test_invalid_coverage_reasons_flow_to_fraud_and_require_human_review():
+    request = make_request()
+    request.policy_features.coverage_valid = False
+    request.policy_features.coverage_reasons = [
+        rc.POLICY_NOT_ACTIVE_ON_LOSS_DATE,
+        rc.COVERAGE_NOT_ACTIVE_ON_LOSS_DATE,
+    ]
+
+    result = score_triage(request)
+
+    assert rc.POLICY_NOT_ACTIVE_ON_LOSS_DATE in result.fraud.reason_codes
+    assert rc.COVERAGE_NOT_ACTIVE_ON_LOSS_DATE in result.fraud.reason_codes
+    assert result.human_review_required is True
