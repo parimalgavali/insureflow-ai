@@ -11,6 +11,10 @@ This folder contains project documentation that supports implementation, onboard
 5. [`api/policy-claims-workflow.md`](api/policy-claims-workflow.md) - implemented API workflow for policy, coverage validation, FNOL, and claim operations.
 6. [`superpowers/plans/2026-06-25-phase-5-rule-based-ai-triage-service.md`](superpowers/plans/2026-06-25-phase-5-rule-based-ai-triage-service.md) - implementation plan for the rule-based AI triage service.
 7. [`api/ai-triage.md`](api/ai-triage.md) - implemented API workflow for AI triage scoring, persistence, and outage handling.
+8. [`superpowers/plans/2026-06-25-phase-6-ml-triage-model-training.md`](superpowers/plans/2026-06-25-phase-6-ml-triage-model-training.md) - implementation plan for local ML triage model training.
+9. [`ml/model-training.md`](ml/model-training.md) - Phase 6 local ML training workflow.
+10. [`ml/severity-model-card.md`](ml/severity-model-card.md) - severity model card.
+11. [`ml/fraud-risk-model-card.md`](ml/fraud-risk-model-card.md) - fraud-risk model card.
 
 ## Planned Documentation Areas
 

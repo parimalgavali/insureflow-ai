@@ -30,3 +30,15 @@ if [ -d "$ROOT_DIR/ai-services/triage-service" ]; then
 
   (cd "$ROOT_DIR/ai-services/triage-service" && "$PYTHON_BIN" -m pytest)
 fi
+
+if [ -d "$ROOT_DIR/ml" ]; then
+  if [ -x "$ROOT_DIR/.venv/bin/python" ]; then
+    PYTHON_BIN="$ROOT_DIR/.venv/bin/python"
+  elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python3)"
+  else
+    PYTHON_BIN="$(command -v python)"
+  fi
+
+  (cd "$ROOT_DIR/ml" && "$PYTHON_BIN" -m pytest)
+fi

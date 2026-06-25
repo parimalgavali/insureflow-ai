@@ -6,7 +6,7 @@ It is a professional portfolio project for demonstrating insurance domain unders
 
 ## Status
 
-The repository contains local infrastructure, synthetic data generation, backend business workflows for policy management and claims intake, and the Phase 5 rule-based AI triage service with backend workflow integration.
+The repository contains local infrastructure, synthetic data generation, backend business workflows for policy management and claims intake, the Phase 5 rule-based AI triage service, and Phase 6 local ML triage model training.
 
 ## Important Boundary
 
@@ -68,6 +68,17 @@ python3 -m uvicorn triage_service.app:app --reload --port 8001
 
 The backend calls the service at `insureflow.ai.triage.base-url`, which defaults to `http://localhost:8001`.
 
+## ML Training
+
+```bash
+cd ml
+python3 -m pip install -e ".[test]"
+python3 -m pytest
+python3 -m insureflow_ml.train --data-dir ../data/synthetic --artifacts-dir artifacts
+```
+
+Model training is documented in [docs/ml/model-training.md](docs/ml/model-training.md).
+
 ## Synthetic Data
 
 ```bash
@@ -84,6 +95,7 @@ python3 -m venv ../.venv
 - [Documentation Index](docs/README.md)
 - [Policy Claims Workflow API](docs/api/policy-claims-workflow.md)
 - [AI Triage API](docs/api/ai-triage.md)
+- [ML Model Training](docs/ml/model-training.md)
 - [Master Build Plan](docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md)
 
 ## Responsible AI Statement
