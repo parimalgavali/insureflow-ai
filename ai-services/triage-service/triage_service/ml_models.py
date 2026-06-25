@@ -39,8 +39,9 @@ class LoadedModel:
 
 def score_with_optional_ml(
     request: TriageScoreRequest,
-    artifacts_dir: Path = DEFAULT_ARTIFACTS_DIR,
+    artifacts_dir: Path | None = None,
 ) -> TriageScoreResponse:
+    artifacts_dir = DEFAULT_ARTIFACTS_DIR if artifacts_dir is None else artifacts_dir
     base = score_triage(request)
     severity = _load_model(artifacts_dir / "severity")
     fraud = _load_model(artifacts_dir / "fraud")

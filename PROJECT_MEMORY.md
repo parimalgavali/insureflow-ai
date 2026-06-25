@@ -82,6 +82,7 @@ Recommended sequence:
 | 2026-06-25 | Verified Phase 5 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 8 tests. |
 | 2026-06-25 | Started Phase 6 ML triage model training. | Branch `ml-triage-model-training`; synthetic-data-first design spec created at `docs/superpowers/specs/2026-06-25-phase-6-ml-triage-model-training-design.md` and implementation plan created at `docs/superpowers/plans/2026-06-25-phase-6-ml-triage-model-training.md`. |
 | 2026-06-25 | Implemented Phase 6 ML training and triage serving. | Added `ml/` package, severity/fraud-risk training workflow, model artifact loader, ML model cards, and triage service ML fallback behavior. |
+| 2026-06-25 | Verified Phase 6 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, and ML package 3 tests. Local `ml/artifacts/` output is ignored by Git and can be regenerated. |
 
 ## Known Issues And Caveats
 
@@ -96,9 +97,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Implement Phase 6 on `ml-triage-model-training`.
-2. Keep the rule-based triage service as the fallback and explainability reference for Phase 6.
-3. After Phase 6 merges, begin Phase 7: LLM document intelligence.
+1. Open and merge the Phase 6 pull request from `ml-triage-model-training`.
+2. After Phase 6 merges, begin Phase 7: LLM document intelligence.
+3. Keep the rule-based triage service as the fallback and explainability reference while adding document intelligence.
 
 ## Memory Update Rules
 

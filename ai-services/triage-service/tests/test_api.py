@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from triage_service.app import app
+import triage_service.ml_models as ml_models
 
 
 def test_health_endpoint():
@@ -12,7 +13,8 @@ def test_health_endpoint():
     assert response.json() == {"status": "ok", "service": "triage-service"}
 
 
-def test_score_endpoint_returns_rule_based_triage():
+def test_score_endpoint_returns_rule_based_triage(monkeypatch, tmp_path):
+    monkeypatch.setattr(ml_models, "DEFAULT_ARTIFACTS_DIR", tmp_path / "missing")
     client = TestClient(app)
 
     response = client.post(
