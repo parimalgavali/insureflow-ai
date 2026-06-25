@@ -8,6 +8,7 @@ Implemented services:
 
 - `triage-service` for rule-based triage and optional local ML inference.
 - `document-intelligence-service` for offline LLM-style extraction, missing-document checks, summaries, prompt validation, and audit.
+- `rag-service` for offline document ingestion, lexical retrieval, grounded answers, source references, and RAG audit.
 
 ## Planned Responsibilities
 
