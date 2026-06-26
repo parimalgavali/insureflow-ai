@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `rule-based-triage-service`
+- **Current branch:** `integration-apis`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -96,6 +96,7 @@ Recommended sequence:
 | 2026-06-26 | Implemented Phase 9 adjuster workbench frontend. | Added Vue 3/Vite/TypeScript frontend with claim queue, claim detail workspace, AI triage, document intelligence, RAG assistant, timeline, audit, human review modal, component tests, and frontend docs. |
 | 2026-06-26 | Verified Phase 9 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, RAG service 5 tests, ML package 3 tests, frontend 6 tests, and frontend production build. |
 | 2026-06-26 | Opened Phase 9 pull request. | PR #9: `https://github.com/parimalgavali/insureflow-ai/pull/9` from `adjuster-workbench-frontend` into `main`. |
+| 2026-06-26 | Started Phase 10 Guidewire-inspired integration APIs. | Branch `integration-apis`; design and implementation plan created for `/integration/v1` policy sync, claim create, status update, reserve update, claim lookup, and webhook simulation. |
 
 ## Known Issues And Caveats
 
@@ -111,9 +112,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Open and merge the Phase 9 pull request from `adjuster-workbench-frontend`.
-2. After Phase 9 merges, decide whether Phase 10 should focus on backend/frontend integration APIs or human review/audit persistence.
-3. Use local demo data first and add live backend integration after the UI workflow is stable.
+1. Implement Phase 10 Guidewire-inspired integration APIs on branch `integration-apis`.
+2. Add documentation and an HTTP/Postman-style collection for the `/integration/v1` flow.
+3. After Phase 10 merges, proceed to Phase 11 security, audit, and AI governance.
 
 ## Memory Update Rules
 
