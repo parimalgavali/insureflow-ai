@@ -95,6 +95,7 @@ Recommended sequence:
 | 2026-06-26 | Started Phase 9 adjuster workbench frontend. | Branch `adjuster-workbench-frontend`; design and implementation plan created for the Vue workbench. |
 | 2026-06-26 | Implemented Phase 9 adjuster workbench frontend. | Added Vue 3/Vite/TypeScript frontend with claim queue, claim detail workspace, AI triage, document intelligence, RAG assistant, timeline, audit, human review modal, component tests, and frontend docs. |
 | 2026-06-26 | Verified Phase 9 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, RAG service 5 tests, ML package 3 tests, frontend 6 tests, and frontend production build. |
+| 2026-06-26 | Opened Phase 9 pull request. | PR #9: `https://github.com/parimalgavali/insureflow-ai/pull/9` from `adjuster-workbench-frontend` into `main`. |
 
 ## Known Issues And Caveats
 
