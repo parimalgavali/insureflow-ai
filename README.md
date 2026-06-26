@@ -6,7 +6,7 @@ It is a professional portfolio project for demonstrating insurance domain unders
 
 ## Status
 
-The repository contains local infrastructure, synthetic data generation, backend business workflows for policy management and claims intake, the Phase 5 rule-based AI triage service, Phase 6 local ML triage model training, Phase 7 document intelligence service, Phase 8 offline RAG adjuster assistant, and Phase 9 Vue adjuster workbench frontend.
+The repository contains local infrastructure, synthetic data generation, backend business workflows for policy management and claims intake, the Phase 5 rule-based AI triage service, Phase 6 local ML triage model training, Phase 7 document intelligence service, Phase 8 offline RAG adjuster assistant, Phase 9 Vue adjuster workbench frontend, and Phase 10 Guidewire-inspired integration APIs.
 
 ## Important Boundary
 
@@ -56,6 +56,8 @@ Swagger UI is available at `http://localhost:8080/swagger-ui.html` when the API 
 The Phase 3/4 policy and claims workflow is documented in [docs/api/policy-claims-workflow.md](docs/api/policy-claims-workflow.md).
 
 The Phase 5 rule-based AI triage workflow is documented in [docs/api/ai-triage.md](docs/api/ai-triage.md).
+
+The Phase 10 integration API workflow is documented in [docs/api/integration-apis.md](docs/api/integration-apis.md).
 
 ## AI Triage Service
 
@@ -133,6 +135,7 @@ python3 -m venv ../.venv
 - [Document Intelligence API](docs/api/document-intelligence.md)
 - [RAG Assistant API](docs/api/rag-assistant.md)
 - [Adjuster Workbench Frontend](docs/frontend/adjuster-workbench.md)
+- [Integration APIs](docs/api/integration-apis.md)
 - [Master Build Plan](docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md)
 
 ## Responsible AI Statement
