@@ -19,6 +19,8 @@ This folder contains project documentation that supports implementation, onboard
 13. [`api/document-intelligence.md`](api/document-intelligence.md) - Phase 7 document intelligence API contract.
 14. [`superpowers/plans/2026-06-26-phase-8-rag-adjuster-assistant.md`](superpowers/plans/2026-06-26-phase-8-rag-adjuster-assistant.md) - implementation plan for the RAG adjuster assistant.
 15. [`api/rag-assistant.md`](api/rag-assistant.md) - Phase 8 RAG assistant API contract.
+16. [`superpowers/plans/2026-06-26-phase-9-adjuster-workbench-frontend.md`](superpowers/plans/2026-06-26-phase-9-adjuster-workbench-frontend.md) - implementation plan for the Vue adjuster workbench.
+17. [`frontend/adjuster-workbench.md`](frontend/adjuster-workbench.md) - Phase 9 frontend runbook and demo story.
 
 ## Planned Documentation Areas
 
