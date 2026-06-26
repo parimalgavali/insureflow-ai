@@ -94,6 +94,7 @@ Recommended sequence:
 | 2026-06-26 | Opened Phase 8 pull request. | PR #8: `https://github.com/parimalgavali/insureflow-ai/pull/8` from `rag-adjuster-assistant` into `main`. |
 | 2026-06-26 | Started Phase 9 adjuster workbench frontend. | Branch `adjuster-workbench-frontend`; design and implementation plan created for the Vue workbench. |
 | 2026-06-26 | Implemented Phase 9 adjuster workbench frontend. | Added Vue 3/Vite/TypeScript frontend with claim queue, claim detail workspace, AI triage, document intelligence, RAG assistant, timeline, audit, human review modal, component tests, and frontend docs. |
+| 2026-06-26 | Verified Phase 9 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, RAG service 5 tests, ML package 3 tests, frontend 6 tests, and frontend production build. |
 
 ## Known Issues And Caveats
 
@@ -105,10 +106,11 @@ Recommended sequence:
 - Local Java is currently OpenJDK 26. The project is configured for Java 21 compatibility, and CI uses Temurin 21.
 - GitHub connector could not create a PR for this repository, returning `403 Resource not accessible by integration`; create the PR manually or fix GitHub app write permissions if this recurs.
 - Local commits have used the auto-detected Git identity `Parimal Gavali <parimal_gavali@MacBookPro.fritz.box>`. Configure `git config user.name` and `git config user.email` if a different public identity is desired before future commits.
+- Phase 9 frontend browser automation was limited locally: Playwright had no bundled browser installed, and system Chrome aborted under automation. Frontend unit tests and production build passed.
 
 ## Near-Term Next Steps
 
-1. Verify Phase 9 with the full repository test script and open the frontend pull request.
+1. Open and merge the Phase 9 pull request from `adjuster-workbench-frontend`.
 2. After Phase 9 merges, decide whether Phase 10 should focus on backend/frontend integration APIs or human review/audit persistence.
 3. Use local demo data first and add live backend integration after the UI workflow is stable.
 
