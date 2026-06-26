@@ -6,5 +6,6 @@ public enum ClaimEventType {
     STATUS_CHANGED,
     NOTE_ADDED,
     DOCUMENT_ADDED,
-    TRIAGE_COMPLETED
+    TRIAGE_COMPLETED,
+    RESERVE_UPDATED
 }

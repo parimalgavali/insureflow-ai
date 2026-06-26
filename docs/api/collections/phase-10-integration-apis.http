@@ -1,0 +1,100 @@
+@host = http://localhost:8080
+@customerNumber = CUST-INT-1001
+@policyNumber = POL-INT-1001
+@claimNumber = CLM-REPLACE-ME
+
+### Phase 10: Sync policy from an external policy system
+POST {{host}}/integration/v1/policies/sync
+Content-Type: application/json
+
+{
+  "sourceSystem": "PolicyCenter",
+  "externalReference": "PC-POL-1001",
+  "customer": {
+    "customerNumber": "{{customerNumber}}",
+    "firstName": "Avery",
+    "lastName": "Stone",
+    "email": "avery.stone@example.test",
+    "country": "US"
+  },
+  "policy": {
+    "policyNumber": "{{policyNumber}}",
+    "policyType": "PERSONAL_AUTO",
+    "effectiveDate": "2026-01-01",
+    "expirationDate": "2027-01-01",
+    "premiumAmount": 1425.00,
+    "currency": "USD",
+    "activate": true
+  },
+  "coverages": [
+    {
+      "coverageCode": "COLLISION",
+      "coverageName": "Collision Coverage",
+      "coverageType": "COLLISION",
+      "limitAmount": 30000.00,
+      "deductibleAmount": 500.00,
+      "effectiveDate": "2026-01-01",
+      "expirationDate": "2027-01-01",
+      "exclusions": "[]"
+    }
+  ]
+}
+
+### Phase 10: Create claim from an external claim system
+POST {{host}}/integration/v1/claims
+Content-Type: application/json
+
+{
+  "sourceSystem": "ClaimCenter",
+  "externalReference": "CC-CLAIM-1001",
+  "claim": {
+    "policyNumber": "{{policyNumber}}",
+    "claimType": "AUTO_COLLISION",
+    "lossDate": "2026-06-24",
+    "reportedAt": "2026-06-25T10:15:30Z",
+    "lossLocation": "Columbus, OH",
+    "description": "Rear-end collision reported through integration API.",
+    "estimatedLossAmount": 9200.00
+  }
+}
+
+### Phase 10: Lookup claim
+GET {{host}}/integration/v1/claims/{{claimNumber}}
+
+### Phase 10: Move claim to review
+POST {{host}}/integration/v1/claims/{{claimNumber}}/status
+Content-Type: application/json
+
+{
+  "sourceSystem": "ClaimCenter",
+  "externalReference": "CC-STATUS-1001",
+  "targetStatus": "UNDER_REVIEW",
+  "reason": "Integration queue assignment"
+}
+
+### Phase 10: Record reserve update
+POST {{host}}/integration/v1/claims/{{claimNumber}}/reserves
+Content-Type: application/json
+
+{
+  "sourceSystem": "ClaimCenter",
+  "externalReference": "CC-RES-1001",
+  "coverageCode": "COLLISION",
+  "reserveAmount": 8500.00,
+  "currency": "USD",
+  "reason": "Initial collision reserve"
+}
+
+### Phase 10: Simulate claim-triaged webhook acknowledgement
+POST {{host}}/integration/v1/webhooks/claim-triaged
+Content-Type: application/json
+
+{
+  "sourceSystem": "TriageService",
+  "externalReference": "TRIAGE-1001",
+  "claimNumber": "{{claimNumber}}",
+  "severityLabel": "HIGH",
+  "fraudRiskLabel": "MEDIUM",
+  "recommendedQueue": "SENIOR_ADJUSTER",
+  "humanReviewRequired": true
+}

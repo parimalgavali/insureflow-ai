@@ -21,6 +21,8 @@ This folder contains project documentation that supports implementation, onboard
 15. [`api/rag-assistant.md`](api/rag-assistant.md) - Phase 8 RAG assistant API contract.
 16. [`superpowers/plans/2026-06-26-phase-9-adjuster-workbench-frontend.md`](superpowers/plans/2026-06-26-phase-9-adjuster-workbench-frontend.md) - implementation plan for the Vue adjuster workbench.
 17. [`frontend/adjuster-workbench.md`](frontend/adjuster-workbench.md) - Phase 9 frontend runbook and demo story.
+18. [`superpowers/plans/2026-06-26-phase-10-guidewire-integration-apis.md`](superpowers/plans/2026-06-26-phase-10-guidewire-integration-apis.md) - implementation plan for Guidewire-inspired integration APIs.
+19. [`api/integration-apis.md`](api/integration-apis.md) - Phase 10 integration API contract and examples.
 
 ## Planned Documentation Areas
 
