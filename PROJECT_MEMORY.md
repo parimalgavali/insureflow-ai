@@ -99,6 +99,7 @@ Recommended sequence:
 | 2026-06-26 | Started Phase 10 Guidewire-inspired integration APIs. | Branch `integration-apis`; design and implementation plan created for `/integration/v1` policy sync, claim create, status update, reserve update, claim lookup, and webhook simulation. |
 | 2026-06-26 | Implemented Phase 10 Guidewire-inspired integration APIs. | Added `/integration/v1` Spring Boot facade, `integration_events`, `claim_reserves`, policy sync, claim create, claim lookup, claim status update, reserve update, claim-triaged webhook simulation, API docs, and HTTP collection. |
 | 2026-06-26 | Verified Phase 10 locally. | `./scripts/run-tests.sh` passed: backend 33 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, RAG service 5 tests, ML package 3 tests, frontend 6 tests, and frontend production build. `git diff --check` passed. |
+| 2026-06-26 | Opened Phase 10 pull request. | PR #10: `https://github.com/parimalgavali/insureflow-ai/pull/10` from `integration-apis` into `main`. |
 
 ## Known Issues And Caveats
 
@@ -114,7 +115,7 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Open a pull request from `integration-apis` into `main`.
+1. Review and merge Phase 10 pull request #10 from `integration-apis`.
 2. After Phase 10 merges, proceed to Phase 11 security, audit, and AI governance.
 3. Phase 11 should add JWT/roles, correlation IDs, structured audit logging, AI decision audit, and human override reason enforcement.
 
