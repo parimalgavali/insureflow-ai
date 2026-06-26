@@ -66,3 +66,7 @@ if [ -d "$ROOT_DIR/ml" ]; then
 
   (cd "$ROOT_DIR/ml" && "$PYTHON_BIN" -m pytest)
 fi
+
+if [ -f "$ROOT_DIR/frontend/package.json" ]; then
+  (cd "$ROOT_DIR/frontend" && npm test -- --run && npm run build)
+fi
