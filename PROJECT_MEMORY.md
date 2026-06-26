@@ -92,6 +92,7 @@ Recommended sequence:
 | 2026-06-26 | Implemented Phase 8 RAG adjuster assistant service. | Added `ai-services/rag-service` with ingestion, chunking, in-memory retrieval, grounded answers, source references, missing-evidence behavior, audit, tests, and API docs. |
 | 2026-06-26 | Verified Phase 8 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, RAG service 5 tests, and ML package 3 tests. |
 | 2026-06-26 | Opened Phase 8 pull request. | PR #8: `https://github.com/parimalgavali/insureflow-ai/pull/8` from `rag-adjuster-assistant` into `main`. |
+| 2026-06-26 | Started Phase 9 adjuster workbench frontend. | Branch `adjuster-workbench-frontend`; design and implementation plan created for the Vue workbench. |
 
 ## Known Issues And Caveats
 
@@ -106,9 +107,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Open and merge the Phase 8 pull request from `rag-adjuster-assistant`.
-2. After Phase 8 merges, start Phase 9 adjuster workbench frontend planning.
-3. Add pgvector persistence only after the offline RAG contract is stable and the UI/API needs are clear.
+1. Implement Phase 9 on `adjuster-workbench-frontend`.
+2. Keep the first screen as a usable adjuster workbench, not a marketing page.
+3. Use local demo data first and add live backend integration after the UI workflow is stable.
 
 ## Memory Update Rules
 
