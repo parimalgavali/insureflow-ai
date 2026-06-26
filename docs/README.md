@@ -17,6 +17,8 @@ This folder contains project documentation that supports implementation, onboard
 11. [`ml/fraud-risk-model-card.md`](ml/fraud-risk-model-card.md) - fraud-risk model card.
 12. [`superpowers/plans/2026-06-26-phase-7-llm-document-intelligence.md`](superpowers/plans/2026-06-26-phase-7-llm-document-intelligence.md) - implementation plan for document intelligence.
 13. [`api/document-intelligence.md`](api/document-intelligence.md) - Phase 7 document intelligence API contract.
+14. [`superpowers/plans/2026-06-26-phase-8-rag-adjuster-assistant.md`](superpowers/plans/2026-06-26-phase-8-rag-adjuster-assistant.md) - implementation plan for the RAG adjuster assistant.
+15. [`api/rag-assistant.md`](api/rag-assistant.md) - Phase 8 RAG assistant API contract.
 
 ## Planned Documentation Areas
 

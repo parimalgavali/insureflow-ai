@@ -88,6 +88,10 @@ Recommended sequence:
 | 2026-06-26 | Implemented Phase 7 document intelligence service. | Added `ai-services/document-intelligence-service` with extraction, missing-document checks, summaries, prompt registry, retry-on-invalid-JSON, in-memory audit, tests, and API docs. |
 | 2026-06-26 | Verified Phase 7 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, and ML package 3 tests. |
 | 2026-06-26 | Opened Phase 7 pull request. | PR #7: `https://github.com/parimalgavali/insureflow-ai/pull/7` from `llm-document-intelligence` into `main`. |
+| 2026-06-26 | Started Phase 8 RAG adjuster assistant. | Branch `rag-adjuster-assistant`; design and implementation plan created for the offline RAG service. |
+| 2026-06-26 | Implemented Phase 8 RAG adjuster assistant service. | Added `ai-services/rag-service` with ingestion, chunking, in-memory retrieval, grounded answers, source references, missing-evidence behavior, audit, tests, and API docs. |
+| 2026-06-26 | Verified Phase 8 locally. | `./scripts/run-tests.sh` passed: backend 31 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, RAG service 5 tests, and ML package 3 tests. |
+| 2026-06-26 | Opened Phase 8 pull request. | PR #8: `https://github.com/parimalgavali/insureflow-ai/pull/8` from `rag-adjuster-assistant` into `main`. |
 
 ## Known Issues And Caveats
 
@@ -102,9 +106,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Open and merge the Phase 7 pull request from `llm-document-intelligence`.
-2. After Phase 7 merges, start Phase 8 RAG adjuster assistant.
-3. Use the Phase 7 document intelligence service contract as the input boundary for Phase 8 ingestion and retrieval planning.
+1. Open and merge the Phase 8 pull request from `rag-adjuster-assistant`.
+2. After Phase 8 merges, start Phase 9 adjuster workbench frontend planning.
+3. Add pgvector persistence only after the offline RAG contract is stable and the UI/API needs are clear.
 
 ## Memory Update Rules
 

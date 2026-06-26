@@ -1,0 +1,1 @@
+"""RAG assistant service package."""

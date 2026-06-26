@@ -6,7 +6,7 @@ It is a professional portfolio project for demonstrating insurance domain unders
 
 ## Status
 
-The repository contains local infrastructure, synthetic data generation, backend business workflows for policy management and claims intake, the Phase 5 rule-based AI triage service, Phase 6 local ML triage model training, and Phase 7 document intelligence service.
+The repository contains local infrastructure, synthetic data generation, backend business workflows for policy management and claims intake, the Phase 5 rule-based AI triage service, Phase 6 local ML triage model training, Phase 7 document intelligence service, and Phase 8 offline RAG adjuster assistant.
 
 ## Important Boundary
 
@@ -90,6 +90,17 @@ python3 -m uvicorn document_intelligence.app:app --reload --port 8002
 
 Document intelligence is documented in [docs/api/document-intelligence.md](docs/api/document-intelligence.md).
 
+## RAG Assistant Service
+
+```bash
+cd ai-services/rag-service
+python3 -m pip install -e ".[test]"
+python3 -m pytest
+python3 -m uvicorn rag_service.app:app --reload --port 8003
+```
+
+RAG assistant behavior is documented in [docs/api/rag-assistant.md](docs/api/rag-assistant.md).
+
 ## Synthetic Data
 
 ```bash
@@ -108,6 +119,7 @@ python3 -m venv ../.venv
 - [AI Triage API](docs/api/ai-triage.md)
 - [ML Model Training](docs/ml/model-training.md)
 - [Document Intelligence API](docs/api/document-intelligence.md)
+- [RAG Assistant API](docs/api/rag-assistant.md)
 - [Master Build Plan](docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md)
 
 ## Responsible AI Statement
