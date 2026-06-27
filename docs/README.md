@@ -23,6 +23,8 @@ This folder contains project documentation that supports implementation, onboard
 17. [`frontend/adjuster-workbench.md`](frontend/adjuster-workbench.md) - Phase 9 frontend runbook and demo story.
 18. [`superpowers/plans/2026-06-26-phase-10-guidewire-integration-apis.md`](superpowers/plans/2026-06-26-phase-10-guidewire-integration-apis.md) - implementation plan for Guidewire-inspired integration APIs.
 19. [`api/integration-apis.md`](api/integration-apis.md) - Phase 10 integration API contract and examples.
+20. [`superpowers/plans/2026-06-28-phase-11-security-audit-governance.md`](superpowers/plans/2026-06-28-phase-11-security-audit-governance.md) - implementation plan for security, audit, and governance.
+21. [`api/security-audit-governance.md`](api/security-audit-governance.md) - Phase 11 security, audit, governance, and human review runbook.
 
 ## Planned Documentation Areas
 

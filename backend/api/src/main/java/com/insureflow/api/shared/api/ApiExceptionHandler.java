@@ -3,6 +3,7 @@ package com.insureflow.api.shared.api;
 import com.insureflow.api.shared.error.AiServiceUnavailableException;
 import com.insureflow.api.shared.error.BusinessRuleViolationException;
 import com.insureflow.api.shared.error.ResourceNotFoundException;
+import com.insureflow.api.audit.CorrelationIdFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.stream.Collectors;
@@ -70,7 +71,12 @@ public class ApiExceptionHandler {
                         status.getReasonPhrase(),
                         message,
                         request.getRequestURI(),
-                        request.getHeader("X-Correlation-Id")));
+                        correlationId(request)));
+    }
+
+    private String correlationId(HttpServletRequest request) {
+        Object correlationId = request.getAttribute(CorrelationIdFilter.ATTRIBUTE);
+        return correlationId == null ? request.getHeader(CorrelationIdFilter.HEADER) : correlationId.toString();
     }
 
     private String formatFieldError(FieldError error) {

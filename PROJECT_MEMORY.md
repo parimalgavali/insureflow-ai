@@ -101,6 +101,7 @@ Recommended sequence:
 | 2026-06-26 | Verified Phase 10 locally. | `./scripts/run-tests.sh` passed: backend 33 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, RAG service 5 tests, ML package 3 tests, frontend 6 tests, and frontend production build. `git diff --check` passed. |
 | 2026-06-26 | Opened Phase 10 pull request. | PR #10: `https://github.com/parimalgavali/insureflow-ai/pull/10` from `integration-apis` into `main`. |
 | 2026-06-28 | Started Phase 11 security, audit, and governance. | Branch `security-audit-governance`; design and implementation plan created for JWT roles, audit logging, correlation IDs, AI decision snapshots, human review override enforcement, and governance registry views. |
+| 2026-06-28 | Implemented Phase 11 security, audit, and governance controls. | Added JWT auth/RBAC, correlation IDs, audit logs, AI triage input/output snapshots, governance registry endpoints, human review override enforcement, structured logging, tests, and `docs/api/security-audit-governance.md`. |
 
 ## Known Issues And Caveats
 
@@ -116,7 +117,7 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Implement Phase 11 on branch `security-audit-governance`.
+1. Open and merge the Phase 11 pull request from branch `security-audit-governance`.
 2. After Phase 11 merges, proceed to Phase 12 cloud deployment.
 3. Phase 12 should prepare Docker/cloud configuration and a public or semi-public deployment path.
 

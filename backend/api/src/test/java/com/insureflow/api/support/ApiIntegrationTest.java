@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import com.insureflow.api.security.InsureFlowRole;
+import com.insureflow.api.security.JwtService;
+import java.util.Set;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.annotation.DirtiesContext;
@@ -26,6 +29,9 @@ public abstract class ApiIntegrationTest {
     @Autowired
     protected TestRestTemplate restTemplate;
 
+    @Autowired(required = false)
+    private JwtService jwtService;
+
     protected String baseUrl;
 
     @DynamicPropertySource
@@ -38,5 +44,14 @@ public abstract class ApiIntegrationTest {
     @BeforeEach
     void setBaseUrl() {
         baseUrl = "http://localhost:" + port + "/api/v1";
+        if (jwtService != null && restTemplate.getRestTemplate().getInterceptors().isEmpty()) {
+            String token = jwtService.createToken("integration-test-admin", Set.of(InsureFlowRole.ADMIN));
+            restTemplate.getRestTemplate().getInterceptors().add((request, body, execution) -> {
+                if (!request.getHeaders().containsKey("Authorization")) {
+                    request.getHeaders().setBearerAuth(token);
+                }
+                return execution.execute(request, body);
+            });
+        }
     }
 }

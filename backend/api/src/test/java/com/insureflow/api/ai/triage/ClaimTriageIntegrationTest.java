@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.ParameterizedTypeReference;
@@ -20,6 +21,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 class ClaimTriageIntegrationTest extends ApiIntegrationTest {
 
@@ -27,6 +29,9 @@ class ClaimTriageIntegrationTest extends ApiIntegrationTest {
             new ParameterizedTypeReference<>() {};
     private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_MAP_RESPONSE =
             new ParameterizedTypeReference<>() {};
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void runTriagePersistsResultAndRecordsTimelineEvent() {
@@ -67,6 +72,18 @@ class ClaimTriageIntegrationTest extends ApiIntegrationTest {
                 .containsEntry("claimNumber", claimNumber)
                 .containsEntry("severityLabel", "HIGH")
                 .containsEntry("recommendedQueue", "COMPLEX_CLAIMS");
+
+        Map<String, Object> snapshots = jdbcTemplate.queryForMap(
+                """
+                select input_snapshot::text as input_snapshot,
+                       output_snapshot::text as output_snapshot
+                from ai_triage_results atr
+                join claims c on c.id = atr.claim_id
+                where c.claim_number = ?
+                """,
+                claimNumber);
+        assertThat((String) snapshots.get("input_snapshot")).contains("estimatedLossAmount");
+        assertThat((String) snapshots.get("output_snapshot")).contains("COMPLEX_CLAIMS");
     }
 
     private void createAutoPolicy(String customerNumber, String policyNumber) {

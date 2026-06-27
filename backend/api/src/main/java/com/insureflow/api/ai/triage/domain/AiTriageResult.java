@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -66,6 +67,14 @@ public class AiTriageResult extends BaseEntity {
 
     @Column(name = "human_review_required", nullable = false)
     private boolean humanReviewRequired;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "input_snapshot", nullable = false, columnDefinition = "jsonb")
+    private Map<String, Object> inputSnapshot = Map.of();
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "output_snapshot", nullable = false, columnDefinition = "jsonb")
+    private Map<String, Object> outputSnapshot = Map.of();
 
     public Claim getClaim() {
         return claim;
@@ -173,5 +182,21 @@ public class AiTriageResult extends BaseEntity {
 
     public void setHumanReviewRequired(boolean humanReviewRequired) {
         this.humanReviewRequired = humanReviewRequired;
+    }
+
+    public Map<String, Object> getInputSnapshot() {
+        return inputSnapshot;
+    }
+
+    public void setInputSnapshot(Map<String, Object> inputSnapshot) {
+        this.inputSnapshot = inputSnapshot;
+    }
+
+    public Map<String, Object> getOutputSnapshot() {
+        return outputSnapshot;
+    }
+
+    public void setOutputSnapshot(Map<String, Object> outputSnapshot) {
+        this.outputSnapshot = outputSnapshot;
     }
 }

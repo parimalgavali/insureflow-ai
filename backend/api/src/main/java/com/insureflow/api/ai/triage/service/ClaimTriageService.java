@@ -2,6 +2,7 @@ package com.insureflow.api.ai.triage.service;
 
 import com.insureflow.api.ai.triage.api.dto.ClaimTriageResponse;
 import com.insureflow.api.ai.triage.api.dto.TriageScoreBlock;
+import com.insureflow.api.ai.triage.api.dto.TriageScoreRequest;
 import com.insureflow.api.ai.triage.api.dto.TriageScoreResponse;
 import com.insureflow.api.ai.triage.client.TriageClient;
 import com.insureflow.api.ai.triage.domain.AiTriageResult;
@@ -15,6 +16,8 @@ import com.insureflow.api.shared.error.ResourceNotFoundException;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
@@ -27,25 +30,29 @@ public class ClaimTriageService {
     private final ClaimTriageFeatureAssembler featureAssembler;
     private final TriageClient triageClient;
     private final ClaimTimelineService claimTimelineService;
+    private final ObjectMapper objectMapper;
 
     public ClaimTriageService(
             ClaimRepository claimRepository,
             AiTriageResultRepository aiTriageResultRepository,
             ClaimTriageFeatureAssembler featureAssembler,
             TriageClient triageClient,
-            ClaimTimelineService claimTimelineService) {
+            ClaimTimelineService claimTimelineService,
+            ObjectMapper objectMapper) {
         this.claimRepository = claimRepository;
         this.aiTriageResultRepository = aiTriageResultRepository;
         this.featureAssembler = featureAssembler;
         this.triageClient = triageClient;
         this.claimTimelineService = claimTimelineService;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
     public ClaimTriageResponse runTriage(String claimNumber) {
         Claim claim = findClaim(claimNumber);
-        TriageScoreResponse score = scoreClaim(claim);
-        AiTriageResult result = aiTriageResultRepository.save(toEntity(claim, score));
+        TriageScoreRequest request = featureAssembler.assemble(claim);
+        TriageScoreResponse score = scoreClaim(request);
+        AiTriageResult result = aiTriageResultRepository.save(toEntity(claim, request, score));
         claimTimelineService.record(
                 claim,
                 ClaimEventType.TRIAGE_COMPLETED,
@@ -76,15 +83,15 @@ public class ClaimTriageService {
                 .orElseThrow(() -> new ResourceNotFoundException("Claim " + claimNumber + " was not found"));
     }
 
-    private TriageScoreResponse scoreClaim(Claim claim) {
+    private TriageScoreResponse scoreClaim(TriageScoreRequest request) {
         try {
-            return triageClient.score(featureAssembler.assemble(claim));
+            return triageClient.score(request);
         } catch (RestClientException exception) {
             throw new AiServiceUnavailableException("AI triage service is unavailable", exception);
         }
     }
 
-    private AiTriageResult toEntity(Claim claim, TriageScoreResponse score) {
+    private AiTriageResult toEntity(Claim claim, TriageScoreRequest request, TriageScoreResponse score) {
         AiTriageResult result = new AiTriageResult();
         result.setClaim(claim);
         result.setModelName(score.modelName());
@@ -99,7 +106,13 @@ public class ClaimTriageService {
         result.setReasonCodes(reasonCodes(score));
         result.setExplanation(score.explanation());
         result.setHumanReviewRequired(score.humanReviewRequired());
+        result.setInputSnapshot(toMap(request));
+        result.setOutputSnapshot(toMap(score));
         return result;
+    }
+
+    private Map<String, Object> toMap(Object value) {
+        return objectMapper.convertValue(value, new TypeReference<>() {});
     }
 
     private List<String> reasonCodes(TriageScoreResponse score) {
