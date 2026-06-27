@@ -102,6 +102,7 @@ Recommended sequence:
 | 2026-06-26 | Opened Phase 10 pull request. | PR #10: `https://github.com/parimalgavali/insureflow-ai/pull/10` from `integration-apis` into `main`. |
 | 2026-06-28 | Started Phase 11 security, audit, and governance. | Branch `security-audit-governance`; design and implementation plan created for JWT roles, audit logging, correlation IDs, AI decision snapshots, human review override enforcement, and governance registry views. |
 | 2026-06-28 | Implemented Phase 11 security, audit, and governance controls. | Added JWT auth/RBAC, correlation IDs, audit logs, AI triage input/output snapshots, governance registry endpoints, human review override enforcement, structured logging, tests, and `docs/api/security-audit-governance.md`. |
+| 2026-06-28 | Opened Phase 11 pull request. | PR #11: `https://github.com/parimalgavali/insureflow-ai/pull/11` from `security-audit-governance` into `main`. |
 
 ## Known Issues And Caveats
 
