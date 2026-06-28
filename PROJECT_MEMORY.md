@@ -106,6 +106,7 @@ Recommended sequence:
 | 2026-06-28 | Started Phase 12 cloud deployment readiness. | Branch `cloud-deployment`; design and implementation plan created for Docker packaging, local app Compose, Azure Container Apps templates, deployment validation, and runbook docs. |
 | 2026-06-28 | Implemented Phase 12 cloud deployment readiness. | Added Dockerfiles, `.dockerignore` files, app-profile Compose services, smoke tests, Azure Container Apps Bicep templates, GitHub deployment validation workflow, and cloud deployment runbook. |
 | 2026-06-28 | Verified Phase 12 locally. | `./scripts/run-tests.sh`, `docker compose --profile app config`, `bash -n scripts/smoke-test-containers.sh`, `docker compose --profile app build`, real app-profile container smoke checks, and `git diff --check` passed. Azure Bicep build was skipped locally because Azure CLI is not installed. |
+| 2026-06-28 | Opened Phase 12 pull request. | PR #12: `https://github.com/parimalgavali/insureflow-ai/pull/12` from `cloud-deployment` into `main`. |
 
 ## Known Issues And Caveats
 
