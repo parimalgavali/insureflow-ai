@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `integration-apis`
+- **Current branch:** `security-audit-governance`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -100,6 +100,9 @@ Recommended sequence:
 | 2026-06-26 | Implemented Phase 10 Guidewire-inspired integration APIs. | Added `/integration/v1` Spring Boot facade, `integration_events`, `claim_reserves`, policy sync, claim create, claim lookup, claim status update, reserve update, claim-triaged webhook simulation, API docs, and HTTP collection. |
 | 2026-06-26 | Verified Phase 10 locally. | `./scripts/run-tests.sh` passed: backend 33 tests, synthetic generator 10 tests, triage service 10 tests, document intelligence service 7 tests, RAG service 5 tests, ML package 3 tests, frontend 6 tests, and frontend production build. `git diff --check` passed. |
 | 2026-06-26 | Opened Phase 10 pull request. | PR #10: `https://github.com/parimalgavali/insureflow-ai/pull/10` from `integration-apis` into `main`. |
+| 2026-06-28 | Started Phase 11 security, audit, and governance. | Branch `security-audit-governance`; design and implementation plan created for JWT roles, audit logging, correlation IDs, AI decision snapshots, human review override enforcement, and governance registry views. |
+| 2026-06-28 | Implemented Phase 11 security, audit, and governance controls. | Added JWT auth/RBAC, correlation IDs, audit logs, AI triage input/output snapshots, governance registry endpoints, human review override enforcement, structured logging, tests, and `docs/api/security-audit-governance.md`. |
+| 2026-06-28 | Opened Phase 11 pull request. | PR #11: `https://github.com/parimalgavali/insureflow-ai/pull/11` from `security-audit-governance` into `main`. |
 
 ## Known Issues And Caveats
 
@@ -115,9 +118,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Review and merge Phase 10 pull request #10 from `integration-apis`.
-2. After Phase 10 merges, proceed to Phase 11 security, audit, and AI governance.
-3. Phase 11 should add JWT/roles, correlation IDs, structured audit logging, AI decision audit, and human override reason enforcement.
+1. Open and merge the Phase 11 pull request from branch `security-audit-governance`.
+2. After Phase 11 merges, proceed to Phase 12 cloud deployment.
+3. Phase 12 should prepare Docker/cloud configuration and a public or semi-public deployment path.
 
 ## Memory Update Rules
 
