@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 
-from triage_service.ml_models import score_with_optional_ml
+from triage_service.ml_models import _default_artifacts_dir, score_with_optional_ml
 from triage_service.schemas import (
     ClaimFeatures,
     PolicyFeatures,
@@ -41,6 +41,12 @@ def test_score_with_optional_ml_falls_back_when_artifacts_are_missing(tmp_path):
     assert result.model_name == "rule-based-triage"
     assert result.model_version == "rules-v1"
     assert result.severity.label == "HIGH"
+
+
+def test_default_artifacts_dir_can_be_overridden(monkeypatch, tmp_path):
+    monkeypatch.setenv("INSUREFLOW_ML_ARTIFACTS_DIR", str(tmp_path / "artifacts"))
+
+    assert _default_artifacts_dir() == tmp_path / "artifacts"
 
 
 def test_score_with_optional_ml_uses_loaded_artifacts(tmp_path):

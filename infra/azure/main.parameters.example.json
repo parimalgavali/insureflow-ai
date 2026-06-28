@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appName": {
+      "value": "insureflow-ai"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "apiImage": {
+      "value": "ghcr.io/parimalgavali/insureflow-ai/api:latest"
+    },
+    "frontendImage": {
+      "value": "ghcr.io/parimalgavali/insureflow-ai/frontend:latest"
+    },
+    "triageImage": {
+      "value": "ghcr.io/parimalgavali/insureflow-ai/triage-service:latest"
+    },
+    "documentIntelligenceImage": {
+      "value": "ghcr.io/parimalgavali/insureflow-ai/document-intelligence-service:latest"
+    },
+    "ragImage": {
+      "value": "ghcr.io/parimalgavali/insureflow-ai/rag-service:latest"
+    },
+    "postgresAdminLogin": {
+      "value": "insureflowadmin"
+    },
+    "postgresAdminPassword": {
+      "value": "replace-with-a-secure-password"
+    },
+    "jwtIssuer": {
+      "value": "insureflow-ai"
+    },
+    "jwtSecret": {
+      "value": "replace-with-a-long-random-secret"
+    }
+  }
+}

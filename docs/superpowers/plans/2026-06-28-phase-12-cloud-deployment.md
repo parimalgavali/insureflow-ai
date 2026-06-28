@@ -13,6 +13,7 @@
 ## File Map
 
 - Create `backend/api/Dockerfile`: multi-stage Maven build and JRE runtime image for the Spring Boot API.
+- Modify `backend/api/pom.xml`: add Spring Boot jar repackaging for executable container runtime.
 - Create `ai-services/triage-service/Dockerfile`: Python service runtime image for triage.
 - Create `ai-services/document-intelligence-service/Dockerfile`: Python service runtime image for document intelligence.
 - Create `ai-services/rag-service/Dockerfile`: Python service runtime image for RAG.
@@ -31,41 +32,47 @@
 
 **Files:**
 - Create: `backend/api/Dockerfile`
+- Modify: `backend/api/pom.xml`
 
 - [ ] **Step 1: Write build expectation**
 
 Run before implementation:
 
 ```bash
-docker build -f backend/api/Dockerfile -t insureflow-api:test backend/api
+docker build -f backend/api/Dockerfile -t insureflow-api:test .
 ```
 
 Expected: fails because `backend/api/Dockerfile` does not exist.
 
 - [ ] **Step 2: Add the backend Dockerfile**
 
-Create a multi-stage Dockerfile that builds with Maven and runs the generated Spring Boot jar on a JRE image:
+Create a multi-stage Dockerfile that builds from the repository root with Maven and runs the generated Spring Boot jar on a JRE image:
 
 ```dockerfile
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
-COPY pom.xml .
-COPY src ./src
-RUN mvn -q -DskipTests package
+COPY backend/pom.xml backend/pom.xml
+COPY backend/api/pom.xml backend/api/pom.xml
+COPY backend/api/src backend/api/src
+WORKDIR /workspace/backend
+RUN mvn -q -pl api -am -DskipTests package
+RUN find api/target -maxdepth 1 -name 'insureflow-api-*.jar' ! -name '*.original' -exec cp {} /tmp/insureflow-api.jar \;
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /workspace/target/*.jar /app/insureflow-api.jar
+COPY --from=build /tmp/insureflow-api.jar /app/insureflow-api.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/insureflow-api.jar"]
 ```
+
+Ensure `backend/api/pom.xml` applies the Spring Boot Maven plugin so the packaged jar has an executable manifest.
 
 - [ ] **Step 3: Verify backend image build**
 
 Run:
 
 ```bash
-docker build -f backend/api/Dockerfile -t insureflow-api:test backend/api
+docker build -f backend/api/Dockerfile -t insureflow-api:test .
 ```
 
 Expected: image builds successfully.
