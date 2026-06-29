@@ -91,7 +91,7 @@ bash -n scripts/load-smoke-test.sh
 git diff --check
 ```
 
-- [ ] Commit and open a PR:
+- [x] Commit and open a PR:
 
 ```bash
 git add .
