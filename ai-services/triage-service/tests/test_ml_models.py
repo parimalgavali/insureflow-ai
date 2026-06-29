@@ -1,6 +1,8 @@
 from pathlib import Path
 import sys
 
+import pandas as pd
+
 from triage_service.ml_models import _default_artifacts_dir, score_with_optional_ml
 from triage_service.schemas import (
     ClaimFeatures,
@@ -52,11 +54,9 @@ def test_default_artifacts_dir_can_be_overridden(monkeypatch, tmp_path):
 def test_score_with_optional_ml_uses_loaded_artifacts(tmp_path):
     repo_root = Path(__file__).resolve().parents[3]
     sys.path.append(str(repo_root / "ml"))
-    from insureflow_ml.features import load_training_frame
     from insureflow_ml.training import train_all
 
-    frame = load_training_frame(repo_root / "data" / "sample")
-    train_all(frame, tmp_path, random_state=13)
+    train_all(_training_frame(), tmp_path, random_state=13)
 
     result = score_with_optional_ml(make_request(), artifacts_dir=tmp_path)
 
@@ -66,3 +66,26 @@ def test_score_with_optional_ml_uses_loaded_artifacts(tmp_path):
     assert result.severity.label in {"LOW", "MEDIUM", "HIGH"}
     assert result.fraud.label in {"LOW", "MEDIUM", "HIGH"}
     assert result.litigation.reason_codes
+
+
+def _training_frame() -> pd.DataFrame:
+    labels = ["LOW", "MEDIUM", "HIGH"] * 4
+    return pd.DataFrame([
+        {
+            "claim_type": "AUTO_COLLISION" if index % 2 == 0 else "GLASS_DAMAGE",
+            "estimated_damage_eur": 8000 + index * 3500,
+            "injury_reported": index % 3 == 0,
+            "third_party_involved": index % 2 == 0,
+            "police_report_available": index % 4 != 0,
+            "loss_report_delay_days": index + 1,
+            "policy_age_days": 120 + index * 15,
+            "prior_claims_count": index % 3,
+            "product_type": "PERSONAL_AUTO" if index % 2 == 0 else "HOME",
+            "annual_premium_eur": 900 + index * 110,
+            "deductible_eur": 250 + (index % 3) * 250,
+            "coverage_limit_eur": 25000 + (index % 4) * 25000,
+            "severity_label": labels[index],
+            "fraud_label": labels[-index - 1],
+        }
+        for index in range(12)
+    ])
