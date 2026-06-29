@@ -27,6 +27,8 @@ This folder contains project documentation that supports implementation, onboard
 21. [`api/security-audit-governance.md`](api/security-audit-governance.md) - Phase 11 security, audit, governance, and human review runbook.
 22. [`superpowers/plans/2026-06-28-phase-12-cloud-deployment.md`](superpowers/plans/2026-06-28-phase-12-cloud-deployment.md) - implementation plan for cloud deployment readiness.
 23. [`deployment/cloud-deployment.md`](deployment/cloud-deployment.md) - Phase 12 local container demo and Azure deployment runbook.
+24. [`superpowers/specs/2026-06-29-phase-13-testing-quality-observability-design.md`](superpowers/specs/2026-06-29-phase-13-testing-quality-observability-design.md) - design for quality gates, coverage, observability, and load smoke checks.
+25. [`superpowers/plans/2026-06-29-phase-13-testing-quality-observability.md`](superpowers/plans/2026-06-29-phase-13-testing-quality-observability.md) - implementation plan for Phase 13 testing, quality, and observability.
 
 ## Planned Documentation Areas
 
