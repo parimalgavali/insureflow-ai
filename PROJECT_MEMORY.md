@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `security-audit-governance`
+- **Current branch:** `cloud-deployment`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -103,6 +103,10 @@ Recommended sequence:
 | 2026-06-28 | Started Phase 11 security, audit, and governance. | Branch `security-audit-governance`; design and implementation plan created for JWT roles, audit logging, correlation IDs, AI decision snapshots, human review override enforcement, and governance registry views. |
 | 2026-06-28 | Implemented Phase 11 security, audit, and governance controls. | Added JWT auth/RBAC, correlation IDs, audit logs, AI triage input/output snapshots, governance registry endpoints, human review override enforcement, structured logging, tests, and `docs/api/security-audit-governance.md`. |
 | 2026-06-28 | Opened Phase 11 pull request. | PR #11: `https://github.com/parimalgavali/insureflow-ai/pull/11` from `security-audit-governance` into `main`. |
+| 2026-06-28 | Started Phase 12 cloud deployment readiness. | Branch `cloud-deployment`; design and implementation plan created for Docker packaging, local app Compose, Azure Container Apps templates, deployment validation, and runbook docs. |
+| 2026-06-28 | Implemented Phase 12 cloud deployment readiness. | Added Dockerfiles, `.dockerignore` files, app-profile Compose services, smoke tests, Azure Container Apps Bicep templates, GitHub deployment validation workflow, and cloud deployment runbook. |
+| 2026-06-28 | Verified Phase 12 locally. | `./scripts/run-tests.sh`, `docker compose --profile app config`, `bash -n scripts/smoke-test-containers.sh`, `docker compose --profile app build`, real app-profile container smoke checks, and `git diff --check` passed. Azure Bicep build was skipped locally because Azure CLI is not installed. |
+| 2026-06-28 | Opened Phase 12 pull request. | PR #12: `https://github.com/parimalgavali/insureflow-ai/pull/12` from `cloud-deployment` into `main`. |
 
 ## Known Issues And Caveats
 
@@ -115,12 +119,13 @@ Recommended sequence:
 - GitHub connector could not create a PR for this repository, returning `403 Resource not accessible by integration`; create the PR manually or fix GitHub app write permissions if this recurs.
 - Local commits have used the auto-detected Git identity `Parimal Gavali <parimal_gavali@MacBookPro.fritz.box>`. Configure `git config user.name` and `git config user.email` if a different public identity is desired before future commits.
 - Phase 9 frontend browser automation was limited locally: Playwright had no bundled browser installed, and system Chrome aborted under automation. Frontend unit tests and production build passed.
+- Phase 12 Azure Bicep syntax was not locally compiled because Azure CLI is not installed in this workspace. The deployment validation workflow skips Bicep compilation when `az` is unavailable.
 
 ## Near-Term Next Steps
 
-1. Open and merge the Phase 11 pull request from branch `security-audit-governance`.
-2. After Phase 11 merges, proceed to Phase 12 cloud deployment.
-3. Phase 12 should prepare Docker/cloud configuration and a public or semi-public deployment path.
+1. Open and merge the Phase 12 pull request from branch `cloud-deployment`.
+2. After Phase 12 merges, proceed to Phase 13 testing, quality, and observability.
+3. Phase 13 should add coverage reporting, dependency/security scanning, local observability, and load-test smoke coverage.
 
 ## Memory Update Rules
 

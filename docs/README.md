@@ -25,6 +25,8 @@ This folder contains project documentation that supports implementation, onboard
 19. [`api/integration-apis.md`](api/integration-apis.md) - Phase 10 integration API contract and examples.
 20. [`superpowers/plans/2026-06-28-phase-11-security-audit-governance.md`](superpowers/plans/2026-06-28-phase-11-security-audit-governance.md) - implementation plan for security, audit, and governance.
 21. [`api/security-audit-governance.md`](api/security-audit-governance.md) - Phase 11 security, audit, governance, and human review runbook.
+22. [`superpowers/plans/2026-06-28-phase-12-cloud-deployment.md`](superpowers/plans/2026-06-28-phase-12-cloud-deployment.md) - implementation plan for cloud deployment readiness.
+23. [`deployment/cloud-deployment.md`](deployment/cloud-deployment.md) - Phase 12 local container demo and Azure deployment runbook.
 
 ## Planned Documentation Areas
 

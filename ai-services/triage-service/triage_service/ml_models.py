@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,7 +12,19 @@ from triage_service.rules import score_triage
 from triage_service.schemas import RiskLabel, ScoreBlock, TriageScoreRequest, TriageScoreResponse
 
 
-DEFAULT_ARTIFACTS_DIR = Path(__file__).resolve().parents[3] / "ml" / "artifacts"
+def _default_artifacts_dir() -> Path:
+    configured = os.getenv("INSUREFLOW_ML_ARTIFACTS_DIR")
+    if configured:
+        return Path(configured)
+
+    module_path = Path(__file__).resolve()
+    for parent in module_path.parents:
+        if (parent / "ml").is_dir():
+            return parent / "ml" / "artifacts"
+    return Path("/app/ml/artifacts")
+
+
+DEFAULT_ARTIFACTS_DIR = _default_artifacts_dir()
 LABELS = ["LOW", "MEDIUM", "HIGH"]
 FEATURE_COLUMNS = [
     "claim_type",

@@ -1,0 +1,54 @@
+name: Deployment Validation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/deployment-validation.yml"
+      - ".dockerignore"
+      - "docker-compose.yml"
+      - "backend/api/Dockerfile"
+      - "ai-services/**/Dockerfile"
+      - "ai-services/**/.dockerignore"
+      - "frontend/Dockerfile"
+      - "frontend/.dockerignore"
+      - "frontend/nginx.conf"
+      - "infra/azure/**"
+      - "scripts/smoke-test-containers.sh"
+  workflow_dispatch:
+
+jobs:
+  validate-deployment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -f backend/api/Dockerfile -t insureflow-api:ci .
+
+      - name: Build triage service image
+        run: docker build -f ai-services/triage-service/Dockerfile -t insureflow-triage:ci ai-services/triage-service
+
+      - name: Build document intelligence service image
+        run: docker build -f ai-services/document-intelligence-service/Dockerfile -t insureflow-document-intelligence:ci ai-services/document-intelligence-service
+
+      - name: Build RAG service image
+        run: docker build -f ai-services/rag-service/Dockerfile -t insureflow-rag:ci ai-services/rag-service
+
+      - name: Build frontend image
+        run: docker build -f frontend/Dockerfile -t insureflow-frontend:ci frontend
+
+      - name: Validate Compose app profile
+        run: docker compose --profile app config
+
+      - name: Validate smoke script syntax
+        run: bash -n scripts/smoke-test-containers.sh
+
+      - name: Validate Bicep template when Azure CLI is available
+        run: |
+          if command -v az >/dev/null 2>&1; then
+            az bicep build --file infra/azure/main.bicep
+          else
+            echo "Azure CLI not available on this runner; skipping Bicep build."
+          fi
