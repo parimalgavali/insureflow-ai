@@ -50,11 +50,12 @@ def test_default_artifacts_dir_can_be_overridden(monkeypatch, tmp_path):
 
 
 def test_score_with_optional_ml_uses_loaded_artifacts(tmp_path):
-    sys.path.append(str(Path(__file__).resolve().parents[3] / "ml"))
+    repo_root = Path(__file__).resolve().parents[3]
+    sys.path.append(str(repo_root / "ml"))
     from insureflow_ml.features import load_training_frame
     from insureflow_ml.training import train_all
 
-    frame = load_training_frame(Path("../../data/sample"))
+    frame = load_training_frame(repo_root / "data" / "sample")
     train_all(frame, tmp_path, random_state=13)
 
     result = score_with_optional_ml(make_request(), artifacts_dir=tmp_path)

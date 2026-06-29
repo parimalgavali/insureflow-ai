@@ -1,12 +1,11 @@
 import json
-from pathlib import Path
 
 from insureflow_ml.features import load_training_frame
 from insureflow_ml.training import train_all
 
 
-def test_train_all_writes_model_artifacts(tmp_path):
-    frame = load_training_frame(Path("../data/sample"))
+def test_train_all_writes_model_artifacts(tmp_path, sample_data_dir):
+    frame = load_training_frame(sample_data_dir)
 
     results = train_all(frame, tmp_path, random_state=7)
 

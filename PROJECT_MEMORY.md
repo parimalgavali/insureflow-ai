@@ -111,6 +111,7 @@ Recommended sequence:
 | 2026-06-29 | Implemented Phase 13 testing, quality, and observability. | Added backend/Python/frontend coverage, local quality gates, CI/security workflows, Spring Actuator Prometheus metrics, Prometheus/Grafana Compose profile, load-smoke validation, and quality runbook docs. |
 | 2026-06-29 | Verified Phase 13 locally. | `./scripts/run-coverage.sh`, `./scripts/run-quality-gates.sh`, `./scripts/load-smoke-test.sh`, `docker compose --profile app --profile observability ps`, API `/actuator/prometheus`, Prometheus readiness/query, Grafana health, and `git diff --check` passed. Local Trivy scan was skipped because `trivy` is not installed. |
 | 2026-06-29 | Opened Phase 13 pull request. | PR #13: `https://github.com/parimalgavali/insureflow-ai/pull/13` from `testing-quality-observability` into `main`. |
+| 2026-06-29 | Fixed Phase 13 CI failures. | Updated Trivy action to resolvable `aquasecurity/trivy-action@v0.36.0` and made triage/ML tests resolve sample data by file location so repo-root CI pytest commands pass. |
 
 ## Known Issues And Caveats
 
