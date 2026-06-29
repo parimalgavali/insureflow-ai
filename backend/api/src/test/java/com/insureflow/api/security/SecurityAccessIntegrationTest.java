@@ -31,6 +31,25 @@ class SecurityAccessIntegrationTest extends ApiIntegrationTest {
     }
 
     @Test
+    void actuatorHealthAndPrometheusMetricsArePublicForLocalScraping() {
+        ResponseEntity<String> health = client.exchange(
+                "http://localhost:" + port + "/actuator/health",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class);
+        ResponseEntity<String> metrics = client.exchange(
+                "http://localhost:" + port + "/actuator/prometheus",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class);
+
+        assertThat(health.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(health.getBody()).contains("\"status\":\"UP\"");
+        assertThat(metrics.getStatusCode()).as(metrics.getBody()).isEqualTo(HttpStatus.OK);
+        assertThat(metrics.getBody()).contains("jvm_memory_used_bytes");
+    }
+
+    @Test
     void rolesControlBackendIntegrationAndGovernanceAccess() {
         String adjusterToken = token("adjuster-user", "ADJUSTER");
         String integrationToken = token("integration-client", "INTEGRATION");

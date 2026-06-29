@@ -12,7 +12,12 @@ dependencies = [
 [project.optional-dependencies]
 test = [
   "pytest>=8.0.0",
+  "pytest-cov>=5.0.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["insureflow_ml*"]
+exclude = ["artifacts*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

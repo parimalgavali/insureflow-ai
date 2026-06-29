@@ -37,50 +37,50 @@
 - [ ] Add Actuator and Micrometer Prometheus dependencies.
 - [ ] Expose `health`, `info`, and `prometheus` management endpoints in `application.yml`.
 - [ ] Permit `/actuator/health` and `/actuator/prometheus` in `SecurityConfig`.
-- [ ] Add JaCoCo to Maven `verify`.
-- [ ] Run `cd backend && mvn -pl api test` and confirm the new test passes.
-- [ ] Run `cd backend && mvn verify` and confirm `backend/api/target/site/jacoco/index.html` is generated.
+- [x] Add JaCoCo to Maven `verify`.
+- [x] Run `cd backend && mvn -pl api test` and confirm the new test passes.
+- [x] Run `cd backend && mvn clean -Pcoverage verify` and confirm `backend/api/target/site/jacoco/index.html` is generated.
 
 ## Task 2: Coverage Scripts
 
-- [ ] Add `pytest-cov` to Python test extras.
-- [ ] Add frontend coverage support through Vitest.
-- [ ] Create `scripts/run-coverage.sh` to run backend JaCoCo, Python coverage, ML coverage, and frontend coverage.
-- [ ] Verify `bash -n scripts/run-coverage.sh`.
-- [ ] Run `./scripts/run-coverage.sh` and fix failures.
+- [x] Add `pytest-cov` to Python test extras.
+- [x] Add frontend coverage support through Vitest.
+- [x] Create `scripts/run-coverage.sh` to run backend JaCoCo, Python coverage, ML coverage, and frontend coverage.
+- [x] Verify `bash -n scripts/run-coverage.sh`.
+- [x] Run `./scripts/run-coverage.sh` and fix failures.
 
 ## Task 3: Quality Gates And CI
 
-- [ ] Create `scripts/run-quality-gates.sh` to run tests, coverage, Compose validation, script syntax checks, and optional local scanner checks.
-- [ ] Expand `.github/workflows/ci.yml` to run backend, Python, ML, frontend, and quality validation jobs on pull requests.
-- [ ] Add `.github/workflows/security-scan.yml` with Trivy filesystem scanning and npm audit.
-- [ ] Verify workflow YAML and script syntax locally.
+- [x] Create `scripts/run-quality-gates.sh` to run tests, coverage, Compose validation, script syntax checks, and optional local scanner checks.
+- [x] Expand `.github/workflows/ci.yml` to run backend, Python, ML, frontend, and quality validation jobs on pull requests.
+- [x] Add `.github/workflows/security-scan.yml` with Trivy filesystem scanning and npm audit.
+- [x] Verify workflow YAML and script syntax locally.
 
 ## Task 4: Observability Stack
 
-- [ ] Add Prometheus and Grafana services under a Compose `observability` profile.
-- [ ] Add Prometheus scrape config for `api:8080/actuator/prometheus`.
-- [ ] Add Grafana provisioning for the Prometheus data source and dashboard folder.
-- [ ] Add an InsureFlow overview dashboard for request volume, latency, JVM memory, and CPU.
-- [ ] Run `docker compose --profile app --profile observability config`.
+- [x] Add Prometheus and Grafana services under a Compose `observability` profile.
+- [x] Add Prometheus scrape config for `api:8080/actuator/prometheus`.
+- [x] Add Grafana provisioning for the Prometheus data source and dashboard folder.
+- [x] Add an InsureFlow overview dashboard for request volume, latency, JVM memory, and CPU.
+- [x] Run `docker compose --profile app --profile observability config`.
 
 ## Task 5: Load Smoke Script
 
-- [ ] Create `scripts/load-smoke-test.sh`.
-- [ ] Include startup retries for backend, triage, and RAG health checks.
-- [ ] Mint an adjuster token through `/api/v1/auth/dev-token`.
-- [ ] Create customer, policy, coverage, activate policy, and submit FNOL with unique IDs.
-- [ ] Score the triage service directly.
-- [ ] Ingest RAG evidence and query it.
-- [ ] Run `bash -n scripts/load-smoke-test.sh`.
-- [ ] If app containers are running, run `./scripts/load-smoke-test.sh`.
+- [x] Create `scripts/load-smoke-test.sh`.
+- [x] Include startup retries for backend, triage, and RAG health checks.
+- [x] Mint an adjuster token through `/api/v1/auth/dev-token`.
+- [x] Create customer, policy, coverage, activate policy, and submit FNOL with unique IDs.
+- [x] Score the triage service directly.
+- [x] Ingest RAG evidence and query it.
+- [x] Run `bash -n scripts/load-smoke-test.sh`.
+- [x] If app containers are running, run `./scripts/load-smoke-test.sh`.
 
 ## Task 6: Documentation And Memory
 
-- [ ] Add `docs/quality/testing-quality-observability.md`.
-- [ ] Update README and docs index links.
-- [ ] Update `PROJECT_MEMORY.md` with Phase 13 start and implementation details.
-- [ ] Run full verification:
+- [x] Add `docs/quality/testing-quality-observability.md`.
+- [x] Update README and docs index links.
+- [x] Update `PROJECT_MEMORY.md` with Phase 13 start and implementation details.
+- [x] Run full verification:
 
 ```bash
 ./scripts/run-tests.sh

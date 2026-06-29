@@ -29,6 +29,7 @@ This folder contains project documentation that supports implementation, onboard
 23. [`deployment/cloud-deployment.md`](deployment/cloud-deployment.md) - Phase 12 local container demo and Azure deployment runbook.
 24. [`superpowers/specs/2026-06-29-phase-13-testing-quality-observability-design.md`](superpowers/specs/2026-06-29-phase-13-testing-quality-observability-design.md) - design for quality gates, coverage, observability, and load smoke checks.
 25. [`superpowers/plans/2026-06-29-phase-13-testing-quality-observability.md`](superpowers/plans/2026-06-29-phase-13-testing-quality-observability.md) - implementation plan for Phase 13 testing, quality, and observability.
+26. [`quality/testing-quality-observability.md`](quality/testing-quality-observability.md) - Phase 13 testing, coverage, quality gate, observability, and load-smoke runbook.
 
 ## Planned Documentation Areas
 

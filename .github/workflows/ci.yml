@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - "codex/**"
   pull_request:
     branches:
       - main
@@ -27,3 +26,105 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         run: mvn test
+
+      - name: Run backend coverage
+        working-directory: backend
+        run: mvn clean -Pcoverage verify
+
+      - name: Upload backend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jacoco-report
+          path: backend/api/target/site/jacoco
+
+  python:
+    name: Python, AI, And ML Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "synthetic-data-generator[dev]"
+          python -m pip install -e "ai-services/triage-service[test]"
+          python -m pip install -e "ai-services/document-intelligence-service[test]"
+          python -m pip install -e "ai-services/rag-service[test]"
+          python -m pip install -e "ml[test]"
+
+      - name: Run Python tests with coverage
+        run: |
+          python -m pytest synthetic-data-generator --cov=generator --cov-report=xml:coverage-synthetic.xml
+          python -m pytest ai-services/triage-service --cov=triage_service --cov-report=xml:coverage-triage.xml
+          python -m pytest ai-services/document-intelligence-service --cov=document_intelligence --cov-report=xml:coverage-document-intelligence.xml
+          python -m pytest ai-services/rag-service --cov=rag_service --cov-report=xml:coverage-rag.xml
+          python -m pytest ml --cov=insureflow_ml --cov-report=xml:coverage-ml.xml
+
+      - name: Upload Python coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage-reports
+          path: coverage-*.xml
+
+  frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm test -- --run
+
+      - name: Run frontend coverage
+        working-directory: frontend
+        run: npm run coverage
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload frontend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+
+  quality-config:
+    name: Quality Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate scripts
+        run: |
+          bash -n scripts/run-tests.sh
+          bash -n scripts/run-coverage.sh
+          bash -n scripts/run-quality-gates.sh
+          bash -n scripts/smoke-test-containers.sh
+          bash -n scripts/load-smoke-test.sh
+
+      - name: Validate Compose profiles
+        run: |
+          docker compose --profile app config
+          docker compose --profile app --profile observability config
