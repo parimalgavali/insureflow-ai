@@ -43,6 +43,7 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
     private boolean shouldSkip(HttpServletRequest request) {
         String path = request.getRequestURI();
         return path.equals("/api/v1/health")
+                || path.startsWith("/actuator")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs")
                 || path.equals("/api/v1/auth/dev-token");

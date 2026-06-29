@@ -6,7 +6,7 @@ It is a professional portfolio project for demonstrating insurance domain unders
 
 ## Status
 
-The repository contains local infrastructure, synthetic data generation, backend business workflows for policy management and claims intake, the Phase 5 rule-based AI triage service, Phase 6 local ML triage model training, Phase 7 document intelligence service, Phase 8 offline RAG adjuster assistant, Phase 9 Vue adjuster workbench frontend, Phase 10 Guidewire-inspired integration APIs, Phase 11 security, audit, and governance controls, and Phase 12 cloud deployment readiness.
+The repository contains local infrastructure, synthetic data generation, backend business workflows for policy management and claims intake, the Phase 5 rule-based AI triage service, Phase 6 local ML triage model training, Phase 7 document intelligence service, Phase 8 offline RAG adjuster assistant, Phase 9 Vue adjuster workbench frontend, Phase 10 Guidewire-inspired integration APIs, Phase 11 security, audit, and governance controls, Phase 12 cloud deployment readiness, and Phase 13 quality and observability gates.
 
 ## Important Boundary
 
@@ -69,6 +69,36 @@ The Phase 10 integration API workflow is documented in [docs/api/integration-api
 The Phase 11 security, audit, and governance controls are documented in [docs/api/security-audit-governance.md](docs/api/security-audit-governance.md).
 
 Cloud deployment readiness is documented in [docs/deployment/cloud-deployment.md](docs/deployment/cloud-deployment.md).
+
+## Quality And Observability
+
+Run all tests:
+
+```bash
+./scripts/run-tests.sh
+```
+
+Generate coverage reports:
+
+```bash
+./scripts/run-coverage.sh
+```
+
+Run local quality gates:
+
+```bash
+./scripts/run-quality-gates.sh
+```
+
+Start the app with Prometheus and Grafana:
+
+```bash
+docker compose --profile app --profile observability up -d --build
+```
+
+Grafana is available at `http://localhost:3000` with the default local credentials from `.env.example`.
+
+Quality and observability details are documented in [docs/quality/testing-quality-observability.md](docs/quality/testing-quality-observability.md).
 
 ## AI Triage Service
 
@@ -149,6 +179,7 @@ python3 -m venv ../.venv
 - [Integration APIs](docs/api/integration-apis.md)
 - [Security, Audit, And Governance](docs/api/security-audit-governance.md)
 - [Cloud Deployment](docs/deployment/cloud-deployment.md)
+- [Testing, Quality, And Observability](docs/quality/testing-quality-observability.md)
 - [Master Build Plan](docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md)
 
 ## Responsible AI Statement

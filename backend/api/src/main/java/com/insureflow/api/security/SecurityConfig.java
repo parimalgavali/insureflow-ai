@@ -32,7 +32,14 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, accessDeniedException) ->
                                 response.setStatus(HttpStatus.FORBIDDEN.value())))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/health", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
+                        .requestMatchers(
+                                "/api/v1/health",
+                                "/actuator/health",
+                                "/actuator/health/**",
+                                "/actuator/prometheus",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**")
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/dev-token")
                         .permitAll()
