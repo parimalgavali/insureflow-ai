@@ -55,6 +55,13 @@ public class ClaimWorkflowService {
     }
 
     @Transactional(readOnly = true)
+    public List<ClaimResponse> listClaims() {
+        return claimRepository.findAllByOrderByReportedAtDesc().stream()
+                .map(claim -> ClaimResponse.from(claim, coverageValidationSnapshot(claim.getClaimNumber()).orElse(null)))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<ClaimEventResponse> getEvents(String claimNumber) {
         findClaim(claimNumber);
         return claimEventRepository.findByClaimClaimNumberOrderByCreatedAtAsc(claimNumber).stream()

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 
 import AuditPanel from "../components/AuditPanel.vue";
@@ -8,26 +8,61 @@ import DocumentPanel from "../components/DocumentPanel.vue";
 import RagAssistant from "../components/RagAssistant.vue";
 import TimelinePanel from "../components/TimelinePanel.vue";
 import TriagePanel from "../components/TriagePanel.vue";
-import { demoClaims } from "../demoData";
-import type { HumanReviewSubmission } from "../types";
+import { claimRepository } from "../services/claimRepository";
+import type { ClaimDetail, HumanReviewSubmission } from "../types";
 
 const route = useRoute();
 const lastReview = ref<HumanReviewSubmission | null>(null);
+const claims = ref<ClaimDetail[]>([]);
+const selectedClaim = ref<ClaimDetail | null>(null);
+const isLoading = ref(true);
+const errorMessage = ref("");
 
-const selectedClaim = computed(() => {
+async function loadClaim() {
   const claimNumber = route.params.claimNumber;
-  return demoClaims.find((claim) => claim.claimNumber === claimNumber) ?? demoClaims[0];
-});
+  if (typeof claimNumber !== "string") {
+    errorMessage.value = "Claim route is missing a claim number.";
+    isLoading.value = false;
+    return;
+  }
+
+  isLoading.value = true;
+  errorMessage.value = "";
+  try {
+    const [claimList, claim] = await Promise.all([
+      claimRepository.listClaims(),
+      claimRepository.getClaim(claimNumber),
+    ]);
+    claims.value = claimList;
+    selectedClaim.value = claim;
+    if (!claim) {
+      errorMessage.value = `Claim ${claimNumber} was not found.`;
+    }
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : "Unable to load claim.";
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+onMounted(loadClaim);
+watch(() => route.params.claimNumber, loadClaim);
 </script>
 
 <template>
-  <main class="workbench-grid">
+  <main v-if="isLoading" class="page-shell">
+    <section class="panel state-panel">Loading claim...</section>
+  </main>
+  <main v-else-if="errorMessage || !selectedClaim" class="page-shell">
+    <section class="panel state-panel error-state">{{ errorMessage }}</section>
+  </main>
+  <main v-else class="workbench-grid">
     <section class="queue-panel compact-route-panel" aria-label="Claim navigation">
       <p class="eyebrow">Open Work</p>
       <h2>Claim Queue</h2>
       <div class="queue-list">
         <RouterLink
-          v-for="claim in demoClaims"
+          v-for="claim in claims"
           :key="claim.claimNumber"
           class="claim-row route-claim-link"
           :class="{ selected: claim.claimNumber === selectedClaim.claimNumber }"

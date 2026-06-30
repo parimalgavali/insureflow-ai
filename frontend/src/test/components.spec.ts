@@ -44,6 +44,7 @@ describe("App selection", () => {
         plugins: [router],
       },
     });
+    await flushPromises();
 
     await wrapper.find('[aria-label="Search claims"]').setValue("Jonas");
     await wrapper.find('[data-test="claim-row"]').trigger("click");

@@ -91,3 +91,9 @@ export interface HumanReviewSubmission {
   action: string;
   reason: string;
 }
+
+export type DataMode = "demo" | "live";
+
+export interface ClaimRepositoryState {
+  mode: DataMode;
+}
