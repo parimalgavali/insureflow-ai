@@ -48,6 +48,10 @@ Start here if you are reviewing the project for a role, interview, or portfolio 
 - [Five-minute demo script](demo/demo-script.md)
 - [Screenshot checklist](demo/screenshot-checklist.md)
 
+## Product Roadmap
+
+- [Dynamic claims application roadmap](product/dynamic-claims-application-roadmap.md)
+
 ## Deployment, Quality, And Observability
 
 - [Cloud deployment runbook](deployment/cloud-deployment.md)
@@ -92,6 +96,9 @@ Phase plans and design specs:
 - [Phase 13 testing, quality, and observability](superpowers/plans/2026-06-29-phase-13-testing-quality-observability.md)
 - [Phase 14 portfolio packaging design](superpowers/specs/2026-06-30-phase-14-portfolio-packaging-design.md)
 - [Phase 14 portfolio packaging implementation plan](superpowers/plans/2026-06-30-phase-14-portfolio-packaging.md)
+- [Dynamic claims application design](superpowers/specs/2026-06-30-dynamic-claims-application-design.md)
+- [Dynamic claims application roadmap plan](superpowers/plans/2026-06-30-dynamic-claims-application-roadmap.md)
+- [Phase 15 frontend routing shell](superpowers/plans/2026-06-30-phase-15-frontend-routing-shell.md)
 
 ## Documentation Practice
 
