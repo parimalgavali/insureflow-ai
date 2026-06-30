@@ -113,6 +113,10 @@ Recommended sequence:
 | 2026-06-29 | Opened Phase 13 pull request. | PR #13: `https://github.com/parimalgavali/insureflow-ai/pull/13` from `testing-quality-observability` into `main`. |
 | 2026-06-29 | Fixed Phase 13 CI failures. | Updated Trivy action to resolvable `aquasecurity/trivy-action@v0.36.0` and made triage/ML tests resolve sample data by file location so repo-root CI pytest commands pass. |
 | 2026-06-29 | Hardened Phase 13 CI fixes. | Removed ML test dependency on untracked local `data/sample/*.csv` files by generating deterministic test fixtures, and upgraded vulnerable backend dependencies reported by Trivy. |
+| 2026-06-30 | Started Phase 14 portfolio packaging. | Branch `portfolio-packaging`, created from updated `main` after Phase 13 merged. |
+| 2026-06-30 | Designed Phase 14 portfolio package. | Spec created at `docs/superpowers/specs/2026-06-30-phase-14-portfolio-packaging-design.md`; scope is recruiter-ready docs, demo script, portfolio narrative, resume bullets, and responsible AI statement. |
+| 2026-06-30 | Implemented Phase 14 portfolio docs. | Added polished README, docs index, `docs/demo/`, `docs/portfolio/`, `docs/ai/responsible-ai-statement.md`, and implementation plan. |
+| 2026-06-30 | Verified Phase 14 locally. | `git diff --check`, Phase 14 path sanity checks, and `./scripts/run-quality-gates.sh` passed. First sandboxed quality-gate run failed because Testcontainers could not access Docker; rerun with Docker access passed. |
 
 ## Known Issues And Caveats
 
@@ -129,9 +133,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Open and merge the Phase 13 pull request from `testing-quality-observability`.
-2. After Phase 13 merges, proceed to Phase 14 portfolio packaging and recruiter-facing polish.
-3. Phase 14 should add final demo scripts, screenshots, architecture polish, and project narrative packaging.
+1. Verify Phase 14 portfolio packaging and open the pull request from `portfolio-packaging`.
+2. After Phase 14 merges, optionally capture screenshots listed in `docs/demo/screenshot-checklist.md`.
+3. Prepare a final public GitHub project description using `docs/portfolio/project-narrative.md`.
 
 ## Memory Update Rules
 

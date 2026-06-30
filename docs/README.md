@@ -1,47 +1,98 @@
 # InsureFlow AI Documentation
 
-This folder contains project documentation that supports implementation, onboarding, and portfolio presentation.
+This folder contains implementation docs, portfolio docs, demo guides, and project memory for InsureFlow AI.
 
-## Start Here
+## Evaluator Quick Path
 
-1. [`../PROJECT_MEMORY.md`](../PROJECT_MEMORY.md) - living project memory and current status.
-2. [`superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`](superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md) - phase-by-phase master build plan.
-3. [`../PROJECT_BLUEPRINT.md`](../PROJECT_BLUEPRINT.md) - full project blueprint copied into the repository during Phase 0.
-4. [`superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md`](superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md) - implementation plan for the policy and FNOL workflow.
-5. [`api/policy-claims-workflow.md`](api/policy-claims-workflow.md) - implemented API workflow for policy, coverage validation, FNOL, and claim operations.
-6. [`superpowers/plans/2026-06-25-phase-5-rule-based-ai-triage-service.md`](superpowers/plans/2026-06-25-phase-5-rule-based-ai-triage-service.md) - implementation plan for the rule-based AI triage service.
-7. [`api/ai-triage.md`](api/ai-triage.md) - implemented API workflow for AI triage scoring, persistence, and outage handling.
-8. [`superpowers/plans/2026-06-25-phase-6-ml-triage-model-training.md`](superpowers/plans/2026-06-25-phase-6-ml-triage-model-training.md) - implementation plan for local ML triage model training.
-9. [`ml/model-training.md`](ml/model-training.md) - Phase 6 local ML training workflow.
-10. [`ml/severity-model-card.md`](ml/severity-model-card.md) - severity model card.
-11. [`ml/fraud-risk-model-card.md`](ml/fraud-risk-model-card.md) - fraud-risk model card.
-12. [`superpowers/plans/2026-06-26-phase-7-llm-document-intelligence.md`](superpowers/plans/2026-06-26-phase-7-llm-document-intelligence.md) - implementation plan for document intelligence.
-13. [`api/document-intelligence.md`](api/document-intelligence.md) - Phase 7 document intelligence API contract.
-14. [`superpowers/plans/2026-06-26-phase-8-rag-adjuster-assistant.md`](superpowers/plans/2026-06-26-phase-8-rag-adjuster-assistant.md) - implementation plan for the RAG adjuster assistant.
-15. [`api/rag-assistant.md`](api/rag-assistant.md) - Phase 8 RAG assistant API contract.
-16. [`superpowers/plans/2026-06-26-phase-9-adjuster-workbench-frontend.md`](superpowers/plans/2026-06-26-phase-9-adjuster-workbench-frontend.md) - implementation plan for the Vue adjuster workbench.
-17. [`frontend/adjuster-workbench.md`](frontend/adjuster-workbench.md) - Phase 9 frontend runbook and demo story.
-18. [`superpowers/plans/2026-06-26-phase-10-guidewire-integration-apis.md`](superpowers/plans/2026-06-26-phase-10-guidewire-integration-apis.md) - implementation plan for Guidewire-inspired integration APIs.
-19. [`api/integration-apis.md`](api/integration-apis.md) - Phase 10 integration API contract and examples.
-20. [`superpowers/plans/2026-06-28-phase-11-security-audit-governance.md`](superpowers/plans/2026-06-28-phase-11-security-audit-governance.md) - implementation plan for security, audit, and governance.
-21. [`api/security-audit-governance.md`](api/security-audit-governance.md) - Phase 11 security, audit, governance, and human review runbook.
-22. [`superpowers/plans/2026-06-28-phase-12-cloud-deployment.md`](superpowers/plans/2026-06-28-phase-12-cloud-deployment.md) - implementation plan for cloud deployment readiness.
-23. [`deployment/cloud-deployment.md`](deployment/cloud-deployment.md) - Phase 12 local container demo and Azure deployment runbook.
-24. [`superpowers/specs/2026-06-29-phase-13-testing-quality-observability-design.md`](superpowers/specs/2026-06-29-phase-13-testing-quality-observability-design.md) - design for quality gates, coverage, observability, and load smoke checks.
-25. [`superpowers/plans/2026-06-29-phase-13-testing-quality-observability.md`](superpowers/plans/2026-06-29-phase-13-testing-quality-observability.md) - implementation plan for Phase 13 testing, quality, and observability.
-26. [`quality/testing-quality-observability.md`](quality/testing-quality-observability.md) - Phase 13 testing, coverage, quality gate, observability, and load-smoke runbook.
+Start here if you are reviewing the project for a role, interview, or portfolio discussion:
 
-## Planned Documentation Areas
+1. [Root README](../README.md) - project overview, architecture, demo commands, and proof points.
+2. [Five-minute demo script](demo/demo-script.md) - guided demo flow.
+3. [Recruiter walkthrough](demo/recruiter-walkthrough.md) - plain-language project explanation.
+4. [Interview talking points](demo/interview-talking-points.md) - deeper technical discussion prep.
+5. [Project narrative](portfolio/project-narrative.md) - short, medium, and long story versions.
+6. [Resume bullets](portfolio/resume-bullets.md) - role-aligned resume language.
+7. [Responsible AI statement](ai/responsible-ai-statement.md) - AI limits, governance, and prohibited uses.
 
-- `architecture/` - system context, service architecture, data model, AI architecture, deployment.
-- `domain/` - insurance glossary, claim lifecycle, policy lifecycle, Guidewire-inspired design.
-- `api/` - backend, AI, and integration API contracts.
-- `data/` - synthetic data strategy, data dictionary, generation rules.
-- `ml/` - model cards, fraud/severity evaluation, governance.
-- `rag/` - ingestion, chunking, retrieval, prompt design, evaluation.
-- `demo/` - recruiter walkthrough, demo script, screenshots.
-- `superpowers/plans/` - implementation plans used by Codex agents.
+## Architecture And Domain
+
+- [System context](architecture/system-context.md)
+- [Service architecture](architecture/service-architecture.md)
+- [Insurance glossary](domain/insurance-glossary.md)
+- [Synthetic data strategy](data/synthetic-data-generation.md)
+- [Data dictionary](data/data-dictionary.md)
+
+## APIs And Workflows
+
+- [Policy and claims workflow API](api/policy-claims-workflow.md)
+- [AI triage API](api/ai-triage.md)
+- [Document intelligence API](api/document-intelligence.md)
+- [RAG assistant API](api/rag-assistant.md)
+- [Integration APIs](api/integration-apis.md)
+- [Integration API HTTP collection](api/collections/phase-10-integration-apis.http)
+- [Security, audit, and governance](api/security-audit-governance.md)
+
+## AI, ML, And Responsible AI
+
+- [Responsible AI statement](ai/responsible-ai-statement.md)
+- [Model training workflow](ml/model-training.md)
+- [Severity model card](ml/severity-model-card.md)
+- [Fraud-risk model card](ml/fraud-risk-model-card.md)
+- [AI triage API](api/ai-triage.md)
+- [Document intelligence API](api/document-intelligence.md)
+- [RAG assistant API](api/rag-assistant.md)
+
+## Frontend Demo
+
+- [Adjuster workbench runbook](frontend/adjuster-workbench.md)
+- [Five-minute demo script](demo/demo-script.md)
+- [Screenshot checklist](demo/screenshot-checklist.md)
+
+## Deployment, Quality, And Observability
+
+- [Cloud deployment runbook](deployment/cloud-deployment.md)
+- [Testing, quality, and observability](quality/testing-quality-observability.md)
+
+Useful commands:
+
+```bash
+./scripts/run-tests.sh
+./scripts/run-coverage.sh
+./scripts/run-quality-gates.sh
+docker compose --profile app --profile observability up -d --build
+```
+
+## Portfolio Package
+
+- [Recruiter walkthrough](demo/recruiter-walkthrough.md)
+- [Interview talking points](demo/interview-talking-points.md)
+- [Screenshot checklist](demo/screenshot-checklist.md)
+- [Project narrative](portfolio/project-narrative.md)
+- [Resume bullets](portfolio/resume-bullets.md)
+
+## Implementation History
+
+- [Project memory](../PROJECT_MEMORY.md)
+- [Full project blueprint](../PROJECT_BLUEPRINT.md)
+- [Master build plan](superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md)
+
+Phase plans and design specs:
+
+- [Phase 0/1 repository and domain foundation](superpowers/plans/2026-06-24-phase-0-1-repository-and-domain-foundation.md)
+- [Phase 2 synthetic data generator](superpowers/plans/2026-06-24-phase-2-synthetic-data-generator.md)
+- [Phase 3/4 policy and claims workflow](superpowers/plans/2026-06-25-phase-3-4-policy-and-claims-workflow.md)
+- [Phase 5 rule-based AI triage service](superpowers/plans/2026-06-25-phase-5-rule-based-ai-triage-service.md)
+- [Phase 6 ML triage model training](superpowers/plans/2026-06-25-phase-6-ml-triage-model-training.md)
+- [Phase 7 document intelligence](superpowers/plans/2026-06-26-phase-7-llm-document-intelligence.md)
+- [Phase 8 RAG adjuster assistant](superpowers/plans/2026-06-26-phase-8-rag-adjuster-assistant.md)
+- [Phase 9 adjuster workbench frontend](superpowers/plans/2026-06-26-phase-9-adjuster-workbench-frontend.md)
+- [Phase 10 Guidewire-inspired integration APIs](superpowers/plans/2026-06-26-phase-10-guidewire-integration-apis.md)
+- [Phase 11 security, audit, and governance](superpowers/plans/2026-06-28-phase-11-security-audit-governance.md)
+- [Phase 12 cloud deployment readiness](superpowers/plans/2026-06-28-phase-12-cloud-deployment.md)
+- [Phase 13 testing, quality, and observability](superpowers/plans/2026-06-29-phase-13-testing-quality-observability.md)
+- [Phase 14 portfolio packaging design](superpowers/specs/2026-06-30-phase-14-portfolio-packaging-design.md)
+- [Phase 14 portfolio packaging implementation plan](superpowers/plans/2026-06-30-phase-14-portfolio-packaging.md)
 
 ## Documentation Practice
 
-Docs should be updated as part of each meaningful implementation step. Keep them practical: explain what exists, how to run it, why the design choice was made, and where the next agent should continue.
+Docs should be practical and truthful. Explain what exists, how to run it, why the design choice was made, and what limitations matter. Keep the Guidewire-inspired boundary and responsible AI limitations visible in evaluator-facing material.
