@@ -12,7 +12,7 @@ const emit = defineEmits<{
   submit: [review: HumanReviewSubmission];
 }>();
 
-const action = ref("REQUEST_DOCUMENTS");
+const action = ref("REQUEST_MORE_INFORMATION");
 const reason = ref("");
 
 function submitReview() {
@@ -41,10 +41,9 @@ function submitReview() {
       <form @submit.prevent="submitReview">
         <label class="field-label" for="review-action">Action</label>
         <select id="review-action" v-model="action" class="input">
-          <option value="REQUEST_DOCUMENTS">Request documents</option>
-          <option value="ASSIGN_SENIOR_ADJUSTER">Assign senior adjuster</option>
-          <option value="CONTINUE_STANDARD_REVIEW">Continue standard review</option>
-          <option value="FAST_TRACK_REVIEW">Fast-track review</option>
+          <option value="ACCEPT_AI_RECOMMENDATION">Accept AI recommendation</option>
+          <option value="REQUEST_MORE_INFORMATION">Request more information</option>
+          <option value="OVERRIDE_AI_RECOMMENDATION">Override AI recommendation</option>
         </select>
 
         <label class="field-label" for="review-reason">Reason</label>

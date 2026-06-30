@@ -86,20 +86,20 @@ describe("RagAssistant", () => {
 });
 
 describe("HumanReviewModal", () => {
-  it("captures action and reason before submitting review", async () => {
+  it("captures backend decision and reason before submitting review", async () => {
     const wrapper = mount(HumanReviewModal, {
       props: {
         claimNumber: demoClaims[0].claimNumber,
       },
     });
 
-    await wrapper.find("select").setValue("REQUEST_DOCUMENTS");
+    await wrapper.find("select").setValue("REQUEST_MORE_INFORMATION");
     await wrapper.find("textarea").setValue("Need police report before coverage review.");
     await wrapper.find("form").trigger("submit.prevent");
 
     expect(wrapper.emitted("submit")?.[0]).toEqual([
       {
-        action: "REQUEST_DOCUMENTS",
+        action: "REQUEST_MORE_INFORMATION",
         reason: "Need police report before coverage review.",
       },
     ]);

@@ -175,6 +175,7 @@ Make human review actions real and persisted.
 - Refreshing the page keeps the decision visible.
 - Claim timeline/audit reflects the review event.
 - High-priority claims continue to require human review before workflow movement.
+- Live mode uses the backend human review API; demo mode keeps a local in-memory review history.
 
 ### Branch Name
 

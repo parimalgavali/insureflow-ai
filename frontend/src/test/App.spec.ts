@@ -53,6 +53,19 @@ describe("App", () => {
     expect(wrapper.find("form").exists()).toBe(true);
   });
 
+  it("records a human review from the route-backed review page", async () => {
+    const { wrapper } = await mountAppAt("/claims/CLM-20260626-000418/review");
+
+    await wrapper.find("select").setValue("ACCEPT_AI_RECOMMENDATION");
+    await wrapper.find("textarea").setValue("Coverage and AI recommendation reviewed.");
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Review History");
+    expect(wrapper.text()).toContain("ACCEPT_AI_RECOMMENDATION");
+    expect(wrapper.text()).toContain("Coverage and AI recommendation reviewed.");
+  });
+
   it("exposes navigation for the main product pages", async () => {
     const { wrapper } = await mountAppAt("/claims");
 
