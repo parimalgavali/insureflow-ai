@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import { claimRepository } from "../services/claimRepository";
+</script>
+
 <template>
   <main class="page-shell">
     <section class="page-heading">
@@ -10,7 +14,7 @@
     <section class="panel settings-grid">
       <div>
         <p class="eyebrow">Data Mode</p>
-        <h2>Demo</h2>
+        <h2>{{ claimRepository.mode.toUpperCase() }}</h2>
       </div>
       <div>
         <p class="eyebrow">API Connection</p>

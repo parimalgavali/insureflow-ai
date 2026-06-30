@@ -77,6 +77,21 @@ class ClaimOperationsIntegrationTest extends ApiIntegrationTest {
     }
 
     @Test
+    void listsClaimsNewestReportedFirst() {
+        String olderClaimNumber = createSubmittedClaim(
+                "CUST-OPS-1003", "POL-OPS-1003", "2026-06-24T10:15:30Z");
+        String newerClaimNumber = createSubmittedClaim(
+                "CUST-OPS-1004", "POL-OPS-1004", "2026-06-26T10:15:30Z");
+
+        ResponseEntity<List<Map<String, Object>>> response = getList("/claims");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .extracting(claim -> claim.get("claimNumber"))
+                .containsSubsequence(newerClaimNumber, olderClaimNumber);
+    }
+
+    @Test
     void noteWithUnknownAdjusterReturns422InsteadOfUnexpectedServerError() {
         String claimNumber = createSubmittedClaim("CUST-OPS-1002", "POL-OPS-1002");
 
@@ -90,6 +105,10 @@ class ClaimOperationsIntegrationTest extends ApiIntegrationTest {
     }
 
     private String createSubmittedClaim(String customerNumber, String policyNumber) {
+        return createSubmittedClaim(customerNumber, policyNumber, "2026-06-25T10:15:30Z");
+    }
+
+    private String createSubmittedClaim(String customerNumber, String policyNumber, String reportedAt) {
         post("/customers", Map.of(
                 "customerNumber", customerNumber,
                 "firstName", "Morgan",
@@ -118,7 +137,7 @@ class ClaimOperationsIntegrationTest extends ApiIntegrationTest {
                 "policyNumber", policyNumber,
                 "claimType", "AUTO_COLLISION",
                 "lossDate", "2026-06-24",
-                "reportedAt", "2026-06-25T10:15:30Z",
+                "reportedAt", reportedAt,
                 "lossLocation", "Columbus, OH",
                 "description", "Rear-end collision at a stop light.",
                 "estimatedLossAmount", new BigDecimal("9000.00")));

@@ -2,7 +2,7 @@
 
 Phase 9 added the InsureFlow AI adjuster workbench under `frontend`.
 
-The app is a Vue 3/Vite/TypeScript frontend. Phase 15 adds Vue Router and turns the original single-page workbench into a routed application shell while keeping local demo data as the active data source.
+The app is a Vue 3/Vite/TypeScript frontend. Phase 15 added Vue Router and turned the original single-page workbench into a routed application shell. Phase 16 adds a typed claim API client and live claim queue/detail wiring while keeping demo mode available.
 
 ## Local Run
 
@@ -13,6 +13,14 @@ npm test -- --run
 npm run build
 npm run dev
 ```
+
+By default, the frontend runs in demo mode so the portfolio workflow is visible without a backend. To run the queue and claim detail pages against the Spring Boot backend:
+
+```bash
+VITE_DATA_MODE=live npm run dev
+```
+
+In Vite dev mode, `/api` proxies to `http://localhost:8080`. In Docker Compose, nginx proxies `/api` to the `api` service.
 
 ## Routes
 
@@ -60,14 +68,18 @@ The demo shows:
 - audit entries
 - human review action capture
 
+## Data Modes
+
+- `demo` uses `frontend/src/demoData.ts`.
+- `live` calls `/api/v1/claims`, `/api/v1/claims/{claimNumber}`, `/api/v1/claims/{claimNumber}/events`, and `/api/v1/claims/{claimNumber}/triage`.
+- Live mode bootstraps a development adjuster token through `/api/v1/auth/dev-token`.
+
 ## Design Boundary
 
-The frontend is still demo-data-first. It mirrors current backend and AI contracts but does not call them directly yet.
+Claim queue and claim detail data can now come from the backend. Rich document intelligence and RAG interaction are still represented with placeholders in live mode until Phase 18.
 
 Future frontend phases can add:
 
-- backend API adapters
-- authentication
 - persisted review actions
 - document upload
 - live RAG question input

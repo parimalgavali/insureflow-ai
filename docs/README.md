@@ -99,6 +99,7 @@ Phase plans and design specs:
 - [Dynamic claims application design](superpowers/specs/2026-06-30-dynamic-claims-application-design.md)
 - [Dynamic claims application roadmap plan](superpowers/plans/2026-06-30-dynamic-claims-application-roadmap.md)
 - [Phase 15 frontend routing shell](superpowers/plans/2026-06-30-phase-15-frontend-routing-shell.md)
+- [Phase 16 live claim queue](superpowers/plans/2026-06-30-phase-16-live-claim-queue.md)
 
 ## Documentation Practice
 

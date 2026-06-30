@@ -23,6 +23,11 @@ class ClaimController {
         this.claimWorkflowService = claimWorkflowService;
     }
 
+    @GetMapping
+    List<ClaimResponse> listClaims() {
+        return claimWorkflowService.listClaims();
+    }
+
     @GetMapping("/{claimNumber}")
     ClaimResponse getClaim(@PathVariable String claimNumber) {
         return claimWorkflowService.getClaim(claimNumber);

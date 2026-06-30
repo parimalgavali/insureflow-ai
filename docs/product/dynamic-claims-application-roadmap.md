@@ -136,7 +136,7 @@ Connect the claim queue and claim detail page to live backend APIs.
 
 ### Success Criteria
 
-- Frontend can display real backend claim data.
+- Frontend can display real backend claim data through `/api/v1/claims`.
 - Demo mode can still run without backend for portfolio screenshots.
 - API failures produce useful user-facing states.
 - Claim selection changes the route and reloads data.

@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import { createMemoryHistory, createRouter } from "vue-router";
 
@@ -13,13 +13,16 @@ async function mountAppAt(path: string) {
   router.push(path);
   await router.isReady();
 
+  const wrapper = mount(App, {
+    global: {
+      plugins: [router],
+    },
+  });
+  await flushPromises();
+
   return {
     router,
-    wrapper: mount(App, {
-      global: {
-        plugins: [router],
-      },
-    }),
+    wrapper,
   };
 }
 

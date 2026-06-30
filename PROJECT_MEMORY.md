@@ -48,6 +48,7 @@ Recommended sequence:
 | 2026-06-25 | Keep AI triage as a rule-based decision-support service before introducing ML models. | Phase 5 needs explainable, deterministic behavior and stable backend contracts before Phase 6 model training. |
 | 2026-06-30 | Continue post-Phase-14 productization as Phases 15-20. | The next goal is a dynamic multi-page claims application; routing/page boundaries should come before live API integration. |
 | 2026-06-30 | Start Phase 15 on branch `frontend-routing-shell`. | Phase 15 adds Vue Router and frontend page boundaries while keeping demo data until Phase 16 live API integration. |
+| 2026-06-30 | Start Phase 16 on branch `live-claim-queue`. | Phase 16 connects claim queue/detail pages to live backend APIs while preserving explicit demo mode. |
 
 ## Completed Work
 
@@ -122,6 +123,7 @@ Recommended sequence:
 | 2026-06-30 | Opened Phase 14 pull request. | PR #14: `https://github.com/parimalgavali/insureflow-ai/pull/14` from `portfolio-packaging` into `main`. |
 | 2026-06-30 | Documented the dynamic claims application roadmap. | Added Phases 15-20 roadmap at `docs/product/dynamic-claims-application-roadmap.md`, design spec at `docs/superpowers/specs/2026-06-30-dynamic-claims-application-design.md`, and roadmap plan at `docs/superpowers/plans/2026-06-30-dynamic-claims-application-roadmap.md`. |
 | 2026-06-30 | Implemented Phase 15 frontend routing shell. | Added Vue Router, `/claims`, `/claims/:claimNumber`, `/claims/:claimNumber/review`, `/documents`, `/governance`, `/integrations`, and `/settings` routes, plus page-level docs and route tests. |
+| 2026-06-30 | Implemented Phase 16 live claim queue/detail foundation. | Added backend `GET /api/v1/claims`, typed frontend claim API client, demo/live repository mode, backend-to-workbench mapper, page loading/error/empty states, and `/api` Vite/nginx proxying. |
 
 ## Known Issues And Caveats
 
@@ -138,9 +140,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Review Phase 15 routing shell on branch `frontend-routing-shell`.
-2. Commit and open a pull request for Phase 15.
-3. After Phase 15 merges, start Phase 16 live claim queue and claim detail API integration.
+1. Review Phase 16 live claim queue/detail implementation on branch `live-claim-queue`.
+2. Commit and open a pull request for Phase 16.
+3. After Phase 16 merges, start Phase 17 human review workflow persistence.
 
 ## Memory Update Rules
 
