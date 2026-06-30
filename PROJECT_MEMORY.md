@@ -117,6 +117,7 @@ Recommended sequence:
 | 2026-06-30 | Designed Phase 14 portfolio package. | Spec created at `docs/superpowers/specs/2026-06-30-phase-14-portfolio-packaging-design.md`; scope is recruiter-ready docs, demo script, portfolio narrative, resume bullets, and responsible AI statement. |
 | 2026-06-30 | Implemented Phase 14 portfolio docs. | Added polished README, docs index, `docs/demo/`, `docs/portfolio/`, `docs/ai/responsible-ai-statement.md`, and implementation plan. |
 | 2026-06-30 | Verified Phase 14 locally. | `git diff --check`, Phase 14 path sanity checks, and `./scripts/run-quality-gates.sh` passed. First sandboxed quality-gate run failed because Testcontainers could not access Docker; rerun with Docker access passed. |
+| 2026-06-30 | Opened Phase 14 pull request. | PR #14: `https://github.com/parimalgavali/insureflow-ai/pull/14` from `portfolio-packaging` into `main`. |
 
 ## Known Issues And Caveats
 
@@ -133,7 +134,7 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Verify Phase 14 portfolio packaging and open the pull request from `portfolio-packaging`.
+1. Review and merge Phase 14 PR #14 from `portfolio-packaging`.
 2. After Phase 14 merges, optionally capture screenshots listed in `docs/demo/screenshot-checklist.md`.
 3. Prepare a final public GitHub project description using `docs/portfolio/project-narrative.md`.
 
