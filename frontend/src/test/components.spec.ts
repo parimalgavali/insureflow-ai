@@ -1,5 +1,6 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
+import { createMemoryHistory, createRouter } from "vue-router";
 
 import App from "../App.vue";
 import ClaimQueue from "../components/ClaimQueue.vue";
@@ -7,6 +8,7 @@ import HumanReviewModal from "../components/HumanReviewModal.vue";
 import RagAssistant from "../components/RagAssistant.vue";
 import TriagePanel from "../components/TriagePanel.vue";
 import { demoClaims } from "../demoData";
+import { routes } from "../router";
 
 describe("ClaimQueue", () => {
   it("filters claims by customer name and emits selected claim", async () => {
@@ -29,12 +31,25 @@ describe("ClaimQueue", () => {
 });
 
 describe("App selection", () => {
-  it("updates the detail workspace when a queue claim is selected", async () => {
-    const wrapper = mount(App);
+  it("navigates to the claim detail page when a queue claim is selected", async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes,
+    });
+    router.push("/claims");
+    await router.isReady();
+
+    const wrapper = mount(App, {
+      global: {
+        plugins: [router],
+      },
+    });
 
     await wrapper.find('[aria-label="Search claims"]').setValue("Jonas");
     await wrapper.find('[data-test="claim-row"]').trigger("click");
+    await flushPromises();
 
+    expect(router.currentRoute.value.path).toBe("/claims/CLM-20260626-000219");
     expect(wrapper.text()).toContain("CLM-20260626-000219");
     expect(wrapper.text()).toContain("Jonas Weber");
     expect(wrapper.text()).toContain("Property water damage");

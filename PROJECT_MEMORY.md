@@ -46,6 +46,8 @@ Recommended sequence:
 | 2026-06-24 | Keep feature work off `main`; use feature branches. | Keeps the public portfolio branch stable while implementation work is reviewed. |
 | 2026-06-25 | Use readable feature branch names without the `codex/` prefix. | The user prefers names such as `policy-claims-workflow-implementation`. |
 | 2026-06-25 | Keep AI triage as a rule-based decision-support service before introducing ML models. | Phase 5 needs explainable, deterministic behavior and stable backend contracts before Phase 6 model training. |
+| 2026-06-30 | Continue post-Phase-14 productization as Phases 15-20. | The next goal is a dynamic multi-page claims application; routing/page boundaries should come before live API integration. |
+| 2026-06-30 | Start Phase 15 on branch `frontend-routing-shell`. | Phase 15 adds Vue Router and frontend page boundaries while keeping demo data until Phase 16 live API integration. |
 
 ## Completed Work
 
@@ -118,6 +120,8 @@ Recommended sequence:
 | 2026-06-30 | Implemented Phase 14 portfolio docs. | Added polished README, docs index, `docs/demo/`, `docs/portfolio/`, `docs/ai/responsible-ai-statement.md`, and implementation plan. |
 | 2026-06-30 | Verified Phase 14 locally. | `git diff --check`, Phase 14 path sanity checks, and `./scripts/run-quality-gates.sh` passed. First sandboxed quality-gate run failed because Testcontainers could not access Docker; rerun with Docker access passed. |
 | 2026-06-30 | Opened Phase 14 pull request. | PR #14: `https://github.com/parimalgavali/insureflow-ai/pull/14` from `portfolio-packaging` into `main`. |
+| 2026-06-30 | Documented the dynamic claims application roadmap. | Added Phases 15-20 roadmap at `docs/product/dynamic-claims-application-roadmap.md`, design spec at `docs/superpowers/specs/2026-06-30-dynamic-claims-application-design.md`, and roadmap plan at `docs/superpowers/plans/2026-06-30-dynamic-claims-application-roadmap.md`. |
+| 2026-06-30 | Implemented Phase 15 frontend routing shell. | Added Vue Router, `/claims`, `/claims/:claimNumber`, `/claims/:claimNumber/review`, `/documents`, `/governance`, `/integrations`, and `/settings` routes, plus page-level docs and route tests. |
 
 ## Known Issues And Caveats
 
@@ -134,9 +138,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Review and merge Phase 14 PR #14 from `portfolio-packaging`.
-2. After Phase 14 merges, optionally capture screenshots listed in `docs/demo/screenshot-checklist.md`.
-3. Prepare a final public GitHub project description using `docs/portfolio/project-narrative.md`.
+1. Review Phase 15 routing shell on branch `frontend-routing-shell`.
+2. Commit and open a pull request for Phase 15.
+3. After Phase 15 merges, start Phase 16 live claim queue and claim detail API integration.
 
 ## Memory Update Rules
 

@@ -1,8 +1,8 @@
 # Adjuster Workbench Frontend
 
-Phase 9 adds the InsureFlow AI adjuster workbench under `frontend`.
+Phase 9 added the InsureFlow AI adjuster workbench under `frontend`.
 
-The app is a Vue 3/Vite/TypeScript frontend that opens directly to a usable claim queue and selected claim workspace. It uses local demo data first so the portfolio story is visible even when backend and AI services are not running.
+The app is a Vue 3/Vite/TypeScript frontend. Phase 15 adds Vue Router and turns the original single-page workbench into a routed application shell while keeping local demo data as the active data source.
 
 ## Local Run
 
@@ -14,9 +14,23 @@ npm run build
 npm run dev
 ```
 
+## Routes
+
+The routed demo app currently exposes:
+
+- `/claims` - claim queue
+- `/claims/:claimNumber` - claim detail workbench
+- `/claims/:claimNumber/review` - human review checkpoint
+- `/documents` - document intelligence workspace
+- `/governance` - audit and responsible AI evidence
+- `/integrations` - Guidewire-inspired integration console placeholder
+- `/settings` - demo mode and API connection context
+
+The root route `/` redirects to `/claims`.
+
 ## First Screen
 
-The first screen is the workbench itself:
+The first useful screen is the claim queue. Opening a claim shows the full workbench:
 
 - claim queue
 - selected claim detail
@@ -48,7 +62,7 @@ The demo shows:
 
 ## Design Boundary
 
-Phase 9 is demo-data-first. It mirrors current backend and AI contracts but does not call them directly yet.
+The frontend is still demo-data-first. It mirrors current backend and AI contracts but does not call them directly yet.
 
 Future frontend phases can add:
 
@@ -57,7 +71,7 @@ Future frontend phases can add:
 - persisted review actions
 - document upload
 - live RAG question input
-- production routing
+- live governance/audit filtering
 
 ## Verification
 
