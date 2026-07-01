@@ -67,7 +67,7 @@ The dynamic product should be built in six new phases.
 | Phase 16 | API Client And Live Claim Queue | Claim list and claim detail read from the backend. |
 | Phase 17 | Human Review Workflow | Adjuster decisions are submitted to the backend and reflected in the UI. |
 | Phase 18 | Document And RAG Workspace | Document status, summaries, and RAG questions are interactive/live. |
-| Phase 19 | Governance And Audit Dashboards | Audit logs, model versions, prompt versions, and AI evidence become browsable. |
+| Phase 19 | Governance And Audit Dashboards | Audit logs, model versions, prompt versions, and AI evidence are browsable. |
 | Phase 20 | Product Hardening And Demo Readiness | UX polish, error handling, integration tests, seed data, and demo runbooks are production-shaped. |
 
 This sequence is intentionally frontend-first but contract-aware. It avoids rebuilding backend behavior that already exists, while adding backend endpoints only where the UI exposes a real gap.
@@ -223,28 +223,29 @@ Expose responsible AI and operational audit evidence through real UI pages.
 
 ### Build
 
-- Add governance dashboard.
-- Show model versions.
-- Show prompt versions.
-- Show audit logs with filters:
-  - claim number
+- Add governance dashboard. **Implemented in Phase 19.**
+- Show model versions. **Implemented in Phase 19.**
+- Show prompt versions. **Implemented in Phase 19.**
+- Show audit logs with filters. **Implemented in Phase 19 for:**
+  - entity type
   - actor
-  - event type
-  - date/time
+  - action
   - correlation ID
-- Add AI decision evidence view:
+- Add AI decision evidence view. **Implemented in Phase 19:**
   - triage score
   - reason codes
   - model/rule version
   - RAG sources
   - human override status
-- Add integration event viewer for Guidewire-inspired sync events.
+- Add integration event viewer for Guidewire-inspired sync events. **Deferred to Phase 20 or a dedicated integration dashboard pass.**
 
 ### Backend Gaps To Check
 
 - Does the audit log API support filtering and pagination?
 - Does governance expose enough model/prompt metadata for UI display?
 - Does the integration event endpoint expose event details safely?
+
+Phase 19 decision: keep governance and audit data behind Spring Boot. The frontend calls the governance registry and filtered audit APIs, then composes claim-level AI evidence cards from existing claim, triage, and RAG-facing view models.
 
 ### Success Criteria
 

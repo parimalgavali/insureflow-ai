@@ -102,6 +102,7 @@ Phase plans and design specs:
 - [Phase 16 live claim queue](superpowers/plans/2026-06-30-phase-16-live-claim-queue.md)
 - [Phase 17 human review workflow](superpowers/plans/2026-07-01-phase-17-human-review-workflow.md)
 - [Phase 18 document and RAG workspace](superpowers/plans/2026-07-01-phase-18-document-rag-workspace.md)
+- [Phase 19 governance and audit dashboard](superpowers/plans/2026-07-01-phase-19-governance-audit-dashboard.md)
 
 ## Documentation Practice
 

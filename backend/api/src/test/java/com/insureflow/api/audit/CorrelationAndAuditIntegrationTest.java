@@ -51,6 +51,37 @@ class CorrelationAndAuditIntegrationTest extends ApiIntegrationTest {
                 });
     }
 
+    @Test
+    void auditorCanSearchAuditEventsByActorEntityAndCorrelationId() {
+        String adjusterToken = token("phase-19-adjuster", "ADJUSTER");
+        String auditorToken = token("phase-19-auditor", "AUDITOR");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adjusterToken);
+        headers.set("X-Correlation-Id", "corr-phase-19-001");
+
+        restTemplate.exchange(
+                baseUrl + "/claims/CLM-PHASE-19-MISSING",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                MAP_RESPONSE);
+
+        ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                baseUrl
+                        + "/audit/events?entityType=CLAIMS&actorId=phase-19-adjuster"
+                        + "&correlationId=corr-phase-19-001&limit=10",
+                HttpMethod.GET,
+                authEntity(auditorToken),
+                LIST_RESPONSE);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .anySatisfy(log -> {
+                    assertThat(log).containsEntry("actorId", "phase-19-adjuster");
+                    assertThat(log).containsEntry("entityType", "CLAIMS");
+                    assertThat(log).containsEntry("correlationId", "corr-phase-19-001");
+                });
+    }
+
     private String token(String subject, String role) {
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 baseUrl + "/auth/dev-token",
