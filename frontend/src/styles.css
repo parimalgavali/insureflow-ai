@@ -162,6 +162,21 @@ button {
   gap: 12px;
 }
 
+.governance-filter-grid,
+.governance-summary-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.governance-filter-grid {
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(140px, 0.5fr);
+  align-items: end;
+}
+
+.governance-summary-grid {
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+}
+
 .workspace-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
@@ -579,6 +594,8 @@ button {
   .page-card-grid,
   .settings-grid,
   .workspace-columns,
+  .governance-filter-grid,
+  .governance-summary-grid,
   .intelligence-rail,
   .info-grid,
   .score-grid,

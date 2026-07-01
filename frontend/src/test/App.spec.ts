@@ -91,4 +91,20 @@ describe("App", () => {
     expect(wrapper.text()).toContain("RAG Assistant");
     expect(wrapper.text()).toContain("DOC-");
   });
+
+  it("renders governance dashboard filters and AI evidence", async () => {
+    const { wrapper } = await mountAppAt("/governance");
+
+    expect(wrapper.text()).toContain("Governance Dashboard");
+    expect(wrapper.text()).toContain("Model Versions");
+    expect(wrapper.text()).toContain("Prompt Versions");
+    expect(wrapper.text()).toContain("AI Evidence");
+
+    await wrapper.find("input").setValue("triage-service");
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Audit Events");
+    expect(wrapper.text()).toContain("CLM-20260626-000418");
+  });
 });

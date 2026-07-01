@@ -2,7 +2,7 @@
 
 Phase 9 added the InsureFlow AI adjuster workbench under `frontend`.
 
-The app is a Vue 3/Vite/TypeScript frontend. Phase 15 added Vue Router and turned the original single-page workbench into a routed application shell. Phase 16 added a typed claim API client and live claim queue/detail wiring while keeping demo mode available. Phase 18 connects the documents workspace to live document and RAG decision-support APIs.
+The app is a Vue 3/Vite/TypeScript frontend. Phase 15 added Vue Router and turned the original single-page workbench into a routed application shell. Phase 16 added a typed claim API client and live claim queue/detail wiring while keeping demo mode available. Phase 18 connects the documents workspace to live document and RAG decision-support APIs. Phase 19 turns governance into a live/demo dashboard for model versions, prompt versions, audit events, and AI evidence.
 
 ## Local Run
 
@@ -36,7 +36,7 @@ The routed demo app currently exposes:
 - `/claims/:claimNumber` - claim detail workbench
 - `/claims/:claimNumber/review` - human review checkpoint and review history
 - `/documents` - interactive document intelligence and grounded Q&A workspace
-- `/governance` - audit and responsible AI evidence
+- `/governance` - governance dashboard with model registry, prompt registry, audit events, and AI evidence
 - `/integrations` - Guidewire-inspired integration console placeholder
 - `/settings` - demo mode and API connection context
 
@@ -77,7 +77,7 @@ The demo shows:
 ## Data Modes
 
 - `demo` uses `frontend/src/demoData.ts`.
-- `live` calls `/api/v1/claims`, `/api/v1/claims/{claimNumber}`, `/api/v1/claims/{claimNumber}/events`, `/api/v1/claims/{claimNumber}/triage`, `/api/v1/claims/{claimNumber}/human-reviews`, `/api/v1/claims/{claimNumber}/document-workspace`, and `/api/v1/claims/{claimNumber}/rag-query`.
+- `live` calls `/api/v1/claims`, `/api/v1/claims/{claimNumber}`, `/api/v1/claims/{claimNumber}/events`, `/api/v1/claims/{claimNumber}/triage`, `/api/v1/claims/{claimNumber}/human-reviews`, `/api/v1/claims/{claimNumber}/document-workspace`, `/api/v1/claims/{claimNumber}/rag-query`, `/api/v1/governance/model-versions`, `/api/v1/governance/prompt-versions`, and `/api/v1/audit/events`.
 - Live mode bootstraps a development adjuster token through `/api/v1/auth/dev-token`.
 
 ## Document And RAG Workspace
@@ -86,14 +86,25 @@ The `/documents` route now loads claims through the repository layer, lets the a
 
 Claim detail pages also enrich live claims with document workspace output and a default RAG answer.
 
+## Governance Dashboard
+
+The `/governance` route shows:
+
+- model versions and active status
+- prompt versions and model bindings
+- audit events with actor, entity, status, and correlation ID
+- AI evidence cards with triage labels, reason codes, queue recommendation, human-review flag, and RAG source count
+
+Demo mode derives this from `frontend/src/demoData.ts`. Live mode calls the Spring Boot governance and audit APIs through the repository layer.
+
 ## Design Boundary
 
-Claim queue, claim detail, human review, document workspace, and RAG question submission can now come from the backend. File upload and live execution of the Python document/RAG services from the UI remain future hardening work.
+Claim queue, claim detail, human review, document workspace, RAG question submission, and governance/audit dashboard data can now come from the backend. File upload and live execution of the Python document/RAG services from the UI remain future hardening work.
 
 Future frontend phases can add:
 
 - document upload
-- live governance/audit filtering
+- richer audit pagination and date-range filtering
 
 ## Verification
 

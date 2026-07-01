@@ -102,6 +102,62 @@ export interface HumanReviewRecord {
   reviewedAt: string;
 }
 
+export interface GovernanceModelVersion {
+  id: string;
+  name: string;
+  version: string;
+  type: string;
+  artifactUri: string | null;
+  metrics: Record<string, unknown>;
+  active: boolean;
+}
+
+export interface GovernancePromptVersion {
+  id: string;
+  name: string;
+  version: string;
+  modelName: string | null;
+  templatePreview: string;
+  active: boolean;
+}
+
+export interface GovernanceAuditEvent {
+  id: string;
+  actorType: string;
+  actorId: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  correlationId: string | null;
+  status: string;
+  createdAt: string;
+}
+
+export interface GovernanceAiEvidence {
+  claimNumber: string;
+  severity: RiskLabel;
+  fraud: RiskLabel;
+  litigation: RiskLabel;
+  reasonCodes: string[];
+  recommendedQueue: string;
+  humanReviewRequired: boolean;
+  ragSourceCount: number;
+}
+
+export interface GovernanceFilters {
+  entityType?: string;
+  actorId?: string;
+  action?: string;
+  correlationId?: string;
+}
+
+export interface GovernanceDashboard {
+  modelVersions: GovernanceModelVersion[];
+  promptVersions: GovernancePromptVersion[];
+  auditEvents: GovernanceAuditEvent[];
+  aiEvidence: GovernanceAiEvidence[];
+}
+
 export type DataMode = "demo" | "live";
 
 export interface ClaimRepositoryState {

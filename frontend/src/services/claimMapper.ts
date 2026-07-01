@@ -2,13 +2,22 @@ import type {
   AuditEvent,
   ClaimDetail,
   DocumentIntelligenceSnapshot,
+  GovernanceAuditEvent,
+  GovernanceModelVersion,
+  GovernancePromptVersion,
   RagAnswer,
   RiskLabel,
   TimelineEvent,
   TriageSnapshot,
 } from "../types";
 import type { BackendClaimEventResponse, BackendClaimResponse, BackendClaimTriageResponse } from "./claimApi";
-import type { BackendDocumentWorkspaceResponse, BackendRagQuestionResponse } from "./claimApi";
+import type {
+  BackendDocumentWorkspaceResponse,
+  BackendGovernanceAuditEventResponse,
+  BackendModelVersionResponse,
+  BackendPromptVersionResponse,
+  BackendRagQuestionResponse,
+} from "./claimApi";
 
 interface ClaimMappingInput {
   claim: BackendClaimResponse;
@@ -112,6 +121,44 @@ export function toRagAnswer(answer: BackendRagQuestionResponse): RagAnswer {
       chunkId: source.chunkId,
       sectionTitle: source.sectionTitle,
     })),
+  };
+}
+
+export function toGovernanceModelVersion(model: BackendModelVersionResponse): GovernanceModelVersion {
+  return {
+    id: model.id,
+    name: model.modelName,
+    version: model.version,
+    type: model.modelType,
+    artifactUri: model.artifactUri,
+    metrics: model.metrics,
+    active: model.active,
+  };
+}
+
+export function toGovernancePromptVersion(prompt: BackendPromptVersionResponse): GovernancePromptVersion {
+  return {
+    id: prompt.id,
+    name: prompt.promptName,
+    version: prompt.version,
+    modelName: prompt.modelName,
+    templatePreview: prompt.template.length > 140 ? `${prompt.template.slice(0, 137)}...` : prompt.template,
+    active: prompt.active,
+  };
+}
+
+export function toGovernanceAuditEvent(event: BackendGovernanceAuditEventResponse): GovernanceAuditEvent {
+  const status = event.afterState?.status;
+  return {
+    id: event.id,
+    actorType: event.actorType,
+    actorId: event.actorId ?? "anonymous",
+    action: event.action,
+    entityType: event.entityType,
+    entityId: event.entityId,
+    correlationId: event.correlationId,
+    status: typeof status === "number" || typeof status === "string" ? String(status) : "unknown",
+    createdAt: formatDateTime(event.createdAt),
   };
 }
 

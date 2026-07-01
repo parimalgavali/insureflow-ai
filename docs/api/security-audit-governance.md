@@ -54,6 +54,23 @@ Authorization: Bearer <AUDITOR or ADMIN token>
 
 Phase 11 uses the nil UUID `00000000-0000-0000-0000-000000000000` for request-level audit records that are not yet tied to a specific domain row.
 
+Phase 19 adds filtered audit search for dashboard use:
+
+```http
+GET /api/v1/audit/events?entityType=CLAIMS&actorId=demo-adjuster&correlationId=corr-001&limit=50
+Authorization: Bearer <AUDITOR or ADMIN token>
+```
+
+Supported optional filters:
+
+- `entityType`
+- `actorId`
+- `action`
+- `correlationId`
+- `limit`, capped at 100
+
+Response records include actor, action, entity, correlation ID, response status, captured request metadata, and creation time.
+
 ## AI Decision Snapshots
 
 Claim triage now stores both the request features and the model response in `ai_triage_results`:
@@ -78,6 +95,8 @@ Authorization: Bearer <AUDITOR or ADMIN token>
 ```
 
 These endpoints are intentionally auditor/admin only because they expose operational metadata rather than claim workflow data.
+
+The Phase 19 frontend governance dashboard reads both registries and audit events through these Spring Boot APIs. It also composes AI evidence cards from claim triage and RAG source metadata so reviewers can trace why a claim was routed for human review.
 
 ## Human Review
 

@@ -4,11 +4,17 @@ import {
   createClaimApi,
   type BackendClaimTriageResponse,
   type BackendDocumentWorkspaceResponse,
+  type BackendGovernanceAuditEventResponse,
+  type BackendModelVersionResponse,
+  type BackendPromptVersionResponse,
   type BackendRagQuestionResponse,
 } from "./claimApi";
 import {
   toClaimDetail,
   toDocumentIntelligenceSnapshot,
+  toGovernanceAuditEvent,
+  toGovernanceModelVersion,
+  toGovernancePromptVersion,
   toRagAnswer,
   toTimelineEvents,
   toTriageSnapshot,
@@ -104,6 +110,37 @@ const backendRagAnswer: BackendRagQuestionResponse = {
   ],
 };
 
+const backendModelVersion: BackendModelVersionResponse = {
+  id: "00000000-0000-4000-8000-000000000101",
+  modelName: "rule-based-triage",
+  version: "1.0.0",
+  modelType: "RULE_ENGINE",
+  artifactUri: "registry://rule-based-triage/1.0.0",
+  metrics: { coverage: 1 },
+  active: true,
+};
+
+const backendPromptVersion: BackendPromptVersionResponse = {
+  id: "00000000-0000-4000-8000-000000000102",
+  promptName: "rag-adjuster-answer",
+  version: "v1",
+  template: "Answer with grounded claim evidence.",
+  modelName: "deterministic-rag",
+  active: true,
+};
+
+const backendAuditEvent: BackendGovernanceAuditEventResponse = {
+  id: "00000000-0000-4000-8000-000000000103",
+  actorType: "USER",
+  actorId: "demo-adjuster",
+  action: "GET /api/v1/claims/CLM-LIVE-1",
+  entityType: "CLAIMS",
+  entityId: "00000000-0000-0000-0000-000000000000",
+  correlationId: "corr-governance-001",
+  afterState: { status: 200, path: "/api/v1/claims/CLM-LIVE-1" },
+  createdAt: "2026-06-26T10:21:30Z",
+};
+
 describe("claim API client", () => {
   it("bootstraps a dev token and sends bearer auth on live requests", async () => {
     const fetchMock = vi
@@ -192,6 +229,42 @@ describe("claim API client", () => {
       }),
     );
   });
+
+  it("fetches governance registries and filtered audit events with bearer auth", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: "dev-token" }))
+      .mockResolvedValueOnce(jsonResponse([backendModelVersion]))
+      .mockResolvedValueOnce(jsonResponse([backendPromptVersion]))
+      .mockResolvedValueOnce(jsonResponse([backendAuditEvent]));
+    const api = createClaimApi({ baseUrl: "/api/v1", fetchImpl: fetchMock });
+
+    const models = await api.fetchModelVersions();
+    const prompts = await api.fetchPromptVersions();
+    const audit = await api.fetchAuditEvents({
+      entityType: "CLAIMS",
+      actorId: "demo-adjuster",
+      correlationId: "corr-governance-001",
+    });
+
+    expect(models[0].modelName).toBe("rule-based-triage");
+    expect(prompts[0].promptName).toBe("rag-adjuster-answer");
+    expect(audit[0].correlationId).toBe("corr-governance-001");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/governance/model-versions",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer dev-token" }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      "/api/v1/audit/events?entityType=CLAIMS&actorId=demo-adjuster&correlationId=corr-governance-001",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer dev-token" }),
+      }),
+    );
+  });
 });
 
 describe("claim mapper", () => {
@@ -239,6 +312,23 @@ describe("claim mapper", () => {
       ],
     });
   });
+
+  it("maps governance registry and audit DTOs into dashboard widgets", () => {
+    expect(toGovernanceModelVersion(backendModelVersion)).toMatchObject({
+      name: "rule-based-triage",
+      version: "1.0.0",
+      active: true,
+    });
+    expect(toGovernancePromptVersion(backendPromptVersion)).toMatchObject({
+      name: "rag-adjuster-answer",
+      modelName: "deterministic-rag",
+    });
+    expect(toGovernanceAuditEvent(backendAuditEvent)).toMatchObject({
+      actorId: "demo-adjuster",
+      entityType: "CLAIMS",
+      correlationId: "corr-governance-001",
+    });
+  });
 });
 
 describe("claim repository", () => {
@@ -252,6 +342,9 @@ describe("claim repository", () => {
       createHumanReview: vi.fn(),
       fetchDocumentWorkspace: vi.fn(),
       askRagQuestion: vi.fn(),
+      fetchModelVersions: vi.fn(),
+      fetchPromptVersions: vi.fn(),
+      fetchAuditEvents: vi.fn(),
     };
     const repository = createClaimRepository({ mode: "demo", api });
 
@@ -271,6 +364,9 @@ describe("claim repository", () => {
       createHumanReview: vi.fn().mockResolvedValue(backendHumanReview),
       fetchDocumentWorkspace: vi.fn().mockResolvedValue(backendDocumentWorkspace),
       askRagQuestion: vi.fn().mockResolvedValue(backendRagAnswer),
+      fetchModelVersions: vi.fn().mockResolvedValue([backendModelVersion]),
+      fetchPromptVersions: vi.fn().mockResolvedValue([backendPromptVersion]),
+      fetchAuditEvents: vi.fn().mockResolvedValue([backendAuditEvent]),
     };
     const repository = createClaimRepository({
       mode: "live",
@@ -297,6 +393,37 @@ describe("claim repository", () => {
     expect(api.askRagQuestion).toHaveBeenCalledWith("CLM-LIVE-1", "What should the adjuster verify?");
   });
 
+  it("returns a live governance dashboard with audit filters", async () => {
+    const api = {
+      fetchClaimSummaries: vi.fn().mockResolvedValue([backendClaim]),
+      fetchClaim: vi.fn(),
+      fetchClaimEvents: vi.fn(),
+      fetchClaimTriage: vi.fn(),
+      fetchHumanReviews: vi.fn(),
+      createHumanReview: vi.fn(),
+      fetchDocumentWorkspace: vi.fn(),
+      askRagQuestion: vi.fn(),
+      fetchModelVersions: vi.fn().mockResolvedValue([backendModelVersion]),
+      fetchPromptVersions: vi.fn().mockResolvedValue([backendPromptVersion]),
+      fetchAuditEvents: vi.fn().mockResolvedValue([backendAuditEvent]),
+    };
+    const repository = createClaimRepository({ mode: "live", api });
+
+    const dashboard = await repository.getGovernanceDashboard({
+      entityType: "CLAIMS",
+      actorId: "demo-adjuster",
+    });
+
+    expect(dashboard.modelVersions[0].name).toBe("rule-based-triage");
+    expect(dashboard.promptVersions[0].name).toBe("rag-adjuster-answer");
+    expect(dashboard.auditEvents[0].actorId).toBe("demo-adjuster");
+    expect(dashboard.aiEvidence[0].claimNumber).toBe("CLM-LIVE-1");
+    expect(api.fetchAuditEvents).toHaveBeenCalledWith({
+      entityType: "CLAIMS",
+      actorId: "demo-adjuster",
+    });
+  });
+
   it("returns document workspaces and RAG answers in demo mode", async () => {
     const repository = createClaimRepository({ mode: "demo" });
 
@@ -305,6 +432,31 @@ describe("claim repository", () => {
 
     expect(documents?.missingDocuments).toContain("POLICE_REPORT");
     expect(rag?.sources.length).toBeGreaterThan(0);
+  });
+
+  it("returns a demo governance dashboard without calling the live API", async () => {
+    const api = {
+      fetchClaimSummaries: vi.fn(),
+      fetchClaim: vi.fn(),
+      fetchClaimEvents: vi.fn(),
+      fetchClaimTriage: vi.fn(),
+      fetchHumanReviews: vi.fn(),
+      createHumanReview: vi.fn(),
+      fetchDocumentWorkspace: vi.fn(),
+      askRagQuestion: vi.fn(),
+      fetchModelVersions: vi.fn(),
+      fetchPromptVersions: vi.fn(),
+      fetchAuditEvents: vi.fn(),
+    };
+    const repository = createClaimRepository({ mode: "demo", api });
+
+    const dashboard = await repository.getGovernanceDashboard({ entityType: "CLAIMS" });
+
+    expect(dashboard.modelVersions[0].name).toBe("rule-based-triage");
+    expect(dashboard.promptVersions[0].name).toBe("rag-adjuster-answer");
+    expect(dashboard.auditEvents[0].entityType).toBe("CLAIMS");
+    expect(dashboard.aiEvidence[0].ragSourceCount).toBeGreaterThan(0);
+    expect(api.fetchModelVersions).not.toHaveBeenCalled();
   });
 
   it("records demo human reviews in memory", async () => {

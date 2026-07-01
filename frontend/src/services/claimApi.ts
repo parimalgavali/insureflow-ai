@@ -89,6 +89,44 @@ export interface BackendRagQuestionResponse {
   sources: BackendRagSourceResponse[];
 }
 
+export interface BackendModelVersionResponse {
+  id: string;
+  modelName: string;
+  version: string;
+  modelType: string;
+  artifactUri: string | null;
+  metrics: Record<string, unknown>;
+  active: boolean;
+}
+
+export interface BackendPromptVersionResponse {
+  id: string;
+  promptName: string;
+  version: string;
+  template: string;
+  modelName: string | null;
+  active: boolean;
+}
+
+export interface BackendGovernanceAuditEventResponse {
+  id: string;
+  actorType: string;
+  actorId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  correlationId: string | null;
+  afterState: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface AuditEventFilters {
+  entityType?: string;
+  actorId?: string;
+  action?: string;
+  correlationId?: string;
+}
+
 export interface CreateHumanReviewPayload {
   reviewerAdjusterId: string;
   decision: string;
@@ -104,6 +142,9 @@ export interface ClaimApi {
   fetchHumanReviews(claimNumber: string): Promise<BackendHumanReviewResponse[]>;
   fetchDocumentWorkspace(claimNumber: string): Promise<BackendDocumentWorkspaceResponse>;
   askRagQuestion(claimNumber: string, question: string): Promise<BackendRagQuestionResponse>;
+  fetchModelVersions(): Promise<BackendModelVersionResponse[]>;
+  fetchPromptVersions(): Promise<BackendPromptVersionResponse[]>;
+  fetchAuditEvents(filters?: AuditEventFilters): Promise<BackendGovernanceAuditEventResponse[]>;
   createHumanReview(
     claimNumber: string,
     payload: CreateHumanReviewPayload,
@@ -219,6 +260,22 @@ export function createClaimApi(options: ClaimApiOptions = {}): ClaimApi {
         `/claims/${encodeURIComponent(claimNumber)}/rag-query`,
         { question },
       );
+    },
+    async fetchModelVersions() {
+      return (await getJson<BackendModelVersionResponse[]>("/governance/model-versions")) ?? [];
+    },
+    async fetchPromptVersions() {
+      return (await getJson<BackendPromptVersionResponse[]>("/governance/prompt-versions")) ?? [];
+    },
+    async fetchAuditEvents(filters: AuditEventFilters = {}) {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && value.trim().length > 0) {
+          params.set(key, value.trim());
+        }
+      });
+      const query = params.toString();
+      return (await getJson<BackendGovernanceAuditEventResponse[]>(`/audit/events${query ? `?${query}` : ""}`)) ?? [];
     },
     async createHumanReview(claimNumber: string, payload: CreateHumanReviewPayload) {
       return await postJson<BackendHumanReviewResponse>(
