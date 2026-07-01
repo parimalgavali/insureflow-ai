@@ -97,9 +97,25 @@ The `/governance` route shows:
 
 Demo mode derives this from `frontend/src/demoData.ts`. Live mode calls the Spring Boot governance and audit APIs through the repository layer.
 
+## Demo Readiness
+
+Phase 20 adds a readiness panel on `/settings` with:
+
+- current data mode
+- `/api` proxy context
+- frontend smoke coverage
+- Docker app-profile validation command
+- live backend mode hint using `VITE_DATA_MODE=live`
+
+Before a recruiter or interview demo, run:
+
+```bash
+./scripts/demo-readiness-check.sh
+```
+
 ## Design Boundary
 
-Claim queue, claim detail, human review, document workspace, RAG question submission, and governance/audit dashboard data can now come from the backend. File upload and live execution of the Python document/RAG services from the UI remain future hardening work.
+Claim queue, claim detail, human review, document workspace, RAG question submission, and governance/audit dashboard data can now come from the backend. File upload, production login UI, and full audit pagination/date-range filtering remain future hardening work.
 
 Future frontend phases can add:
 

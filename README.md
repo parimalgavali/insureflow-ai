@@ -89,6 +89,12 @@ docker compose --profile app up --build
 ./scripts/smoke-test-containers.sh
 ```
 
+Pre-demo readiness check:
+
+```bash
+./scripts/demo-readiness-check.sh
+```
+
 Frontend workbench:
 
 ```bash
@@ -120,9 +126,10 @@ Grafana runs at `http://localhost:3000` when the observability profile is active
 | RAG assistant | Ingestion, chunking, retrieval, grounded answers, source references, and missing-evidence behavior |
 | Frontend | Vue adjuster workbench for queue, claim detail, AI insight, documents, RAG, timeline, audit, and human review |
 | Integration APIs | Guidewire-inspired policy sync, claim create, claim lookup, claim status, reserves, events, and webhook simulation |
-| Governance | JWT roles, correlation IDs, audit logging, model/prompt registry views, and human review override enforcement |
+| Governance | JWT roles, correlation IDs, audit logging, model/prompt registry views, AI evidence dashboard, and human review override enforcement |
 | Deployment | Dockerfiles, Compose app profile, smoke tests, Azure Container Apps Bicep templates |
 | Quality | Backend/Python/frontend tests, coverage reports, quality gates, Trivy security scan, Prometheus, Grafana, and load smoke script |
+| Demo readiness | Settings readiness panel, demo script, screenshot checklist, recruiter walkthrough, and `scripts/demo-readiness-check.sh` |
 
 ## Tech Stack
 

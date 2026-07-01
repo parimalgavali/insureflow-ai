@@ -10,12 +10,12 @@ Build a realistic claims operations application where an adjuster can sign in, b
 
 The product should remain portfolio-friendly: every phase must produce something demonstrable, documented, and testable.
 
-## Current State
+## Current State After Phase 20
 
 ### What Exists
 
 - Vue 3, Vite, and TypeScript frontend.
-- Single-page adjuster workbench in `frontend/src/App.vue`.
+- Routed adjuster workbench with operational pages for claim queue, claim detail, human review, documents, governance, integrations, and settings.
 - Reusable frontend widgets:
   - claim queue
   - claim overview
@@ -26,6 +26,7 @@ The product should remain portfolio-friendly: every phase must produce something
   - audit panel
   - human review modal
 - Local demo data in `frontend/src/demoData.ts`.
+- Typed frontend API/repository layer with demo and live modes.
 - Spring Boot backend APIs for:
   - authentication
   - customers
@@ -46,16 +47,12 @@ The product should remain portfolio-friendly: every phase must produce something
   - RAG assistant
   - ML model training and inference support
 
-### What Does Not Exist Yet
+### Remaining Gaps
 
-- Frontend routing.
-- Separate claim queue, claim detail, review, governance, document, integration, and admin pages.
-- A frontend API client layer.
-- Authentication UI and token handling.
-- Live frontend calls to the backend.
-- Persisted frontend review actions.
-- Live document upload or document intelligence execution from the UI.
-- Frontend error/loading/empty states for network-backed workflows.
+- Production login UI and refresh-token handling.
+- Live document upload and direct document-intelligence execution from the UI.
+- Full audit pagination, date-range filters, and integration event dashboard.
+- End-to-end browser automation against the full container stack.
 
 ## Recommended Phase Model
 
@@ -68,7 +65,7 @@ The dynamic product should be built in six new phases.
 | Phase 17 | Human Review Workflow | Adjuster decisions are submitted to the backend and reflected in the UI. |
 | Phase 18 | Document And RAG Workspace | Document status, summaries, and RAG questions are interactive/live. |
 | Phase 19 | Governance And Audit Dashboards | Audit logs, model versions, prompt versions, and AI evidence are browsable. |
-| Phase 20 | Product Hardening And Demo Readiness | UX polish, error handling, integration tests, seed data, and demo runbooks are production-shaped. |
+| Phase 20 | Product Hardening And Demo Readiness | UX polish, demo readiness checks, and runbooks are production-shaped. |
 
 This sequence is intentionally frontend-first but contract-aware. It avoids rebuilding backend behavior that already exists, while adding backend endpoints only where the UI exposes a real gap.
 
@@ -266,13 +263,14 @@ Make the dynamic app reliable, explainable, and easy to run.
 
 ### Build
 
-- Add seeded demo dataset for end-to-end UI walkthroughs.
-- Add Playwright or equivalent browser smoke tests.
-- Add API mock mode for frontend CI.
-- Improve responsive layout across laptop and tablet widths.
-- Add consistent loading/error/empty states across all pages.
-- Update Docker Compose app profile if needed.
-- Update README, demo script, screenshots checklist, and recruiter walkthrough.
+- Add seeded demo dataset for end-to-end UI walkthroughs. **Already covered by `frontend/src/demoData.ts` and synthetic data generator outputs.**
+- Add Playwright or equivalent browser smoke tests. **Deferred; current coverage uses Vue Test Utils route smoke tests.**
+- Add API mock mode for frontend CI. **Covered by explicit demo mode and mocked API client tests.**
+- Improve responsive layout across laptop and tablet widths. **Incrementally addressed through existing responsive grids and Phase 20 settings readiness layout.**
+- Add consistent loading/error/empty states across all pages. **Implemented across live-backed claims, documents, governance, and review pages; remaining polish can continue after Phase 20.**
+- Update Docker Compose app profile if needed. **No Compose changes required in Phase 20.**
+- Update README, demo script, screenshots checklist, and recruiter walkthrough. **README, demo script, frontend runbook, roadmap, and docs index updated in Phase 20.**
+- Add demo readiness script and in-app settings checklist. **Implemented in Phase 20.**
 
 ### Success Criteria
 
