@@ -4,6 +4,14 @@ Phase 8 adds a document-grounded adjuster assistant service under `ai-services/r
 
 The first implementation is offline and deterministic. It uses in-memory chunk storage and lexical retrieval instead of pgvector and hosted embeddings. The API and metadata are designed so a future phase can replace the local retriever with pgvector and embedding models.
 
+Phase 18 adds a Spring Boot product facade for frontend grounded questions:
+
+```http
+POST /api/v1/claims/{claimNumber}/rag-query
+```
+
+The Vue app calls this backend facade, not the Python RAG service directly. The facade answers from live claim, coverage, triage, and document context, while preserving the same decision-support boundary and source-reference shape.
+
 ## Boundaries
 
 The assistant is decision support only. It must not approve or reject claims, make fraud accusations, provide legal advice, provide medical advice, or replace human adjuster review.
@@ -71,6 +79,44 @@ Response:
 ```http
 POST /ai/v1/rag/query
 ```
+
+## Spring Boot Claim RAG Facade
+
+```http
+POST /api/v1/claims/CLM-20260626-000418/rag-query
+```
+
+Request:
+
+```json
+{
+  "question": "Is this collision loss covered?"
+}
+```
+
+Response:
+
+```json
+{
+  "claimNumber": "CLM-20260626-000418",
+  "question": "Is this collision loss covered?",
+  "answer": "Based on the live coverage validation snapshot, this collision loss appears potentially covered when reviewed against the active policy context. Human review is still required before any claim decision.",
+  "confidence": "MEDIUM",
+  "requiresHumanReview": true,
+  "sources": [
+    {
+      "documentId": "CLAIM-CLM-20260626-000418",
+      "chunkId": "CLAIM-CLM-20260626-000418-LIVE-CONTEXT",
+      "documentType": "CLAIM_CONTEXT",
+      "sectionTitle": "Coverage validation",
+      "pageNumber": 1,
+      "score": 0.72
+    }
+  ]
+}
+```
+
+The Phase 18 facade is deterministic and claim-context based. Future hardening can replace the answer engine with persisted RAG service evidence while keeping this frontend contract stable.
 
 Request:
 

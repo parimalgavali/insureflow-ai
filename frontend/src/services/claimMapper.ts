@@ -8,11 +8,14 @@ import type {
   TriageSnapshot,
 } from "../types";
 import type { BackendClaimEventResponse, BackendClaimResponse, BackendClaimTriageResponse } from "./claimApi";
+import type { BackendDocumentWorkspaceResponse, BackendRagQuestionResponse } from "./claimApi";
 
 interface ClaimMappingInput {
   claim: BackendClaimResponse;
   events?: BackendClaimEventResponse[];
   triage?: BackendClaimTriageResponse | null;
+  documents?: BackendDocumentWorkspaceResponse | null;
+  rag?: BackendRagQuestionResponse | null;
 }
 
 const emptyDocuments: DocumentIntelligenceSnapshot = {
@@ -61,8 +64,8 @@ export function toClaimDetail(input: ClaimMappingInput): ClaimDetail {
     estimatedLoss: money(input.claim.estimatedLossAmount),
     description: input.claim.description,
     triage,
-    documents: emptyDocuments,
-    rag: emptyRag,
+    documents: input.documents ? toDocumentIntelligenceSnapshot(input.documents) : emptyDocuments,
+    rag: input.rag ? toRagAnswer(input.rag) : emptyRag,
     timeline: toTimelineEvents(input.events ?? []),
     audit: toAuditEvents(input.triage),
   };
@@ -85,6 +88,30 @@ export function toTriageSnapshot(triage: BackendClaimTriageResponse): TriageSnap
     recommendedQueue: triage.recommendedQueue,
     humanReviewRequired: triage.humanReviewRequired,
     reasonCodes: triage.reasonCodes,
+  };
+}
+
+export function toDocumentIntelligenceSnapshot(
+  workspace: BackendDocumentWorkspaceResponse,
+): DocumentIntelligenceSnapshot {
+  return {
+    receivedDocuments: workspace.receivedDocuments,
+    missingDocuments: workspace.missingDocuments,
+    extractionHighlights: workspace.extractionHighlights,
+    summarySections: workspace.summarySections,
+  };
+}
+
+export function toRagAnswer(answer: BackendRagQuestionResponse): RagAnswer {
+  return {
+    question: answer.question,
+    answer: answer.answer,
+    confidence: answer.confidence,
+    sources: answer.sources.map((source) => ({
+      documentId: source.documentId,
+      chunkId: source.chunkId,
+      sectionTitle: source.sectionTitle,
+    })),
   };
 }
 

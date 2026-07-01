@@ -4,6 +4,14 @@ Phase 7 adds a FastAPI document intelligence service under `ai-services/document
 
 The service uses a deterministic local provider by default. This intentionally behaves like an LLM client returning JSON strings, but it does not call an external model. The design keeps local development, tests, and portfolio demos runnable without API keys.
 
+Phase 18 adds a Spring Boot product facade for frontend document workspace reads:
+
+```http
+GET /api/v1/claims/{claimNumber}/document-workspace
+```
+
+The Vue app calls this backend facade, not the Python service directly. The facade builds an adjuster-ready workspace from persisted claim, coverage, triage, and document metadata. The standalone Python service remains the lower-level document-intelligence service for extraction, missing-document checks, and future orchestration.
+
 ## Boundaries
 
 The service is decision support only. It must not approve or reject claims, make fraud accusations, provide legal advice, provide medical advice, or replace human adjuster review.
@@ -97,6 +105,39 @@ Supported Phase 7 document types:
 ```http
 POST /ai/v1/documents/missing-check
 ```
+
+## Spring Boot Document Workspace Facade
+
+```http
+GET /api/v1/claims/CLM-20260626-000418/document-workspace
+```
+
+Response:
+
+```json
+{
+  "claimNumber": "CLM-20260626-000418",
+  "receivedDocuments": ["DAMAGE_PHOTOS", "REPAIR_INVOICE"],
+  "missingDocuments": ["POLICE_REPORT"],
+  "extractionHighlights": [
+    "Received 2 document type(s) for live backend review.",
+    "Estimated loss amount is 8400 EUR.",
+    "Missing required document(s): POLICE_REPORT."
+  ],
+  "summarySections": [
+    {
+      "title": "Claim overview",
+      "body": "Rear bumper collision near Bielefeld."
+    },
+    {
+      "title": "Recommended next action",
+      "body": "Request missing documents and keep the claim in human review."
+    }
+  ]
+}
+```
+
+The facade is deterministic in Phase 18. It does not approve or reject claims and should be treated as decision support.
 
 Request:
 

@@ -101,6 +101,7 @@ Phase plans and design specs:
 - [Phase 15 frontend routing shell](superpowers/plans/2026-06-30-phase-15-frontend-routing-shell.md)
 - [Phase 16 live claim queue](superpowers/plans/2026-06-30-phase-16-live-claim-queue.md)
 - [Phase 17 human review workflow](superpowers/plans/2026-07-01-phase-17-human-review-workflow.md)
+- [Phase 18 document and RAG workspace](superpowers/plans/2026-07-01-phase-18-document-rag-workspace.md)
 
 ## Documentation Practice
 

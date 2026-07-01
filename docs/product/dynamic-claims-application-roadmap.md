@@ -55,7 +55,6 @@ The product should remain portfolio-friendly: every phase must produce something
 - Live frontend calls to the backend.
 - Persisted frontend review actions.
 - Live document upload or document intelligence execution from the UI.
-- Live RAG question input from the UI.
 - Frontend error/loading/empty states for network-backed workflows.
 
 ## Recommended Phase Model
@@ -67,7 +66,7 @@ The dynamic product should be built in six new phases.
 | Phase 15 | Frontend App Shell And Routing | Multi-page frontend structure exists, still mostly demo-data-backed. |
 | Phase 16 | API Client And Live Claim Queue | Claim list and claim detail read from the backend. |
 | Phase 17 | Human Review Workflow | Adjuster decisions are submitted to the backend and reflected in the UI. |
-| Phase 18 | Document And RAG Workspace | Document status, summaries, and RAG questions become interactive/live. |
+| Phase 18 | Document And RAG Workspace | Document status, summaries, and RAG questions are interactive/live. |
 | Phase 19 | Governance And Audit Dashboards | Audit logs, model versions, prompt versions, and AI evidence become browsable. |
 | Phase 20 | Product Hardening And Demo Readiness | UX polish, error handling, integration tests, seed data, and demo runbooks are production-shaped. |
 
@@ -189,19 +188,21 @@ Turn document intelligence and grounded Q&A into interactive workspaces.
 
 ### Build
 
-- Add document page for a claim.
-- Display received and missing documents from backend metadata.
-- Add document upload or document registration flow, depending on backend support.
-- Trigger or display document intelligence summaries.
-- Add RAG question input.
-- Show grounded RAG answer, confidence/coverage state, and source references.
-- Add missing-evidence and no-answer states.
+- Add document page for a claim. **Implemented in Phase 18.**
+- Display received and missing documents from backend metadata. **Implemented in Phase 18.**
+- Add document upload or document registration flow, depending on backend support. **Deferred.**
+- Trigger or display document intelligence summaries. **Implemented through the Spring Boot document workspace facade.**
+- Add RAG question input. **Implemented in Phase 18.**
+- Show grounded RAG answer, confidence/coverage state, and source references. **Implemented in Phase 18.**
+- Add missing-evidence and no-answer states. **Partially implemented through loading/error/empty states; richer no-evidence UX remains Phase 20 hardening.**
 
 ### Backend Gaps To Check
 
 - Does the backend orchestrate document intelligence and RAG calls, or should the frontend call AI services only through the backend?
 - Is file upload in scope, or should documents remain metadata-only for the first version?
 - Where should RAG answer audit events be stored?
+
+Phase 18 decision: the frontend calls Spring Boot only. Spring Boot exposes deterministic document workspace and claim RAG facade endpoints from persisted claim context. Python document-intelligence and RAG services remain lower-level services for future orchestration and hardening.
 
 ### Success Criteria
 
