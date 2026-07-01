@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `governance-audit-dashboard`
+- **Current branch:** `dynamic-app-hardening`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -53,6 +53,7 @@ Recommended sequence:
 | 2026-07-01 | Start Phase 18 on branch `document-rag-workspace`. | Phase 18 makes document workspace and grounded RAG questions interactive/live through a Spring Boot facade. |
 | 2026-07-01 | Keep the frontend behind Spring Boot for document/RAG workflows. | Authentication, persistence, audit, and governance remain backend-owned; Python AI services stay lower-level services for future orchestration. |
 | 2026-07-01 | Start Phase 19 on branch `governance-audit-dashboard`. | Phase 19 exposes governance registries, filtered audit events, and AI decision evidence through a live/demo frontend dashboard. |
+| 2026-07-01 | Start Phase 20 on branch `dynamic-app-hardening`. | Phase 20 closes the dynamic app loop with demo readiness checks, settings-page runbook guidance, and final documentation cleanup. |
 
 ## Completed Work
 
@@ -131,6 +132,7 @@ Recommended sequence:
 | 2026-07-01 | Implemented Phase 17 human review workflow persistence. | Added frontend create/list review operations, backend-aligned review decisions, repository-backed review history, demo in-memory review history, and timeline regression coverage. |
 | 2026-07-01 | Implemented Phase 18 document and RAG workspace. | Added Spring Boot `GET /api/v1/claims/{claimNumber}/document-workspace` and `POST /api/v1/claims/{claimNumber}/rag-query`, live frontend API/repository mapping, interactive `/documents` claim selector and RAG form, docs, and tests. |
 | 2026-07-01 | Implemented Phase 19 governance and audit dashboard. | Added backend `GET /api/v1/audit/events` filter support, frontend governance API/repository mapping, interactive `/governance` dashboard, AI evidence cards, docs, and tests. |
+| 2026-07-01 | Implemented Phase 20 product hardening and demo readiness. | Added settings-page demo readiness panel, `scripts/demo-readiness-check.sh`, final dynamic-app docs cleanup, README/demo script updates, and frontend route coverage. |
 
 ## Known Issues And Caveats
 
@@ -147,9 +149,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Review Phase 19 governance and audit dashboard implementation on branch `governance-audit-dashboard`.
-2. Merge Phase 19 after pull request checks pass.
-3. After Phase 19 merges, start Phase 20 product hardening and demo readiness.
+1. Review Phase 20 product hardening and demo readiness on branch `dynamic-app-hardening`.
+2. Merge Phase 20 after pull request checks pass.
+3. After Phase 20 merges, treat Phases 15-20 as complete and focus on demo rehearsal, screenshots, and optional production auth/upload/audit pagination enhancements.
 
 ## Memory Update Rules
 

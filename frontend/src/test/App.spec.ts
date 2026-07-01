@@ -107,4 +107,13 @@ describe("App", () => {
     expect(wrapper.text()).toContain("Audit Events");
     expect(wrapper.text()).toContain("CLM-20260626-000418");
   });
+
+  it("renders demo readiness details in settings", async () => {
+    const { wrapper } = await mountAppAt("/settings");
+
+    expect(wrapper.text()).toContain("Demo Readiness");
+    expect(wrapper.text()).toContain("Frontend smoke");
+    expect(wrapper.text()).toContain("Docker app profile");
+    expect(wrapper.text()).toContain("VITE_DATA_MODE");
+  });
 });

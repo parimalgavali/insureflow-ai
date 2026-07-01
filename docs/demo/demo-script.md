@@ -14,6 +14,7 @@ docker compose --profile app up --build
 Quality and observability proof:
 
 ```bash
+./scripts/demo-readiness-check.sh
 ./scripts/run-tests.sh
 ./scripts/run-quality-gates.sh
 docker compose --profile app --profile observability up -d --build
@@ -40,9 +41,9 @@ Point to the README architecture diagram.
 
 Show:
 
-- claim queue in the Vue workbench;
-- claim detail view;
-- timeline, notes, document metadata, and status.
+- `/claims` claim queue in the Vue workbench;
+- `/claims/:claimNumber` claim detail view;
+- timeline, document metadata, status, and review path.
 
 ### 1:30-2:15 - AI Triage
 
@@ -61,8 +62,8 @@ Show:
 
 Show:
 
-- document intelligence output;
-- RAG answer with source references;
+- `/documents` document workspace;
+- RAG question input and answer with source references;
 - missing-evidence behavior.
 
 ### 3:00-3:45 - Governance And Integration
@@ -71,7 +72,7 @@ Show:
 
 Show:
 
-- audit/governance docs;
+- `/governance` dashboard with model versions, prompt versions, audit events, and AI evidence;
 - integration API docs;
 - Swagger endpoint groups if running.
 
@@ -81,6 +82,7 @@ Show:
 
 Show:
 
+- `/settings` demo readiness panel;
 - CI checks in GitHub;
 - Grafana or Prometheus if running;
 - `docs/quality/testing-quality-observability.md`.
@@ -107,5 +109,6 @@ If the runtime is unavailable, use the docs-only path:
 6. `docs/api/rag-assistant.md`
 7. `docs/api/security-audit-governance.md`
 8. `docs/quality/testing-quality-observability.md`
+9. `docs/product/dynamic-claims-application-roadmap.md`
 
 This still demonstrates the system design and implementation depth.

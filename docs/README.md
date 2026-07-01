@@ -60,6 +60,7 @@ Start here if you are reviewing the project for a role, interview, or portfolio 
 Useful commands:
 
 ```bash
+./scripts/demo-readiness-check.sh
 ./scripts/run-tests.sh
 ./scripts/run-coverage.sh
 ./scripts/run-quality-gates.sh
@@ -103,6 +104,7 @@ Phase plans and design specs:
 - [Phase 17 human review workflow](superpowers/plans/2026-07-01-phase-17-human-review-workflow.md)
 - [Phase 18 document and RAG workspace](superpowers/plans/2026-07-01-phase-18-document-rag-workspace.md)
 - [Phase 19 governance and audit dashboard](superpowers/plans/2026-07-01-phase-19-governance-audit-dashboard.md)
+- [Phase 20 product hardening and demo readiness](superpowers/plans/2026-07-01-phase-20-product-hardening-demo-readiness.md)
 
 ## Documentation Practice
 

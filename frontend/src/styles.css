@@ -177,6 +177,19 @@ button {
   grid-template-columns: repeat(4, minmax(160px, 1fr));
 }
 
+.readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.readiness-grid article {
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
 .workspace-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
@@ -596,6 +609,7 @@ button {
   .workspace-columns,
   .governance-filter-grid,
   .governance-summary-grid,
+  .readiness-grid,
   .intelligence-rail,
   .info-grid,
   .score-grid,
