@@ -75,4 +75,20 @@ describe("App", () => {
     expect(wrapper.find('a[href="/integrations"]').exists()).toBe(true);
     expect(wrapper.find('a[href="/settings"]').exists()).toBe(true);
   });
+
+  it("supports document workspace review and grounded questions", async () => {
+    const { wrapper } = await mountAppAt("/documents");
+
+    expect(wrapper.text()).toContain("Document Workspace");
+    expect(wrapper.find("select").exists()).toBe(true);
+    expect(wrapper.text()).toContain("POLICE_REPORT");
+
+    await wrapper.find("input").setValue("What documents are missing?");
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("What documents are missing?");
+    expect(wrapper.text()).toContain("RAG Assistant");
+    expect(wrapper.text()).toContain("DOC-");
+  });
 });

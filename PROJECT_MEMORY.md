@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `human-review-workflow`
+- **Current branch:** `document-rag-workspace`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -50,6 +50,8 @@ Recommended sequence:
 | 2026-06-30 | Start Phase 15 on branch `frontend-routing-shell`. | Phase 15 adds Vue Router and frontend page boundaries while keeping demo data until Phase 16 live API integration. |
 | 2026-06-30 | Start Phase 16 on branch `live-claim-queue`. | Phase 16 connects claim queue/detail pages to live backend APIs while preserving explicit demo mode. |
 | 2026-07-01 | Start Phase 17 on branch `human-review-workflow`. | Phase 17 persists human review decisions from the frontend through existing backend human review APIs. |
+| 2026-07-01 | Start Phase 18 on branch `document-rag-workspace`. | Phase 18 makes document workspace and grounded RAG questions interactive/live through a Spring Boot facade. |
+| 2026-07-01 | Keep the frontend behind Spring Boot for document/RAG workflows. | Authentication, persistence, audit, and governance remain backend-owned; Python AI services stay lower-level services for future orchestration. |
 
 ## Completed Work
 
@@ -126,6 +128,7 @@ Recommended sequence:
 | 2026-06-30 | Implemented Phase 15 frontend routing shell. | Added Vue Router, `/claims`, `/claims/:claimNumber`, `/claims/:claimNumber/review`, `/documents`, `/governance`, `/integrations`, and `/settings` routes, plus page-level docs and route tests. |
 | 2026-06-30 | Implemented Phase 16 live claim queue/detail foundation. | Added backend `GET /api/v1/claims`, typed frontend claim API client, demo/live repository mode, backend-to-workbench mapper, page loading/error/empty states, and `/api` Vite/nginx proxying. |
 | 2026-07-01 | Implemented Phase 17 human review workflow persistence. | Added frontend create/list review operations, backend-aligned review decisions, repository-backed review history, demo in-memory review history, and timeline regression coverage. |
+| 2026-07-01 | Implemented Phase 18 document and RAG workspace. | Added Spring Boot `GET /api/v1/claims/{claimNumber}/document-workspace` and `POST /api/v1/claims/{claimNumber}/rag-query`, live frontend API/repository mapping, interactive `/documents` claim selector and RAG form, docs, and tests. |
 
 ## Known Issues And Caveats
 
@@ -142,9 +145,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Review Phase 17 human review workflow implementation on branch `human-review-workflow`.
-2. Merge Phase 17 after pull request checks pass.
-3. After Phase 17 merges, start Phase 18 document and RAG workspace.
+1. Review Phase 18 document and RAG workspace implementation on branch `document-rag-workspace`.
+2. Merge Phase 18 after pull request checks pass.
+3. After Phase 18 merges, start Phase 19 governance and audit dashboards.
 
 ## Memory Update Rules
 

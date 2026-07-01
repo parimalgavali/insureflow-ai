@@ -156,6 +156,12 @@ button {
   align-content: start;
 }
 
+.workspace-controls,
+.rag-question-form {
+  display: grid;
+  gap: 12px;
+}
+
 .workspace-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);

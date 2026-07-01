@@ -60,6 +60,35 @@ export interface BackendHumanReviewResponse {
   reviewedAt: string;
 }
 
+export interface BackendDocumentWorkspaceResponse {
+  claimNumber: string;
+  receivedDocuments: string[];
+  missingDocuments: string[];
+  extractionHighlights: string[];
+  summarySections: {
+    title: string;
+    body: string;
+  }[];
+}
+
+export interface BackendRagSourceResponse {
+  documentId: string;
+  chunkId: string;
+  documentType: string;
+  sectionTitle: string;
+  pageNumber: number;
+  score: number;
+}
+
+export interface BackendRagQuestionResponse {
+  claimNumber: string;
+  question: string;
+  answer: string;
+  confidence: RiskLabel;
+  requiresHumanReview: boolean;
+  sources: BackendRagSourceResponse[];
+}
+
 export interface CreateHumanReviewPayload {
   reviewerAdjusterId: string;
   decision: string;
@@ -73,6 +102,8 @@ export interface ClaimApi {
   fetchClaimEvents(claimNumber: string): Promise<BackendClaimEventResponse[]>;
   fetchClaimTriage(claimNumber: string): Promise<BackendClaimTriageResponse | null>;
   fetchHumanReviews(claimNumber: string): Promise<BackendHumanReviewResponse[]>;
+  fetchDocumentWorkspace(claimNumber: string): Promise<BackendDocumentWorkspaceResponse>;
+  askRagQuestion(claimNumber: string, question: string): Promise<BackendRagQuestionResponse>;
   createHumanReview(
     claimNumber: string,
     payload: CreateHumanReviewPayload,
@@ -172,6 +203,21 @@ export function createClaimApi(options: ClaimApiOptions = {}): ClaimApi {
         (await getJson<BackendHumanReviewResponse[]>(
           `/claims/${encodeURIComponent(claimNumber)}/human-reviews`,
         )) ?? []
+      );
+    },
+    async fetchDocumentWorkspace(claimNumber: string) {
+      const workspace = await getJson<BackendDocumentWorkspaceResponse>(
+        `/claims/${encodeURIComponent(claimNumber)}/document-workspace`,
+      );
+      if (!workspace) {
+        throw new Error(`Document workspace for ${claimNumber} was not found`);
+      }
+      return workspace;
+    },
+    async askRagQuestion(claimNumber: string, question: string) {
+      return await postJson<BackendRagQuestionResponse>(
+        `/claims/${encodeURIComponent(claimNumber)}/rag-query`,
+        { question },
       );
     },
     async createHumanReview(claimNumber: string, payload: CreateHumanReviewPayload) {

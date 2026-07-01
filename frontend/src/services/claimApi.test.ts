@@ -1,7 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createClaimApi, type BackendClaimTriageResponse } from "./claimApi";
-import { toClaimDetail, toTimelineEvents, toTriageSnapshot } from "./claimMapper";
+import {
+  createClaimApi,
+  type BackendClaimTriageResponse,
+  type BackendDocumentWorkspaceResponse,
+  type BackendRagQuestionResponse,
+} from "./claimApi";
+import {
+  toClaimDetail,
+  toDocumentIntelligenceSnapshot,
+  toRagAnswer,
+  toTimelineEvents,
+  toTriageSnapshot,
+} from "./claimMapper";
 import { createClaimRepository } from "./claimRepository";
 
 const backendClaim = {
@@ -62,6 +73,37 @@ const backendHumanReview = {
   reviewedAt: "2026-06-26T10:20:30Z",
 };
 
+const backendDocumentWorkspace: BackendDocumentWorkspaceResponse = {
+  claimNumber: "CLM-LIVE-1",
+  receivedDocuments: ["DAMAGE_PHOTOS", "REPAIR_INVOICE"],
+  missingDocuments: ["POLICE_REPORT"],
+  extractionHighlights: ["Repair invoice total is 9,000 EUR."],
+  summarySections: [
+    {
+      title: "Claim overview",
+      body: "High priority collision claim.",
+    },
+  ],
+};
+
+const backendRagAnswer: BackendRagQuestionResponse = {
+  claimNumber: "CLM-LIVE-1",
+  question: "Is this collision loss covered?",
+  answer: "This collision loss appears potentially covered pending human review.",
+  confidence: "MEDIUM",
+  requiresHumanReview: true,
+  sources: [
+    {
+      documentId: "CLAIM-CLM-LIVE-1",
+      chunkId: "CLAIM-CLM-LIVE-1-LIVE-CONTEXT",
+      documentType: "CLAIM_CONTEXT",
+      sectionTitle: "Coverage validation",
+      pageNumber: 1,
+      score: 0.72,
+    },
+  ],
+};
+
 describe("claim API client", () => {
   it("bootstraps a dev token and sends bearer auth on live requests", async () => {
     const fetchMock = vi
@@ -120,6 +162,36 @@ describe("claim API client", () => {
       }),
     );
   });
+
+  it("fetches document workspaces and asks grounded RAG questions with bearer auth", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ token: "dev-token" }))
+      .mockResolvedValueOnce(jsonResponse(backendDocumentWorkspace))
+      .mockResolvedValueOnce(jsonResponse(backendRagAnswer));
+    const api = createClaimApi({ baseUrl: "/api/v1", fetchImpl: fetchMock });
+
+    const workspace = await api.fetchDocumentWorkspace("CLM-LIVE-1");
+    const answer = await api.askRagQuestion("CLM-LIVE-1", "Is this collision loss covered?");
+
+    expect(workspace.missingDocuments).toEqual(["POLICE_REPORT"]);
+    expect(answer.sources[0].sectionTitle).toBe("Coverage validation");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/claims/CLM-LIVE-1/document-workspace",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer dev-token" }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "/api/v1/claims/CLM-LIVE-1/rag-query",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ question: "Is this collision loss covered?" }),
+      }),
+    );
+  });
 });
 
 describe("claim mapper", () => {
@@ -150,6 +222,23 @@ describe("claim mapper", () => {
       litigation: "LOW",
     });
   });
+
+  it("maps document workspace and RAG DTOs into workbench widgets", () => {
+    expect(toDocumentIntelligenceSnapshot(backendDocumentWorkspace)).toMatchObject({
+      receivedDocuments: ["DAMAGE_PHOTOS", "REPAIR_INVOICE"],
+      missingDocuments: ["POLICE_REPORT"],
+    });
+    expect(toRagAnswer(backendRagAnswer)).toMatchObject({
+      question: "Is this collision loss covered?",
+      confidence: "MEDIUM",
+      sources: [
+        {
+          chunkId: "CLAIM-CLM-LIVE-1-LIVE-CONTEXT",
+          sectionTitle: "Coverage validation",
+        },
+      ],
+    });
+  });
 });
 
 describe("claim repository", () => {
@@ -161,6 +250,8 @@ describe("claim repository", () => {
       fetchClaimTriage: vi.fn(),
       fetchHumanReviews: vi.fn(),
       createHumanReview: vi.fn(),
+      fetchDocumentWorkspace: vi.fn(),
+      askRagQuestion: vi.fn(),
     };
     const repository = createClaimRepository({ mode: "demo", api });
 
@@ -178,6 +269,8 @@ describe("claim repository", () => {
       fetchClaimTriage: vi.fn().mockResolvedValue(backendTriage),
       fetchHumanReviews: vi.fn().mockResolvedValue([backendHumanReview]),
       createHumanReview: vi.fn().mockResolvedValue(backendHumanReview),
+      fetchDocumentWorkspace: vi.fn().mockResolvedValue(backendDocumentWorkspace),
+      askRagQuestion: vi.fn().mockResolvedValue(backendRagAnswer),
     };
     const repository = createClaimRepository({
       mode: "live",
@@ -195,9 +288,23 @@ describe("claim repository", () => {
 
     expect(claims[0].claimNumber).toBe("CLM-LIVE-1");
     expect(claim?.triage.severity).toBe("HIGH");
+    expect(claim?.documents.missingDocuments).toEqual(["POLICE_REPORT"]);
+    expect(claim?.rag.answer).toContain("collision loss");
     expect(created.decision).toBe("REQUEST_MORE_INFORMATION");
     expect(reviews[0].notes).toBe("Need police report before moving workflow.");
     expect(api.fetchClaim).toHaveBeenCalledWith("CLM-LIVE-1");
+    expect(api.fetchDocumentWorkspace).toHaveBeenCalledWith("CLM-LIVE-1");
+    expect(api.askRagQuestion).toHaveBeenCalledWith("CLM-LIVE-1", "What should the adjuster verify?");
+  });
+
+  it("returns document workspaces and RAG answers in demo mode", async () => {
+    const repository = createClaimRepository({ mode: "demo" });
+
+    const documents = await repository.getDocumentWorkspace("CLM-20260626-000418");
+    const rag = await repository.askRagQuestion("CLM-20260626-000418", "What is covered?");
+
+    expect(documents?.missingDocuments).toContain("POLICE_REPORT");
+    expect(rag?.sources.length).toBeGreaterThan(0);
   });
 
   it("records demo human reviews in memory", async () => {

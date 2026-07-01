@@ -3,6 +3,10 @@ package com.insureflow.api.claims.api;
 import com.insureflow.api.claims.api.dto.ChangeClaimStatusRequest;
 import com.insureflow.api.claims.api.dto.ClaimEventResponse;
 import com.insureflow.api.claims.api.dto.ClaimResponse;
+import com.insureflow.api.claims.api.dto.DocumentWorkspaceResponse;
+import com.insureflow.api.claims.api.dto.RagQuestionRequest;
+import com.insureflow.api.claims.api.dto.RagQuestionResponse;
+import com.insureflow.api.claims.service.ClaimDecisionSupportService;
 import com.insureflow.api.claims.service.ClaimWorkflowService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -18,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 class ClaimController {
 
     private final ClaimWorkflowService claimWorkflowService;
+    private final ClaimDecisionSupportService claimDecisionSupportService;
 
-    ClaimController(ClaimWorkflowService claimWorkflowService) {
+    ClaimController(ClaimWorkflowService claimWorkflowService, ClaimDecisionSupportService claimDecisionSupportService) {
         this.claimWorkflowService = claimWorkflowService;
+        this.claimDecisionSupportService = claimDecisionSupportService;
     }
 
     @GetMapping
@@ -36,6 +42,17 @@ class ClaimController {
     @GetMapping("/{claimNumber}/events")
     List<ClaimEventResponse> getEvents(@PathVariable String claimNumber) {
         return claimWorkflowService.getEvents(claimNumber);
+    }
+
+    @GetMapping("/{claimNumber}/document-workspace")
+    DocumentWorkspaceResponse getDocumentWorkspace(@PathVariable String claimNumber) {
+        return claimDecisionSupportService.getDocumentWorkspace(claimNumber);
+    }
+
+    @PostMapping("/{claimNumber}/rag-query")
+    RagQuestionResponse answerRagQuestion(
+            @PathVariable String claimNumber, @Valid @RequestBody RagQuestionRequest request) {
+        return claimDecisionSupportService.answerQuestion(claimNumber, request);
     }
 
     @PostMapping("/{claimNumber}/status")

@@ -92,6 +92,42 @@ class ClaimOperationsIntegrationTest extends ApiIntegrationTest {
     }
 
     @Test
+    void returnsDocumentWorkspaceAndGroundedRagAnswer() {
+        String claimNumber = createSubmittedClaim("CUST-OPS-1005", "POL-OPS-1005");
+        post("/claims/" + claimNumber + "/documents", Map.of(
+                "documentType", "DAMAGE_PHOTOS",
+                "fileName", "damage-photos.zip",
+                "storageUri", "memory://damage-photos.zip",
+                "contentType", "application/zip",
+                "extractedMetadata", Map.of("photoCount", 4)));
+        post("/claims/" + claimNumber + "/documents", Map.of(
+                "documentType", "REPAIR_INVOICE",
+                "fileName", "repair-invoice.txt",
+                "storageUri", "memory://repair-invoice.txt",
+                "contentType", "text/plain",
+                "extractedMetadata", Map.of("totalAmount", 9000)));
+
+        ResponseEntity<Map<String, Object>> workspace = getMap("/claims/" + claimNumber + "/document-workspace");
+
+        assertThat(workspace.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List<String>) workspace.getBody().get("receivedDocuments"))
+                .contains("DAMAGE_PHOTOS", "REPAIR_INVOICE");
+        assertThat((List<String>) workspace.getBody().get("missingDocuments"))
+                .contains("POLICE_REPORT");
+        assertThat((List<Map<String, Object>>) workspace.getBody().get("summarySections"))
+                .extracting(section -> section.get("title"))
+                .contains("Claim overview", "Recommended next action");
+
+        ResponseEntity<Map<String, Object>> rag = post("/claims/" + claimNumber + "/rag-query", Map.of(
+                "question", "Is this collision loss covered?"));
+
+        assertThat(rag.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((String) rag.getBody().get("answer")).contains("collision");
+        assertThat(rag.getBody()).containsEntry("confidence", "MEDIUM");
+        assertThat((List<Map<String, Object>>) rag.getBody().get("sources")).isNotEmpty();
+    }
+
+    @Test
     void noteWithUnknownAdjusterReturns422InsteadOfUnexpectedServerError() {
         String claimNumber = createSubmittedClaim("CUST-OPS-1002", "POL-OPS-1002");
 
