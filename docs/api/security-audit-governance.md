@@ -89,13 +89,21 @@ Authorization: Bearer <ADJUSTER or ADMIN token>
 Content-Type: application/json
 
 {
-  "reviewerId": "11111111-1111-1111-1111-111111111111",
+  "reviewerAdjusterId": "11111111-1111-1111-1111-111111111111",
   "decision": "OVERRIDE_AI_RECOMMENDATION",
-  "overrideReason": "Evidence in the uploaded medical note contradicts the triage reason code."
+  "overrideReason": "Evidence in the uploaded medical note contradicts the triage reason code.",
+  "notes": "Senior adjuster reviewed the supporting documents."
 }
 ```
 
 When the decision is `OVERRIDE_AI_RECOMMENDATION`, `overrideReason` is required. The backend links the review to the latest triage result when one exists and writes a claim timeline event.
+
+Human review history can be read with:
+
+```http
+GET /api/v1/claims/{claimNumber}/human-reviews
+Authorization: Bearer <ADJUSTER or ADMIN token>
+```
 
 ## Logging
 

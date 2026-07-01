@@ -11,7 +11,7 @@ Future Codex sessions should read this file before planning or implementing work
 - **Visibility:** Public
 - **Local workspace:** `/Users/parimal_gavali/Documents/Guidewire`
 - **Primary blueprint source:** `/Users/parimal_gavali/Developer/Guidewire/InsureFlow_AI_Complete_Project_Blueprint.md`
-- **Current branch:** `testing-quality-observability`
+- **Current branch:** `human-review-workflow`
 - **First committed artifact:** `docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md`
 
 ## Project Purpose
@@ -49,6 +49,7 @@ Recommended sequence:
 | 2026-06-30 | Continue post-Phase-14 productization as Phases 15-20. | The next goal is a dynamic multi-page claims application; routing/page boundaries should come before live API integration. |
 | 2026-06-30 | Start Phase 15 on branch `frontend-routing-shell`. | Phase 15 adds Vue Router and frontend page boundaries while keeping demo data until Phase 16 live API integration. |
 | 2026-06-30 | Start Phase 16 on branch `live-claim-queue`. | Phase 16 connects claim queue/detail pages to live backend APIs while preserving explicit demo mode. |
+| 2026-07-01 | Start Phase 17 on branch `human-review-workflow`. | Phase 17 persists human review decisions from the frontend through existing backend human review APIs. |
 
 ## Completed Work
 
@@ -124,6 +125,7 @@ Recommended sequence:
 | 2026-06-30 | Documented the dynamic claims application roadmap. | Added Phases 15-20 roadmap at `docs/product/dynamic-claims-application-roadmap.md`, design spec at `docs/superpowers/specs/2026-06-30-dynamic-claims-application-design.md`, and roadmap plan at `docs/superpowers/plans/2026-06-30-dynamic-claims-application-roadmap.md`. |
 | 2026-06-30 | Implemented Phase 15 frontend routing shell. | Added Vue Router, `/claims`, `/claims/:claimNumber`, `/claims/:claimNumber/review`, `/documents`, `/governance`, `/integrations`, and `/settings` routes, plus page-level docs and route tests. |
 | 2026-06-30 | Implemented Phase 16 live claim queue/detail foundation. | Added backend `GET /api/v1/claims`, typed frontend claim API client, demo/live repository mode, backend-to-workbench mapper, page loading/error/empty states, and `/api` Vite/nginx proxying. |
+| 2026-07-01 | Implemented Phase 17 human review workflow persistence. | Added frontend create/list review operations, backend-aligned review decisions, repository-backed review history, demo in-memory review history, and timeline regression coverage. |
 
 ## Known Issues And Caveats
 
@@ -140,9 +142,9 @@ Recommended sequence:
 
 ## Near-Term Next Steps
 
-1. Review Phase 16 live claim queue/detail implementation on branch `live-claim-queue`.
-2. Commit and open a pull request for Phase 16.
-3. After Phase 16 merges, start Phase 17 human review workflow persistence.
+1. Review Phase 17 human review workflow implementation on branch `human-review-workflow`.
+2. Merge Phase 17 after pull request checks pass.
+3. After Phase 17 merges, start Phase 18 document and RAG workspace.
 
 ## Memory Update Rules
 

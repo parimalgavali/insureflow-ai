@@ -73,6 +73,17 @@ class HumanReviewIntegrationTest extends ApiIntegrationTest {
                         LIST_RESPONSE);
         assertThat(reviews.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(reviews.getBody()).hasSize(1);
+
+        ResponseEntity<List<Map<String, Object>>> events =
+                restTemplate.exchange(
+                        baseUrl + "/claims/" + claimNumber + "/events",
+                        HttpMethod.GET,
+                        authEntity(token),
+                        LIST_RESPONSE);
+        assertThat(events.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(events.getBody())
+                .extracting(event -> event.get("eventType"))
+                .contains("HUMAN_REVIEW_RECORDED");
     }
 
     private String createSubmittedClaim(String token) {

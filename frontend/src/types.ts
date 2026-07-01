@@ -92,6 +92,16 @@ export interface HumanReviewSubmission {
   reason: string;
 }
 
+export interface HumanReviewRecord {
+  id: string;
+  claimNumber: string;
+  reviewerAdjusterId: string;
+  decision: string;
+  overrideReason: string | null;
+  notes: string;
+  reviewedAt: string;
+}
+
 export type DataMode = "demo" | "live";
 
 export interface ClaimRepositoryState {

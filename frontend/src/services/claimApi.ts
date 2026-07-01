@@ -50,11 +50,33 @@ export interface BackendClaimTriageResponse {
   createdAt: string;
 }
 
+export interface BackendHumanReviewResponse {
+  id: string;
+  claimNumber: string;
+  reviewerAdjusterId: string;
+  decision: string;
+  overrideReason: string | null;
+  notes: string | null;
+  reviewedAt: string;
+}
+
+export interface CreateHumanReviewPayload {
+  reviewerAdjusterId: string;
+  decision: string;
+  overrideReason?: string;
+  notes?: string;
+}
+
 export interface ClaimApi {
   fetchClaimSummaries(): Promise<BackendClaimResponse[]>;
   fetchClaim(claimNumber: string): Promise<BackendClaimResponse>;
   fetchClaimEvents(claimNumber: string): Promise<BackendClaimEventResponse[]>;
   fetchClaimTriage(claimNumber: string): Promise<BackendClaimTriageResponse | null>;
+  fetchHumanReviews(claimNumber: string): Promise<BackendHumanReviewResponse[]>;
+  createHumanReview(
+    claimNumber: string,
+    payload: CreateHumanReviewPayload,
+  ): Promise<BackendHumanReviewResponse>;
 }
 
 export interface ClaimApiOptions {
@@ -111,6 +133,23 @@ export function createClaimApi(options: ClaimApiOptions = {}): ClaimApi {
     return (await response.json()) as T;
   }
 
+  async function postJson<T>(path: string, body: unknown): Promise<T> {
+    const token = await authToken();
+    const response = await fetchImpl(`${baseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed for ${path} (${response.status})`);
+    }
+    return (await response.json()) as T;
+  }
+
   return {
     async fetchClaimSummaries() {
       return (await getJson<BackendClaimResponse[]>("/claims")) ?? [];
@@ -127,6 +166,19 @@ export function createClaimApi(options: ClaimApiOptions = {}): ClaimApi {
     },
     async fetchClaimTriage(claimNumber: string) {
       return await getJson<BackendClaimTriageResponse>(`/claims/${encodeURIComponent(claimNumber)}/triage`, true);
+    },
+    async fetchHumanReviews(claimNumber: string) {
+      return (
+        (await getJson<BackendHumanReviewResponse[]>(
+          `/claims/${encodeURIComponent(claimNumber)}/human-reviews`,
+        )) ?? []
+      );
+    },
+    async createHumanReview(claimNumber: string, payload: CreateHumanReviewPayload) {
+      return await postJson<BackendHumanReviewResponse>(
+        `/claims/${encodeURIComponent(claimNumber)}/human-reviews`,
+        payload,
+      );
     },
   };
 }

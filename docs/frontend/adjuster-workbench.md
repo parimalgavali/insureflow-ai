@@ -22,13 +22,19 @@ VITE_DATA_MODE=live npm run dev
 
 In Vite dev mode, `/api` proxies to `http://localhost:8080`. In Docker Compose, nginx proxies `/api` to the `api` service.
 
+Live human review submission also requires an adjuster UUID that exists in the backend:
+
+```bash
+VITE_DATA_MODE=live VITE_REVIEWER_ADJUSTER_ID=<adjuster-uuid> npm run dev
+```
+
 ## Routes
 
 The routed demo app currently exposes:
 
 - `/claims` - claim queue
 - `/claims/:claimNumber` - claim detail workbench
-- `/claims/:claimNumber/review` - human review checkpoint
+- `/claims/:claimNumber/review` - human review checkpoint and review history
 - `/documents` - document intelligence workspace
 - `/governance` - audit and responsible AI evidence
 - `/integrations` - Guidewire-inspired integration console placeholder
@@ -71,12 +77,12 @@ The demo shows:
 ## Data Modes
 
 - `demo` uses `frontend/src/demoData.ts`.
-- `live` calls `/api/v1/claims`, `/api/v1/claims/{claimNumber}`, `/api/v1/claims/{claimNumber}/events`, and `/api/v1/claims/{claimNumber}/triage`.
+- `live` calls `/api/v1/claims`, `/api/v1/claims/{claimNumber}`, `/api/v1/claims/{claimNumber}/events`, `/api/v1/claims/{claimNumber}/triage`, and `/api/v1/claims/{claimNumber}/human-reviews`.
 - Live mode bootstraps a development adjuster token through `/api/v1/auth/dev-token`.
 
 ## Design Boundary
 
-Claim queue and claim detail data can now come from the backend. Rich document intelligence and RAG interaction are still represented with placeholders in live mode until Phase 18.
+Claim queue, claim detail, and human review history/submission can now come from the backend. Rich document intelligence and RAG interaction are still represented with placeholders in live mode until Phase 18.
 
 Future frontend phases can add:
 
