@@ -17,6 +17,18 @@ data = [
     "pyarrow>=17,<22",
     "kaggle>=1.6,<2",
 ]
+rag = [
+    "sentence-transformers>=3.0,<6",
+    "torch>=2.2,<3",
+    "pgvector>=0.3,<1",
+    "psycopg[binary]>=3.2,<4",
+    "sqlalchemy>=2.0,<3",
+    "alembic>=1.13,<2",
+    "pydantic>=2.7,<3",
+]
+llm = [
+    "anthropic>=0.40,<1",
+]
 
 [dependency-groups]
 dev = [
@@ -27,6 +39,14 @@ dev = [
 [tool.uv]
 package = false
 default-groups = ["dev"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
 
 [tool.ruff]
 line-length = 100

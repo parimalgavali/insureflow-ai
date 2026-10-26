@@ -1,0 +1,28 @@
+{"id": "de01", "lang": "de", "topic": "wild animal", "question": "Zahlt die Teilkasko, wenn ich mit einem Reh zusammenstoße?", "expected": ["A.2.2.1.4"]}
+{"id": "de02", "lang": "de", "topic": "theft", "question": "Mein Auto wurde gestohlen – ist das in der Teilkasko versichert?", "expected": ["A.2.2.1.2"]}
+{"id": "de03", "lang": "de", "topic": "glass", "question": "Ist ein Steinschlag in der Windschutzscheibe versichert?", "expected": ["A.2.2.1.5"]}
+{"id": "de04", "lang": "de", "topic": "vollkasko scope", "question": "Welche Schäden deckt die Vollkasko zusätzlich zur Teilkasko ab?", "expected": ["A.2.2.2"]}
+{"id": "de05", "lang": "de", "topic": "hail", "question": "Sind Hagelschäden am Fahrzeug versichert?", "expected": ["A.2.2.1.3"]}
+{"id": "de06", "lang": "de", "topic": "vandalism", "question": "Jemand hat mein geparktes Auto mutwillig zerkratzt. Zahlt die Versicherung?", "expected": ["A.2.2.2.3"]}
+{"id": "de07", "lang": "de", "topic": "reporting deadline", "question": "Wie schnell muss ich einen Schaden bei der Versicherung melden?", "expected": ["E.1.1.1"]}
+{"id": "de08", "lang": "de", "topic": "police report", "question": "Muss ich bei einem Wildunfall oder Diebstahl die Polizei informieren?", "expected": ["E.1.3.3"]}
+{"id": "de09", "lang": "de", "topic": "late reporting", "question": "Was passiert, wenn ich den Schaden zu spät melde oder meine Pflichten verletze?", "expected": ["E.2.1", "E.2.2"]}
+{"id": "de10", "lang": "de", "topic": "hit and run duty", "question": "Darf ich den Unfallort verlassen, bevor die Polizei da ist?", "expected": ["E.1.1.3"]}
+{"id": "de11", "lang": "de", "topic": "gross negligence", "question": "Was passiert, wenn ich den Unfall grob fahrlässig verursacht habe?", "expected": ["A.2.9.1"]}
+{"id": "de12", "lang": "de", "topic": "deductible", "question": "Wie wird die Selbstbeteiligung bei einem Kaskoschaden berücksichtigt?", "expected": ["A.2.5.8"]}
+{"id": "de13", "lang": "de", "topic": "abroad", "question": "Gilt meine Kaskoversicherung auch im Ausland?", "expected": ["A.2.4"]}
+{"id": "de14", "lang": "de", "topic": "insured persons", "question": "Wer ist in der Kfz-Haftpflichtversicherung mitversichert?", "expected": ["A.1.2"]}
+{"id": "de15", "lang": "de", "topic": "towing", "question": "Zahlt die Versicherung die Abschleppkosten nach einem Unfall?", "expected": ["A.2.5.2.2"]}
+{"id": "de16", "lang": "de", "topic": "total loss", "question": "Was bekomme ich bei einem Totalschaden erstattet?", "expected": ["A.2.5.1.1", "A.2.5.1.5"]}
+{"id": "de17", "lang": "de", "topic": "alcohol", "question": "Was passiert, wenn ich unter Alkoholeinfluss gefahren bin?", "expected": ["D.1.2.1", "D.1.3.1"]}
+{"id": "de18", "lang": "de", "topic": "driving licence", "question": "Darf jemand ohne Führerschein mein Auto fahren?", "expected": ["D.1.1.3"]}
+{"id": "en01", "lang": "en", "topic": "own-fault accident", "question": "Does fully comprehensive cover (Vollkasko) pay for an accident I caused myself?", "expected": ["A.2.2.2.2"]}
+{"id": "en02", "lang": "en", "topic": "theft", "question": "Is my car covered against theft?", "expected": ["A.2.2.1.2"]}
+{"id": "en03", "lang": "en", "topic": "hit and run", "question": "Someone hit my parked car and drove away. Is hit-and-run damage covered?", "expected": ["A.2.2.2.2", "A.2.2.2.3", "A.2.2.2"]}
+{"id": "en04", "lang": "en", "topic": "duties after loss", "question": "What are my duties after an accident?", "expected": ["E.1.1"]}
+{"id": "en05", "lang": "en", "topic": "police report", "question": "Do I have to report a theft to the police?", "expected": ["E.1.3.3", "E.1.3.1"]}
+{"id": "en06", "lang": "en", "topic": "late reporting", "question": "What happens if I report the claim late?", "expected": ["E.2.1", "E.1.1.1"]}
+{"id": "en07", "lang": "en", "topic": "deductible", "question": "How is the deductible applied to my claim?", "expected": ["A.2.5.8"]}
+{"id": "en08", "lang": "en", "topic": "glass", "question": "Is windshield glass breakage covered?", "expected": ["A.2.2.1.5"]}
+{"id": "en09", "lang": "en", "topic": "abroad", "question": "Does my cover apply when driving abroad in Europe?", "expected": ["A.2.4", "A.1.4.1"]}
+{"id": "en10", "lang": "en", "topic": "wild animal", "question": "Is damage from hitting a deer covered?", "expected": ["A.2.2.1.4"]}
