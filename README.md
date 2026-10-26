@@ -77,7 +77,16 @@ legacy/     archived v1 (not maintained)
 
 ## Running it
 
-Not yet — v2 is being rebuilt task by task. Each task ends with a PR and a short spec in [docs/specs/](docs/specs/). When task 5 lands, `docker compose up` will bring up the API; task 6 adds the UI.
+Requires [uv](https://docs.astral.sh/uv/) (installs Python 3.12 itself).
+
+```bash
+uv sync --extra data                      # deps incl. pandas/openml/kaggle
+uv run python scripts/fetch_data.py all   # AKB PDF→text, freMTPL2 parquet, 50 seed policyholders
+                                          # + Kaggle fraud CSV if ~/.kaggle/kaggle.json exists
+uv run pytest && uv run ruff check .
+```
+
+Data cards with licenses and checksums: [`data/README.md`](data/README.md). The API, agent and UI arrive in tasks 3–6 (see [`docs/ROADMAP.md`](docs/ROADMAP.md)).
 
 ## Why v2 exists
 
