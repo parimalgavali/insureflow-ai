@@ -1,252 +1,92 @@
-# InsureFlow AI
+# InsureFlow AI — ClaimPilot
 
-InsureFlow AI is a Guidewire-inspired claims and policy intelligence platform built as a professional insurance technology portfolio project.
+**File a motor insurance claim by talking to it.** One screen: a chat on the left, a live claim card on the right. An agent extracts the facts, asks for what is missing, checks coverage against the *real* policy wording with clause citations, scores fraud risk with a model trained on *real* claims, and hands the result to a human reviewer.
 
-It combines Spring Boot insurance workflows, Python AI services, local ML model training, document intelligence, RAG, Vue adjuster tooling, integration APIs, governance, observability, and cloud deployment readiness.
+> Portfolio project by Parimal Gavali. Backend engineering + frontend engineering + applied AI, each backed by something you can open and read. Decision support only — nothing here approves, denies or accuses.
 
-## What This Is
+**Status:** v2 in progress. The v1 prototype is archived under [`legacy/`](legacy/README.md) (tag `v1-guidewire-prototype`). Current step: see [docs/ROADMAP.md](docs/ROADMAP.md).
 
-InsureFlow AI simulates how a modern P&C insurer can handle policy validation, FNOL intake, claim lifecycle operations, AI-assisted triage, document intelligence, adjuster assistance, human review, audit, and integration workflows.
+---
 
-It is designed for portfolio review, technical interviews, and insurance technology discussion. It uses synthetic data and local demo services so the system can be inspected without private insurance data.
+## What it does (target for v2)
 
-## Important Boundary
+```
+You:   Someone hit my parked car last night in Bielefeld, rear bumper is cracked.
+       They drove off. I have photos.
+Agent: Sorry to hear that. Two quick questions: do you know the date, and did
+       you report it to the police?
+You:   Yesterday, 26 Oct. Not yet.
+Agent: Thanks. Here is where you stand:
+       • Coverage: a hit-and-run on a parked car is a Vollkasko event (AKB A.2.3.2);
+         Teilkasko alone would not cover it (A.2.2). Your deductible is €300.
+       • Missing: police report — required for hit-and-run (AKB E.1.1.3). I've added it
+         to your to-do list.
+       • Risk signal: low. Reasons: no prior claims, report filed within 1 day,
+         damage amount consistent with description.
+       Ready to send this to an adjuster?
+```
 
-This is not an official Guidewire product, connector, implementation, certification, or integration. It is a Guidewire-inspired portfolio project that demonstrates relevant insurance workflows and engineering patterns with synthetic data.
+Every sentence above maps to a component:
 
-## Why It Matters
-
-Claim operations are document-heavy, time-sensitive, and audit-sensitive. Insurers need reliable core workflows, explainable decision support, human-in-the-loop controls, integration boundaries, and operational visibility.
-
-InsureFlow AI shows those concerns end to end in one project:
-
-- policy and coverage validation before claim routing;
-- claim intake, timeline, notes, documents, reserves, and status changes;
-- AI triage with rule-based and ML-backed severity and fraud-risk signals;
-- LLM-style document extraction and summarization with deterministic local providers;
-- RAG-based adjuster assistance with grounded source references;
-- human review, override, audit logging, governance views, and correlation IDs;
-- CI, coverage, security scanning, Docker Compose, Azure templates, Prometheus, and Grafana.
-
-## What It Demonstrates
-
-- Insurance domain modeling for customers, policies, coverages, claims, documents, notes, reserves, and audit events.
-- Java 21 and Spring Boot API engineering with PostgreSQL, Flyway, JPA, validation, security, and integration tests.
-- Python FastAPI AI services with typed request/response contracts and deterministic tests.
-- Local ML training with model cards, artifact metadata, and service fallback behavior.
-- Vue 3 adjuster workbench that presents a full claim intelligence workflow.
-- Guidewire-style integration API thinking without claiming official product compatibility.
-- Responsible AI boundaries for decision-support systems.
-- Cloud-native packaging and quality gates suitable for a public portfolio repository.
+| Piece | What is behind it |
+| --- | --- |
+| Follow-up questions | A **LangGraph** state graph with a conditional loop: `extract → check_missing → ask / continue` |
+| Coverage with citations | **RAG** over the GDV *Allgemeine Bedingungen für die Kfz-Versicherung (AKB 2015)* — real German motor policy wording, clause-chunked, embedded with a multilingual transformer, stored in **pgvector** |
+| Risk signal with reasons | A **scikit-learn** gradient-boosting model trained on 15,420 real vehicle claims (Kaggle vehicle-insurance-fraud, CC0), evaluated as an imbalanced problem (AUPRC, recall at fixed precision), with per-prediction feature contributions |
+| "Send to adjuster" | A LangGraph **human-in-the-loop interrupt**; the conversation state is checkpointed in Postgres |
+| The LLM | Anthropic Claude via a provider interface; **Ollama** fallback so the demo runs offline |
+| Bilingual | Corpus is German, UI is English, user may write either; multilingual embeddings handle DE↔EN retrieval |
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    Adjuster["Adjuster / Recruiter Demo User"] --> Workbench["Vue Adjuster Workbench"]
-    Workbench --> API["Spring Boot API"]
-
-    API --> Postgres["PostgreSQL\nPolicies, Claims, Audit, AI Results"]
-    API --> Triage["FastAPI Triage Service\nRules + Optional ML"]
-    API --> DocIntel["Document Intelligence Service\nExtraction + Summaries"]
-    API --> RAG["RAG Assistant Service\nGrounded Answers"]
-    API --> Integration["Guidewire-Inspired\n/integration/v1 APIs"]
-
-    Triage --> ML["Local ML Package\nTraining + Artifacts + Model Cards"]
-    RAG --> SyntheticDocs["Synthetic Documents\nJSONL + Claim Files"]
-    DocIntel --> SyntheticDocs
-
-    Compose["Docker Compose App Profile"] --> API
-    Compose --> Triage
-    Compose --> DocIntel
-    Compose --> RAG
-    Compose --> Workbench
-    Compose --> Postgres
-
-    CI["GitHub Actions\nTests, Coverage, Trivy"] --> API
-    CI --> Triage
-    CI --> DocIntel
-    CI --> RAG
-    CI --> Workbench
-
-    Observability["Prometheus + Grafana"] --> API
-    Cloud["Azure Container Apps Templates"] --> Compose
+```
+Browser — Vue 3 single page (chat + claim card)
+   │ HTTP + Server-Sent Events
+   ▼
+FastAPI ─── LangGraph agent (in-process) ─── LLM provider (Anthropic | Ollama)
+   │              │              │
+   │              │              └── fraud model artifact (.joblib) + explainer
+   │              └── retriever ──► Postgres + pgvector (policy_chunks)
+   └── SQLAlchemy ───────────────► Postgres (conversations, messages, claims, checkpoints)
 ```
 
-## Five-Minute Demo
+Three containers: `db`, `api`, `web`. Details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-Start with the guided script:
+## Data
 
-- [Five-minute demo script](docs/demo/demo-script.md)
-- [Recruiter walkthrough](docs/demo/recruiter-walkthrough.md)
-- [Interview talking points](docs/demo/interview-talking-points.md)
-- [Screenshot checklist](docs/demo/screenshot-checklist.md)
+Real, public, documented in [docs/DATA.md](docs/DATA.md):
 
-Fast local demo path:
+- **GDV AKB 2015** — German Insurance Association model motor policy terms (RAG corpus)
+- **Vehicle Insurance Fraud Detection** — 15,420 labelled real claims, CC0 (fraud model)
+- **freMTPL2freq / freMTPL2sev** — 678k real French motor TPL policies, CC0 (realistic policyholder seed data)
+- **InsuranceQA** — real consumer Q&A (RAG evaluation)
 
-```bash
-docker compose --profile app up --build
-./scripts/smoke-test-containers.sh
+No real policy/claim data is linked across these sources publicly, so a thin seed layer joins them for the demo. That limitation is stated, not hidden.
+
+## Repository layout (v2)
+
+```
+api/        FastAPI app, agent, retriever, ML inference         (task 4–5)
+ml/         training script, evaluation, model card             (task 2)
+rag/        ingestion, chunking, eval questions                 (task 3)
+web/        Vue 3 single-page frontend                          (task 6)
+scripts/    fetch_data.py and friends                           (task 1)
+docs/       DECISIONS, DATA, ARCHITECTURE, ROADMAP, specs/, planning/
+legacy/     archived v1 (not maintained)
 ```
 
-Pre-demo readiness check:
+## Running it
 
-```bash
-./scripts/demo-readiness-check.sh
-```
+Not yet — v2 is being rebuilt task by task. Each task ends with a PR and a short spec in [docs/specs/](docs/specs/). When task 5 lands, `docker compose up` will bring up the API; task 6 adds the UI.
 
-Frontend workbench:
+## Why v2 exists
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+v1 (June–July 2026) was a wide Guidewire-style scaffold — 9 containers, 5 pages, 20 phases — on synthetic data, with "AI" components that were keyword matching and regexes. The audit and the reasoning for the reset are in [docs/planning/2026-10-27-v2-direction.md](docs/planning/2026-10-27-v2-direction.md) and [docs/DECISIONS.md](docs/DECISIONS.md). Narrow and real beats wide and shallow.
 
-Quality and observability path:
+## Responsible AI
 
-```bash
-./scripts/run-tests.sh
-./scripts/run-coverage.sh
-./scripts/run-quality-gates.sh
-docker compose --profile app --profile observability up -d --build
-```
+Outputs are decision support for a human reviewer. The fraud signal is a *risk score with reasons*, never a verdict. Coverage answers always cite the clause and say when evidence is missing. Everything runs on public data; nothing personal is stored beyond a demo conversation.
 
-Grafana runs at `http://localhost:3000` when the observability profile is active. Swagger UI is available at `http://localhost:8080/swagger-ui.html` when the API is running.
+## License
 
-## System Capabilities
-
-| Area | What Exists |
-| --- | --- |
-| Domain foundation | PostgreSQL/Flyway schema for customers, policies, coverages, claims, documents, notes, reserves, audit, AI results, and integration events |
-| Policy and claims workflow | Policy lookup, coverage validation, FNOL, claim timeline, notes, documents, status transitions, and claim operations |
-| AI triage | Rule-based triage plus optional ML severity and fraud-risk model artifacts |
-| ML training | Synthetic-data training pipeline, metrics, model cards, artifact loader, and reproducible tests |
-| Document intelligence | Deterministic local LLM-style extraction, missing-document checks, summaries, retries, and audit |
-| RAG assistant | Ingestion, chunking, retrieval, grounded answers, source references, and missing-evidence behavior |
-| Frontend | Vue adjuster workbench for queue, claim detail, AI insight, documents, RAG, timeline, audit, and human review |
-| Integration APIs | Guidewire-inspired policy sync, claim create, claim lookup, claim status, reserves, events, and webhook simulation |
-| Governance | JWT roles, correlation IDs, audit logging, model/prompt registry views, AI evidence dashboard, and human review override enforcement |
-| Deployment | Dockerfiles, Compose app profile, smoke tests, Azure Container Apps Bicep templates |
-| Quality | Backend/Python/frontend tests, coverage reports, quality gates, Trivy security scan, Prometheus, Grafana, and load smoke script |
-| Demo readiness | Settings readiness panel, demo script, screenshot checklist, recruiter walkthrough, and `scripts/demo-readiness-check.sh` |
-
-## Tech Stack
-
-- Java 21, Spring Boot 3.5, Maven, Spring Security, JPA, Flyway
-- PostgreSQL, Docker Compose, Testcontainers
-- Python, FastAPI, Pydantic, pytest, scikit-learn, pandas
-- Vue 3, Vite, TypeScript, Vitest
-- GitHub Actions, Trivy, JaCoCo, coverage.py, npm audit
-- Prometheus, Grafana
-- Azure Container Apps Bicep templates
-
-## Local Run Commands
-
-Backend:
-
-```bash
-cd backend
-mvn test
-```
-
-All tests:
-
-```bash
-./scripts/run-tests.sh
-```
-
-Synthetic data:
-
-```bash
-cd synthetic-data-generator
-python3 -m venv ../.venv
-../.venv/bin/python -m pip install ".[dev]"
-../.venv/bin/python -m pytest
-../.venv/bin/python -m generator --customers 500 --policies 650 --claims 200 --adjusters 25 --seed 42 --output-dir ../data/synthetic
-```
-
-AI triage service:
-
-```bash
-cd ai-services/triage-service
-python3 -m pip install -e ".[test]"
-python3 -m pytest
-python3 -m uvicorn triage_service.app:app --reload --port 8001
-```
-
-ML training:
-
-```bash
-cd ml
-python3 -m pip install -e ".[test]"
-python3 -m pytest
-python3 -m insureflow_ml.train --data-dir ../data/synthetic --artifacts-dir artifacts
-```
-
-Document intelligence service:
-
-```bash
-cd ai-services/document-intelligence-service
-python3 -m pip install -e ".[test]"
-python3 -m pytest
-python3 -m uvicorn document_intelligence.app:app --reload --port 8002
-```
-
-RAG assistant service:
-
-```bash
-cd ai-services/rag-service
-python3 -m pip install -e ".[test]"
-python3 -m pytest
-python3 -m uvicorn rag_service.app:app --reload --port 8003
-```
-
-Frontend:
-
-```bash
-cd frontend
-npm install
-npm test -- --run
-npm run build
-npm run dev
-```
-
-## Documentation Map
-
-Evaluator quick path:
-
-- [Demo script](docs/demo/demo-script.md)
-- [Recruiter walkthrough](docs/demo/recruiter-walkthrough.md)
-- [Project narrative](docs/portfolio/project-narrative.md)
-- [Resume bullets](docs/portfolio/resume-bullets.md)
-- [Responsible AI statement](docs/ai/responsible-ai-statement.md)
-- [Documentation index](docs/README.md)
-
-Deep technical docs:
-
-- [System context](docs/architecture/system-context.md)
-- [Service architecture](docs/architecture/service-architecture.md)
-- [Policy claims workflow API](docs/api/policy-claims-workflow.md)
-- [AI triage API](docs/api/ai-triage.md)
-- [Document intelligence API](docs/api/document-intelligence.md)
-- [RAG assistant API](docs/api/rag-assistant.md)
-- [Integration APIs](docs/api/integration-apis.md)
-- [Security, audit, and governance](docs/api/security-audit-governance.md)
-- [Cloud deployment](docs/deployment/cloud-deployment.md)
-- [Testing, quality, and observability](docs/quality/testing-quality-observability.md)
-- [Model training](docs/ml/model-training.md)
-- [Severity model card](docs/ml/severity-model-card.md)
-- [Fraud-risk model card](docs/ml/fraud-risk-model-card.md)
-
-Project management:
-
-- [Project memory](PROJECT_MEMORY.md)
-- [Master build plan](docs/superpowers/plans/2026-06-24-insureflow-ai-master-build-plan.md)
-- [Full project blueprint](PROJECT_BLUEPRINT.md)
-
-## Responsible AI And Project Boundary
-
-AI outputs in this project are decision-support signals only. They must not be used for real claim approval, denial, fraud accusation, legal advice, medical advice, or production insurance decisions.
-
-The project uses synthetic data, deterministic local AI providers, local ML artifacts, explainable rule baselines, audit trails, human review controls, and model/prompt registry documentation to demonstrate responsible AI design patterns. See [docs/ai/responsible-ai-statement.md](docs/ai/responsible-ai-statement.md).
+MIT for the code. Data sources keep their own licenses (see docs/DATA.md).

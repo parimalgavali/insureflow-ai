@@ -40,3 +40,6 @@ ml/artifacts/
 worktrees/
 
 *.log
+
+data/uploads/
+artifacts/
