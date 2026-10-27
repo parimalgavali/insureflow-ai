@@ -164,6 +164,7 @@ def _stream_turn(
         "messages": [ChatMessage(role="user", content=user_text)],
         "policy": policy,
         "language": language,
+        "attachments": 1 if has_attachment else 0,
     }
     assistant_texts: list[str] = []
     final: dict[str, Any] = {}
@@ -184,12 +185,8 @@ def _stream_turn(
             for text in assistant_texts:
                 conv.messages.append(Message(role="assistant", content=text))
             conv.status = final.get("status", conv.status)
-            if has_attachment and final.get("facts") is not None:
-                final["facts"].photos_attached = True
             card = final.get("card")
             if card is not None:
-                if has_attachment:
-                    card.facts.photos_attached = True
                 conv.claim.card = card.model_dump(mode="json")
                 conv.claim.status = card.status
             else:
