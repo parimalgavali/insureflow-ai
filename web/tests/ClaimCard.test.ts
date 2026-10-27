@@ -38,6 +38,9 @@ describe("ClaimCard", () => {
     expect(w.find('[data-testid="popover"]').exists()).toBe(false);
     await pills[0].trigger("click");
     expect(w.get('[data-testid="popover"]').text()).toContain("Versichert sind Schäden durch Unfall.");
+    expect(pills[0].attributes("aria-pressed")).toBe("true");
+    await pills[0].trigger("click");
+    expect(w.find('[data-testid="popover"]').exists()).toBe(false);
     expect(w.get('[data-testid="risk"]').text()).toBe("medium");
     expect(w.findAll(".reasons li")).toHaveLength(3);
   });
