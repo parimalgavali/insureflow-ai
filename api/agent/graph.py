@@ -41,6 +41,7 @@ from api.llm.provider import Provider, ProviderError
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 MAX_FOLLOWUPS = 3
 TOP_K = 5
+MAX_CITATIONS = 8
 CLAUSE_REF = re.compile(r"\[([A-Z]\.\d+(?:\.\d+)*)\]")
 LANGUAGE_NAMES = {"de": "German", "en": "English"}
 
@@ -51,8 +52,9 @@ EVENT_QUERIES: dict[str, list[str]] = {
         "Pflichten im Schadenfall Anzeige",
     ],
     "hit_and_run": [
-        "Unbekannter beschädigt geparktes Fahrzeug und entfernt sich, Unfall Vollkasko",
-        "Pflichten im Schadenfall Anzeige Aufklärung Polizei",
+        "Unfall: Schäden am Fahrzeug durch ein unmittelbar von außen plötzlich mit mechanischer "
+        "Gewalt einwirkendes Ereignis (Vollkasko)",
+        "Aufklärungspflicht: Unfallstelle nicht verlassen, Polizei, wahrheitsgemäße Angaben",
     ],
     "theft": ["Entwendung des Fahrzeugs Teilkasko", "Anzeige bei der Polizei bei Entwendung"],
     "vandalism": [
@@ -69,6 +71,14 @@ EVENT_QUERIES: dict[str, list[str]] = {
     ],
     "unknown": ["Welche Ereignisse sind in der Kaskoversicherung versichert"],
 }
+
+
+# Asked for every claim: the reporting duty, and the deductible for Kasko products.
+COMMON_QUERIES = ["Anzeigepflicht: Schadenereignis innerhalb einer Woche anzeigen"]
+DEDUCTIBLE_QUERY = (
+    "Selbstbeteiligung wird bei jedem Schadenereignis von der Entschädigung abgezogen"
+)
+PER_QUERY = 3
 
 
 class RiskScorer(Protocol):
@@ -99,6 +109,7 @@ class AgentState(TypedDict, total=False):
     facts: ClaimFacts
     policy: PolicyContext
     missing: list[str]
+    attachments: Annotated[int, operator.add]
     followups_asked: int
     extract_failed: bool
     retrieved: list[Citation]
@@ -147,6 +158,8 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                     ]
         if isinstance(update, ClaimFacts):
             facts = facts.merge(update)
+        if state.get("attachments", 0) > 0 and not facts.photos_attached:
+            facts = facts.model_copy(update={"photos_attached": True})
         return {
             "language": language,
             "facts": facts,
@@ -196,25 +209,33 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         }
 
     def retrieve(state: AgentState) -> dict:
+        """Top hits per query, interleaved: scores are not comparable across queries, so a global
+        sort would let one well-matched duty clause crowd out the coverage clause."""
         if deps.retriever is None:
             return {"retrieved": []}
-        facts, language = state["facts"], state["language"]
-        hits = list(deps.retriever.retrieve_many(EVENT_QUERIES.get(facts.event_type, []), k=TOP_K))
+        facts, policy, language = state["facts"], state["policy"], state["language"]
+        queries = [*EVENT_QUERIES.get(facts.event_type, []), *COMMON_QUERIES]
+        if policy.product != "haftpflicht":
+            queries.append(DEDUCTIBLE_QUERY)
+        per_query = [list(deps.retriever.retrieve_many([q], k=PER_QUERY)) for q in queries]
         if facts.description:
-            hits += deps.retriever.retrieve(facts.description, k=TOP_K, lang=language)
-        best: dict[str, Citation] = {}
-        for hit in hits:
-            chunk = hit.chunk
-            if chunk.clause_id not in best or hit.score > (best[chunk.clause_id].score or 0):
-                best[chunk.clause_id] = Citation(
-                    clause_id=chunk.clause_id,
-                    title=chunk.title,
-                    excerpt=chunk.text[:600],
-                    page=chunk.page,
-                    score=round(float(hit.score), 4),
-                )
-        ranked = sorted(best.values(), key=lambda c: -(c.score or 0))[: TOP_K + 2]
-        return {"retrieved": ranked}
+            per_query.append(
+                list(deps.retriever.retrieve(facts.description, k=PER_QUERY, lang=language))
+            )
+        ordered: dict[str, Citation] = {}
+        for rank in range(PER_QUERY):
+            for hits in per_query:
+                if rank < len(hits):
+                    chunk, score = hits[rank].chunk, float(hits[rank].score)
+                    if chunk.clause_id not in ordered:
+                        ordered[chunk.clause_id] = Citation(
+                            clause_id=chunk.clause_id,
+                            title=chunk.title,
+                            excerpt=chunk.text[:600],
+                            page=chunk.page,
+                            score=round(score, 4),
+                        )
+        return {"retrieved": list(ordered.values())[:MAX_CITATIONS]}
 
     def score_risk(state: AgentState) -> dict:
         if deps.risk_scorer is None:

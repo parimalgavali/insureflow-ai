@@ -16,7 +16,7 @@ from api.agent.graph import (
 )
 from api.agent.language import detect_language
 from api.agent.required_facts import describe, missing_facts
-from api.agent.schemas import ClaimFacts, PolicyContext, ReviewDecision, RiskSignal
+from api.agent.schemas import ChatMessage, ClaimFacts, PolicyContext, ReviewDecision, RiskSignal
 from api.llm.provider import ProviderError, RecordedProvider
 from rag.chunking import Chunk
 from rag.embeddings import BagOfWordsEmbedder
@@ -115,10 +115,17 @@ def test_scripted_hit_and_run_conversation(graph_and_provider):
     assert "Wann" in first["messages"][-1].content
     assert pending_interrupt(first) is None
 
-    second = run_turn(
-        graph,
-        thread,
-        "Das war am 25.10.2026 gegen 19 Uhr. Die Polizei habe ich nicht gerufen, Zeugen gab es keine.",
+    second = graph.invoke(
+        {
+            "messages": [
+                ChatMessage(
+                    role="user",
+                    content="Das war am 25.10.2026 gegen 19 Uhr. Die Polizei habe ich nicht gerufen, Zeugen gab es keine.",
+                )
+            ],
+            "attachments": 1,
+        },
+        thread_config(thread),
     )
     facts = second["facts"]
     assert (
@@ -129,11 +136,12 @@ def test_scripted_hit_and_run_conversation(graph_and_provider):
         and facts.damage_description == "Hintere Stoßstange eingedrückt"
     )
     assert second["followups_asked"] == 1  # follow-up asked exactly once
+    assert facts.photos_attached is True  # one attachment came with this turn
     assert second["status"] == "awaiting_review"
 
     card = second["card"]
     cited = {c.clause_id for c in card.citations}
-    assert any(c.startswith("A.2.2.2") for c in cited) and any(c.startswith("E.1") for c in cited)
+    assert {"A.2.2.2.2", "A.2.5.8", "E.1.1.1", "E.1.1.3"} <= cited
     assert card.risk is not None and card.risk.band == "medium" and len(card.risk.reasons) == 3
     assert card.coverage_status == "likely_covered"
     assert "[Z.9.9]" not in card.coverage_summary and "[A.2.2.2.2]" in card.coverage_summary
