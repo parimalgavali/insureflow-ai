@@ -31,8 +31,11 @@ jobs:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --all-extras
+||||||| parent of 2cf0219 (Task 5: FastAPI backend — conversations/messages (SSE), claims review resume, uploads, bearer auth, SQLAlchemy models + Alembic 0002 (incl. LangGraph checkpoint tables), Dockerfile, docker-compose, CI image build)
+      - run: uv sync --extra data --extra rag --extra llm
       - run: uv run ruff check .
       - run: uv run ruff format --check .
+      - run: uv run alembic upgrade head
       - run: uv run pytest
       - name: Cache embedding model and AKB download
         uses: actions/cache@v4
@@ -52,3 +55,9 @@ jobs:
           name: rag-eval
           path: rag-eval.json
           if-no-files-found: ignore
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t claimpilot-api:ci .
