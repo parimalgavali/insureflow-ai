@@ -43,6 +43,14 @@ const STATUS_LABELS: Record<string, string> = {
 
 const edits = reactive<Record<string, string>>({});
 const editing = ref(false);
+const activeCitation = ref<Citation | null>(null);
+function toggleCitation(c: Citation) {
+  activeCitation.value = activeCitation.value?.clause_id === c.clause_id ? null : c;
+}
+watch(
+  () => props.card?.coverage_summary,
+  () => (activeCitation.value = null),
+);
 watch(
   () => props.facts,
   () => Object.keys(edits).forEach((k) => delete edits[k]),
@@ -125,13 +133,30 @@ function submitReview() {
         <span class="badge" :class="card.coverage_status" data-testid="coverage">{{ STATUS_LABELS[card.coverage_status] }}</span>
         <p class="summary" data-testid="summary">
           <template v-for="(part, i) in summaryParts" :key="i">
-            <CitationPill v-if="'citation' in part" :citation="part.citation" />
+            <CitationPill
+              v-if="'citation' in part"
+              :citation="part.citation"
+              :active="activeCitation?.clause_id === part.citation.clause_id"
+              @select="toggleCitation"
+            />
             <template v-else>{{ part.text }}</template>
           </template>
         </p>
         <p v-if="card.citations.length" class="disclaimer">
-          Clauses: <CitationPill v-for="c in card.citations" :key="c.clause_id" :citation="c" />
+          Clauses:
+          <CitationPill
+            v-for="c in card.citations"
+            :key="c.clause_id"
+            :citation="c"
+            :active="activeCitation?.clause_id === c.clause_id"
+            @select="toggleCitation"
+          />
         </p>
+        <blockquote v-if="activeCitation" class="clause" data-testid="popover" aria-live="polite">
+          <strong>AKB 2015 {{ activeCitation.clause_id }} – {{ activeCitation.title || "clause" }}</strong>
+          {{ activeCitation.excerpt }}
+          <small v-if="activeCitation.page">page {{ activeCitation.page }}</small>
+        </blockquote>
       </template>
       <p v-else-if="citations.length" class="empty">Found {{ citations.length }} relevant clauses, composing…</p>
       <p v-else class="empty">Coverage is checked against the policy wording once the key facts are known.</p>
