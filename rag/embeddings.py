@@ -8,6 +8,7 @@ Default model: intfloat/multilingual-e5-small (384 dims, CPU-friendly, DE/EN). e
 from __future__ import annotations
 
 import os
+import zlib
 from collections.abc import Sequence
 from typing import Protocol
 
@@ -71,7 +72,7 @@ class BagOfWordsEmbedder:
         out = np.zeros((len(texts), self.dim), dtype=np.float32)
         for i, text in enumerate(texts):
             for word in text.lower().split():
-                out[i, hash(word) % self.dim] += 1.0
+                out[i, zlib.crc32(word.encode()) % self.dim] += 1.0
             norm = np.linalg.norm(out[i])
             if norm:
                 out[i] /= norm
