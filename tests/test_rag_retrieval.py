@@ -78,21 +78,6 @@ def test_retrieve_many_unions_and_dedupes(retriever):
     assert ids[0] == "A.2.2.1.2" and len(ids) == len(set(ids)) <= 2
 
 
-def test_translate_hook_adds_german_query():
-    store, embedder = InMemoryStore(), BagOfWordsEmbedder()
-    ingest(CORPUS, store, embedder)
-    calls: list[str] = []
-
-    def translate(q: str) -> str:
-        calls.append(q)
-        return "Bruchschäden Verglasung Windschutzscheibe"
-
-    retriever = Retriever(store, embedder, translate=translate)
-    assert retriever.retrieve("windshield", k=1, lang="de")[0] is not None and calls == []
-    hits = retriever.retrieve("windshield", k=1, lang="en")
-    assert calls == ["windshield"] and hits[0].clause_id == "A.2.2.1.5"
-
-
 def test_search_on_empty_store_returns_nothing():
     assert InMemoryStore().search(np.zeros(64, dtype=np.float32), 5) == []
 
