@@ -1,0 +1,38 @@
+name: deploy-space
+# Mirrors main into the Hugging Face Space (Docker SDK). Needs repo secrets HF_TOKEN (write) and HF_USERNAME.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: deploy-space
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    if: ${{ vars.HF_SPACE_ENABLED != 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Assemble Space tree
+        run: |
+          set -eu
+          rm -rf /tmp/space && mkdir -p /tmp/space
+          cp -r api rag ml db scripts alembic.ini pyproject.toml uv.lock /tmp/space/
+          mkdir -p /tmp/space/data /tmp/space/deploy/space /tmp/space/web
+          cp data/README.md /tmp/space/data/
+          cp deploy/space/Dockerfile deploy/space/entrypoint.sh /tmp/space/deploy/space/
+          cp deploy/space/Dockerfile /tmp/space/Dockerfile
+          cp deploy/space/README.md /tmp/space/README.md
+          rsync -a --exclude node_modules --exclude dist --exclude test-results --exclude playwright-report web/ /tmp/space/web/
+      - name: Push to Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+        run: |
+          set -eu
+          cd /tmp/space
+          git init -q -b main
+          git config user.name "github-actions" && git config user.email "actions@github.com"
+          git add -A && git commit -qm "Deploy ${GITHUB_SHA::7} from GitHub"
+          git push -f "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/claimpilot" main

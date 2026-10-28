@@ -1,0 +1,11 @@
+.git
+.venv
+legacy
+data/raw
+data/processed
+data/uploads
+web/node_modules
+web/dist
+web/test-results
+web/playwright-report
+**/__pycache__

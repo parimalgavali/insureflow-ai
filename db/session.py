@@ -8,7 +8,13 @@ DEFAULT_DATABASE_URL = "postgresql+psycopg://claimpilot:claimpilot@localhost:543
 
 
 def database_url() -> str:
-    return os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
+    """DATABASE_URL, normalised to the psycopg3 driver (hosted Postgres hands out `postgresql://`)."""
+    url = os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://") :]
+    elif url.startswith("postgres://"):
+        url = "postgresql+psycopg://" + url[len("postgres://") :]
+    return url
 
 
 def get_engine(url: str | None = None) -> Engine:
