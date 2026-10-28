@@ -94,6 +94,16 @@ class ReviewDecision(BaseModel):
     reviewer: str = "adjuster"
 
 
+class CostContext(BaseModel):
+    """Expected claim cost for the policy profile (freMTPL2) — context only."""
+
+    claims_per_year: float = Field(ge=0)
+    claim_eur: float = Field(ge=0, description="expected amount per claim")
+    annual_cost_eur: float = Field(ge=0, description="claims_per_year × claim_eur")
+    portfolio_claim_eur: float = Field(ge=0, description="portfolio mean per claim, for scale")
+    basis: str = "freMTPL2 (French motor TPL, 2004–2005)"
+
+
 class ClaimCard(BaseModel):
     facts: ClaimFacts
     policy: PolicyContext
@@ -101,6 +111,7 @@ class ClaimCard(BaseModel):
     coverage_summary: str = ""
     citations: list[Citation] = Field(default_factory=list)
     risk: RiskSignal | None = None
+    cost: CostContext | None = None
     missing_documents: list[str] = Field(default_factory=list)
     next_steps: list[str] = Field(default_factory=list)
     status: ClaimStatus = "collecting"

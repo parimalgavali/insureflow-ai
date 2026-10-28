@@ -10,7 +10,7 @@ from typing import Any
 from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from api.agent.graph import AgentDeps, RetrieverLike, RiskScorer, build_graph
+from api.agent.graph import AgentDeps, CostEstimator, RetrieverLike, RiskScorer, build_graph
 from api.config import Settings
 from api.llm.provider import Provider, RecordedProvider, make_provider
 from db.session import get_engine
@@ -90,6 +90,16 @@ def build_risk_scorer() -> RiskScorer | None:
         return None
 
 
+def build_cost_estimator() -> CostEstimator | None:
+    try:
+        from ml.severity import load_estimator
+
+        return load_estimator()
+    except Exception as exc:  # noqa: BLE001
+        log.warning("cost model unavailable: %s", exc)
+        return None
+
+
 def build_checkpointer(settings: Settings):
     from langgraph.checkpoint.postgres import PostgresSaver
     from psycopg.rows import dict_row
@@ -112,7 +122,13 @@ def build_state(settings: Settings | None = None) -> AppState:
     scorer = build_risk_scorer()
     checkpointer, close = build_checkpointer(settings)
     graph = build_graph(
-        AgentDeps(provider=provider, retriever=retriever, risk_scorer=scorer), checkpointer
+        AgentDeps(
+            provider=provider,
+            retriever=retriever,
+            risk_scorer=scorer,
+            cost_estimator=build_cost_estimator(),
+        ),
+        checkpointer,
     )
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     return AppState(settings, engine, graph, provider, retriever, scorer, close)

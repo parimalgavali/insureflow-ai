@@ -34,6 +34,14 @@ export interface Citation {
   score: number | null;
 }
 
+export interface CostContext {
+  claims_per_year: number;
+  claim_eur: number;
+  annual_cost_eur: number;
+  portfolio_claim_eur: number;
+  basis: string;
+}
+
 export interface RiskSignal {
   score: number;
   band: "low" | "medium" | "high";
@@ -54,6 +62,7 @@ export interface ClaimCard {
   coverage_summary: string;
   citations: Citation[];
   risk: RiskSignal | null;
+  cost: CostContext | null;
   missing_documents: string[];
   next_steps: string[];
   status: ClaimStatus;

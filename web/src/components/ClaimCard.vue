@@ -86,6 +86,7 @@ const summaryParts = computed(() => {
   return parts;
 });
 
+const fmt = (n: number) => Math.round(n).toLocaleString("en");
 const canReview = computed(() => props.status === "awaiting_review" && !props.busy);
 
 function submitReview() {
@@ -171,6 +172,11 @@ function submitReview() {
         </ul>
         <p class="disclaimer">Decision support only – a model signal with reasons, never a verdict. Reviewed by a human.</p>
       </template>
+      <p v-if="card?.cost" class="cost" data-testid="cost">
+        Typical claim for this profile: <strong>≈ €{{ fmt(card.cost.claim_eur) }}</strong>
+        (portfolio €{{ fmt(card.cost.portfolio_claim_eur) }}), {{ card.cost.claims_per_year.toFixed(2) }} claims/year expected
+        <small>· {{ card.cost.basis }} – context only</small>
+      </p>
       <p v-else class="empty">Appears after the facts are complete.</p>
     </section>
 

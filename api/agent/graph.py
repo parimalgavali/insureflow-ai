@@ -30,6 +30,7 @@ from api.agent.schemas import (
     ClaimFacts,
     ClaimStatus,
     ComposeOutput,
+    CostContext,
     FollowupOutput,
     Language,
     PolicyContext,
@@ -85,6 +86,10 @@ class RiskScorer(Protocol):
     def score(self, facts: ClaimFacts, policy: PolicyContext) -> RiskSignal | None: ...
 
 
+class CostEstimator(Protocol):
+    def estimate(self, policy: PolicyContext) -> CostContext | None: ...
+
+
 class RetrieverLike(Protocol):
     def retrieve(self, query: str, k: int = 5, lang: Any = "de") -> list: ...
 
@@ -96,6 +101,7 @@ class AgentDeps:
     provider: Provider
     retriever: RetrieverLike | None = None
     risk_scorer: RiskScorer | None = None
+    cost_estimator: CostEstimator | None = None
     today: Callable[[], str] = field(default=lambda: date.today().isoformat())
     prompts_dir: Path = PROMPTS_DIR
 
@@ -114,6 +120,7 @@ class AgentState(TypedDict, total=False):
     extract_failed: bool
     retrieved: list[Citation]
     risk: RiskSignal | None
+    cost: CostContext | None
     card: ClaimCard | None
     status: ClaimStatus
     review: ReviewDecision | None
@@ -238,9 +245,10 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         return {"retrieved": list(ordered.values())[:MAX_CITATIONS]}
 
     def score_risk(state: AgentState) -> dict:
+        cost = deps.cost_estimator.estimate(state["policy"]) if deps.cost_estimator else None
         if deps.risk_scorer is None:
-            return {"risk": None}
-        return {"risk": deps.risk_scorer.score(state["facts"], state["policy"])}
+            return {"risk": None, "cost": cost}
+        return {"risk": deps.risk_scorer.score(state["facts"], state["policy"]), "cost": cost}
 
     def compose(state: AgentState) -> dict:
         facts, policy, language = state["facts"], state["policy"], state["language"]
@@ -269,6 +277,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             coverage_summary=answer,
             citations=[c for c in retrieved if c.clause_id in cited] or retrieved[:3],
             risk=state.get("risk"),
+            cost=state.get("cost"),
             missing_documents=output.missing_documents,
             next_steps=output.next_steps,
             status="awaiting_review",

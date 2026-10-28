@@ -1,0 +1,93 @@
+{
+  "version": "fremtpl2-v1",
+  "policies": 678013,
+  "claims": 26444,
+  "features_live": [
+    "VehPower",
+    "VehAge",
+    "DrivAge",
+    "BonusMalus"
+  ],
+  "features_fixed_at_median": {
+    "AreaCode": 3.0,
+    "LogDensity": 5.976350909297934,
+    "Diesel": 0.0
+  },
+  "frequency_poisson_deviance": {
+    "glm": 0.609,
+    "hgb": 0.5848,
+    "null": 0.6274
+  },
+  "severity_gamma_deviance": {
+    "glm": 1.4255,
+    "hgb": 1.438,
+    "null": 1.4268
+  },
+  "chosen": {
+    "frequency": "HistGradientBoostingRegressor",
+    "severity": "Pipeline"
+  },
+  "pure_premium_calibration_by_decile": [
+    {
+      "dec": 0,
+      "n": 13561,
+      "predicted_per_year": 71.9,
+      "observed_per_year": 57.7
+    },
+    {
+      "dec": 1,
+      "n": 13560,
+      "predicted_per_year": 101.7,
+      "observed_per_year": 147.1
+    },
+    {
+      "dec": 2,
+      "n": 13560,
+      "predicted_per_year": 121.0,
+      "observed_per_year": 73.8
+    },
+    {
+      "dec": 3,
+      "n": 13561,
+      "predicted_per_year": 132.6,
+      "observed_per_year": 97.0
+    },
+    {
+      "dec": 4,
+      "n": 13560,
+      "predicted_per_year": 142.0,
+      "observed_per_year": 126.5
+    },
+    {
+      "dec": 5,
+      "n": 13560,
+      "predicted_per_year": 152.4,
+      "observed_per_year": 172.7
+    },
+    {
+      "dec": 6,
+      "n": 13560,
+      "predicted_per_year": 172.5,
+      "observed_per_year": 139.1
+    },
+    {
+      "dec": 7,
+      "n": 13560,
+      "predicted_per_year": 222.1,
+      "observed_per_year": 183.7
+    },
+    {
+      "dec": 8,
+      "n": 13560,
+      "predicted_per_year": 315.0,
+      "observed_per_year": 410.7
+    },
+    {
+      "dec": 9,
+      "n": 13561,
+      "predicted_per_year": 679.2,
+      "observed_per_year": 437.1
+    }
+  ],
+  "portfolio_claim_eur": 1864.4
+}

@@ -15,6 +15,7 @@ const card = {
   coverage_summary: "Nach den Musterbedingungen versichert [A.2.2.2.2]. Pflichten beachten [E.1.1.1].",
   citations: [citation, { clause_id: "E.1.1.1", title: "Anzeigepflicht", excerpt: "Innerhalb einer Woche.", page: 31, score: 0.7 }],
   risk: { score: 0.42, band: "medium" as const, reasons: ["no police report", "no witnesses", "evening"], model_version: "v1" },
+  cost: { claims_per_year: 0.1, claim_eur: 1900, annual_cost_eur: 190, portfolio_claim_eur: 1864, basis: "freMTPL2" },
   missing_documents: ["Fotos"],
   next_steps: ["Fotos hochladen", "Prüfung durch Sachbearbeiter"],
   status: "awaiting_review" as const,
@@ -60,4 +61,10 @@ describe("ClaimCard", () => {
     expect(w.get('[data-testid="status"]').text()).toBe("Reviewed");
     expect(w.text()).toContain("Reviewed by adjuster");
   });
+});
+
+it("shows the expected-cost context as context only", () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false } });
+  expect(w.get('[data-testid="cost"]').text()).toMatch(/1,900/);
+  expect(w.get('[data-testid="cost"]').text()).toMatch(/context only/);
 });
