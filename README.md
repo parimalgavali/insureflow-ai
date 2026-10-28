@@ -81,6 +81,12 @@ legacy/     archived v1 (not maintained)
 
 ## Running it
 
+**Live demo:** https://huggingface.co/spaces/parimalgavali/claimpilot (free Space — first load after idle takes ~1 min).
+Deployed from `main` by `.github/workflows/deploy-space.yml`: one container (`deploy/space/Dockerfile`) serving the API and the
+built frontend, Postgres+pgvector on Neon, secrets in the Space settings. No GitHub Pages: the backend, database and embedding
+model need a server.
+
+
 One command (needs [uv](https://docs.astral.sh/uv/) and Docker):
 
 ```bash
