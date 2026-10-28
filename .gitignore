@@ -44,7 +44,7 @@ worktrees/
 *.log
 
 data/uploads/
-artifacts/
+/artifacts/
 web/.vite/
 web/test-results/
 web/playwright-report/
