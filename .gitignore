@@ -46,3 +46,5 @@ worktrees/
 data/uploads/
 artifacts/
 web/.vite/
+web/test-results/
+web/playwright-report/

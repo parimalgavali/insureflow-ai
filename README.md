@@ -8,22 +8,25 @@
 
 ---
 
-## What it does (target for v2)
+## What it does
+
+Real transcript (German input, recorded LLM responses; `make e2e` replays exactly this):
 
 ```
-You:   Someone hit my parked car last night in Bielefeld, rear bumper is cracked.
-       They drove off. I have photos.
-Agent: Sorry to hear that. Two quick questions: do you know the date, and did
-       you report it to the police?
-You:   Yesterday, 26 Oct. Not yet.
-Agent: Thanks. Here is where you stand:
-       • Coverage: a hit-and-run on a parked car is a Vollkasko event (AKB A.2.3.2);
-         Teilkasko alone would not cover it (A.2.2). Your deductible is €300.
-       • Missing: police report — required for hit-and-run (AKB E.1.1.3). I've added it
-         to your to-do list.
-       • Risk signal: low. Reasons: no prior claims, report filed within 1 day,
-         damage amount consistent with description.
-       Ready to send this to an adjuster?
+You:   Gestern Abend hat jemand mein geparktes Auto auf dem Supermarktparkplatz in Köln
+       angefahren und ist einfach weggefahren. Die hintere Stoßstange ist eingedrückt.
+Agent: Das tut mir leid. Damit ich den Fall einordnen kann: Wann genau ist das passiert,
+       und wurde die Polizei informiert?
+You:   Das war am 25.10.2026 gegen 19 Uhr. Die Polizei habe ich nicht gerufen, Zeugen gab es keine.
+Agent: Nach den Musterbedingungen ist ein Unfallschaden am eigenen Fahrzeug in der Vollkasko
+       versichert [A.2.2.2.2]; dazu zählt auch, wenn ein Unbekannter Ihr geparktes Auto
+       beschädigt. Ihre vereinbarte Selbstbeteiligung wird abgezogen [A.2.5.8]. Bitte beachten
+       Sie Ihre Pflichten im Schadenfall: Schaden innerhalb einer Woche anzeigen [E.1.1.1] und
+       alles zur Aufklärung beitragen [E.1.1.3]. Ein Sachbearbeiter prüft den Fall.
+Card:  hit_and_run · Köln · 2026-10-25 19:00 · third party unknown · police report: no
+       Coverage: likely covered (4 cited clauses, click to read)   Risk: low (model hgb-v1)
+       Please provide: Polizeibericht/Anzeigenummer, Fotos, Kostenvoranschlag
+       [Send to adjuster] → status "Reviewed by adjuster"
 ```
 
 Every sentence above maps to a component:
@@ -63,48 +66,75 @@ Real, public, documented in [docs/DATA.md](docs/DATA.md):
 
 No real policy/claim data is linked across these sources publicly, so a thin seed layer joins them for the demo. That limitation is stated, not hidden.
 
-## Repository layout (v2)
+## Repository layout
 
 ```
-api/        FastAPI app, agent, retriever, ML inference         (task 4–5)
-ml/         training script, evaluation, model card             (task 2)
-rag/        ingestion, chunking, eval questions                 (task 3)
-web/        Vue 3 single-page frontend                          (task 6)
-scripts/    fetch_data.py and friends                           (task 1)
-docs/       DECISIONS, DATA, ARCHITECTURE, ROADMAP, specs/, planning/
+api/        FastAPI app (routers, SSE), LangGraph agent (api/agent), LLM providers (api/llm)
+rag/        AKB chunking, embeddings, pgvector store, retriever, query rewriting, eval set
+ml/         fraud-risk model: features, train, evaluate, explain, predict, model card, artifact
+db/         SQLAlchemy models + Alembic migrations (policy chunks, conversations, checkpoints)
+web/        Vue 3 single-page frontend, Vitest unit tests, Playwright e2e smoke
+scripts/    fetch_data.py (AKB / OpenML / Kaggle), seed sampler, demo.sh
+docs/       DECISIONS, DATA, ARCHITECTURE, ROADMAP, specs/, portfolio/, planning/
 legacy/     archived v1 (not maintained)
 ```
 
 ## Running it
 
-Requires [uv](https://docs.astral.sh/uv/) (installs Python 3.12 itself).
+One command (needs [uv](https://docs.astral.sh/uv/) and Docker):
 
 ```bash
-uv sync --extra data                      # deps incl. pandas/openml/kaggle
-uv run python scripts/fetch_data.py all   # AKB PDF→text, freMTPL2 parquet, 50 seed policyholders
-                                          # + Kaggle fraud CSV if ~/.kaggle/kaggle.json exists
-uv run pytest && uv run ruff check .
-
-# RAG over the AKB (needs Postgres 16 + pgvector; DATABASE_URL defaults to localhost claimpilot/claimpilot)
-uv sync --extra rag
-uv run python -m rag.ingest          # 344 clause chunks → policy_chunks (multilingual-e5-small, HNSW)
-uv run python -m rag.eval            # 28 DE/EN questions, fails if top-3 hit rate < 0.8
-
-# API (FastAPI + LangGraph agent)
-uv sync --extra agent --extra api
-uv run alembic upgrade head
-LLM_PROVIDER=recorded uv run uvicorn api.main:app --reload   # or LLM_PROVIDER=anthropic with ANTHROPIC_API_KEY
-curl -X POST localhost:8000/api/conversations -H 'content-type: application/json' -d '{"language":"de"}'
-curl -N -X POST localhost:8000/api/conversations/<id>/messages -F 'text=Gestern hat jemand mein geparktes Auto angefahren …'
-
-# Frontend (Vue 3 + Vite), proxies /api to localhost:8000
-cd web && npm install && npm run dev            # http://localhost:5173
-
-# or everything in containers: db + api + web (http://localhost:8080)
-cp .env.example .env && docker compose up --build
+git clone https://github.com/parimalgavali/insureflow-ai && cd insureflow-ai
+make demo        # fetches public data, ingests the AKB into pgvector, starts db + api + web
+open http://localhost:8080
 ```
 
-Data cards with licenses and checksums: [`data/README.md`](data/README.md). The API, agent and UI arrive in tasks 3–6 (see [`docs/ROADMAP.md`](docs/ROADMAP.md)).
+`scripts/demo.sh` uses recorded LLM replies by default so it works without any key; export
+`ANTHROPIC_API_KEY` before running it for live Claude. With Kaggle credentials
+(`KAGGLE_USERNAME`/`KAGGLE_KEY` or `~/.kaggle/kaggle.json`) it retrains the fraud model;
+otherwise it uses the committed `ml/artifacts/fraud_model.joblib` (210 KB, reproducible via
+`python -m ml.train`).
+
+Development (local Postgres 16 + pgvector, `DATABASE_URL` defaults to `claimpilot/claimpilot@localhost`):
+
+```bash
+uv sync --all-extras && (cd web && npm install)
+uv run python scripts/fetch_data.py all     # AKB PDF→text, freMTPL2, seed policyholders (+ Kaggle if creds)
+uv run alembic upgrade head && uv run python -m rag.ingest
+make dev                                    # API :8000 (recorded LLM) + Vite :5173
+make test && make lint                      # 66 pytest + 8 vitest, ruff, vue-tsc
+make e2e                                    # Playwright smoke: full conversation → adjuster review
+uv run python -m rag.eval                   # retrieval eval, fails below 0.8 top-3
+uv run python -m api.agent.demo             # live Anthropic run of the hit-and-run script
+```
+
+Demo auth: set `DEMO_API_TOKEN` in `.env` to require a bearer token (open when unset); uploads are
+limited to JPEG/PNG/WebP/PDF ≤ `MAX_UPLOAD_MB` (10). `.env` is git-ignored; only `.env.example` is committed.
+
+### Measured numbers
+
+RAG over AKB 2015 — 28 hand-written DE/EN questions, hit if the expected clause is in the top 3
+(`rag/eval/questions.jsonl`, run in CI):
+
+| retrieval | top-1 | top-3 | DE top-3 | EN top-3 |
+|---|---|---|---|---|
+| multilingual-e5-small, dense only | 0.61 | 0.71 | 0.83 | 0.50 |
+| + LLM query rewriting into German policy language | 0.61 | **0.89** | 0.89 | 0.90 |
+
+Fraud-risk model — 15,420 real claims, 6% positive, held-out 20% (`ml/model_card.md`):
+
+| model | AUPRC | ROC-AUC |
+|---|---|---|
+| majority class | 0.060 | 0.500 |
+| logistic regression | 0.167 | 0.805 |
+| HistGradientBoosting (`hgb-v1`) | **0.205** | **0.813** |
+
+The model uses only features a conversation can supply and excludes protected attributes; it
+ranks claims for adjuster attention and is never shown as a verdict.
+
+Data cards with licenses and checksums: [`data/README.md`](data/README.md). Decisions and
+measured alternatives: [`docs/DECISIONS.md`](docs/DECISIONS.md). Resume bullets and interview
+Q&A: [`docs/portfolio/`](docs/portfolio/README.md).
 
 ## Why v2 exists
 
