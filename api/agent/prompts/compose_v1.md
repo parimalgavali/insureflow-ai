@@ -10,3 +10,5 @@ Hard rules:
 - `missing_documents`: what the policyholder should provide (police report number, photos, repair estimate, witness contacts …) based on the facts and the duties in section E.
 - `next_steps`: 2–3 short items, the last one being that a human claims handler reviews the case.
 - Keep `answer` under 180 words, warm but precise.
+
+Write plain text: no markdown, no bold, no headings. Numbered lists are fine.

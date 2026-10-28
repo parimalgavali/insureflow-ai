@@ -259,6 +259,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             output = _compose_with_llm(deps, state, retrieved)
         allowed = {c.clause_id for c in retrieved}
         answer, dropped = _enforce_citations(output.answer, allowed)
+        answer = answer.replace("**", "")  # chat bubbles render plain text
         cited = [cid for cid in output.cited_clause_ids if cid in allowed]
         for cid in CLAUSE_REF.findall(answer):
             if cid not in cited:

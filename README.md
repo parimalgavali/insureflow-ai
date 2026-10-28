@@ -8,6 +8,10 @@
 
 ---
 
+![ClaimPilot demo: hit-and-run claim filed by chat, clauses cited, sent to adjuster](docs/demo.gif)
+
+*Recorded 2026-10-28 against live Claude (haiku 4.5), real Postgres/pgvector; one turn was enough because the model read the date from "last night". The project is not hosted — run it with `make demo` (below) or see `deploy/space/` to self-host on a Hugging Face Space.*
+
 ## What it does
 
 Real transcript (German input, recorded LLM responses; `make e2e` replays exactly this):
