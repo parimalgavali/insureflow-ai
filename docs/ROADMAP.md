@@ -12,7 +12,7 @@ One task = one branch = one PR = one one-page spec in `docs/specs/`. A task is d
 | 5 | Backend API | [task-5](specs/task-5-api.md) | FastAPI + Alembic; SSE message endpoint; `docker compose up` → full conversation via curl; CI green | done — [#26](https://github.com/parimalgavali/insureflow-ai/issues/26), [PR #33](https://github.com/parimalgavali/insureflow-ai/pull/33) |
 | 6 | Frontend | [task-6](specs/task-6-frontend.md) | one-page chat + claim card with streaming, citations, chips, upload, review button; demo flow < 2 min | done — [#27](https://github.com/parimalgavali/insureflow-ai/issues/27), [PR #34](https://github.com/parimalgavali/insureflow-ai/pull/34) |
 | 7 | Quality & release | [task-7](specs/task-7-quality-release.md) | Playwright smoke in CI; 60-s demo GIF in README; resume bullets; a stranger can run it with one command | in review — [#28](https://github.com/parimalgavali/insureflow-ai/issues/28), branch `task-7-quality-release` |
-| 8 | Stretch | [task-8](specs/task-8-stretch.md) | damage-photo CNN tagger; freMTPL severity model; DE/EN UI toggle; small RAG-eval page | later — [#29](https://github.com/parimalgavali/insureflow-ai/issues/29) |
+| 8 | Stretch | [task-8](specs/task-8-stretch.md) | damage-photo CNN tagger; freMTPL severity model; DE/EN UI toggle; small RAG-eval page | items 2–4 done — [#29](https://github.com/parimalgavali/insureflow-ai/issues/29), PRs #39 #40 #41; item 1 declined (ADR 13); item 5 open |
 
 Rough effort: tasks 0–7 ≈ 4–6 focused sessions.
 
