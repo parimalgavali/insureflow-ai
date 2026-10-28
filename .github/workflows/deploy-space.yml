@@ -1,8 +1,8 @@
 name: deploy-space
 # Mirrors main into the Hugging Face Space (Docker SDK). Needs repo secrets HF_TOKEN (write) and HF_USERNAME.
+# Manual only: the project is not hosted at the moment (user decision, see README). Run from the Actions tab
+# after creating the Space and the HF_TOKEN / HF_USERNAME repo secrets.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency: deploy-space
@@ -10,7 +10,6 @@ concurrency: deploy-space
 jobs:
   push:
     runs-on: ubuntu-latest
-    if: ${{ vars.HF_SPACE_ENABLED != 'false' }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
