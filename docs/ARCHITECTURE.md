@@ -88,7 +88,7 @@ Offline training / ingestion live beside the API but are not part of its runtime
 | Method | Path | Purpose |
 | --- | --- | --- |
 | POST | `/api/conversations` | start; returns id + greeting |
-| POST | `/api/conversations/{id}/messages` | user message (+ optional file); **SSE** stream of agent events: `token`, `facts`, `citations`, `risk`, `card`, `question`, `done` |
+| POST | `/api/conversations/{id}/messages` | user message (+ optional file); **SSE** stream of agent events: `facts`, `missing`, `token`, `question`, `citations`, `risk`, `card`, `done`, `error`. `token` events deliver the composed answer in word groups (the compose step uses structured output, so there is no model-level token stream). |
 | GET | `/api/conversations/{id}` | full state for reload |
 | POST | `/api/claims/{id}/review` | reviewer accept/edit → resumes the interrupted graph |
 | GET | `/api/health` | db, model, provider status |

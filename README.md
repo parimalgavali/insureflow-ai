@@ -89,6 +89,16 @@ uv run pytest && uv run ruff check .
 uv sync --extra rag
 uv run python -m rag.ingest          # 344 clause chunks → policy_chunks (multilingual-e5-small, HNSW)
 uv run python -m rag.eval            # 28 DE/EN questions, fails if top-3 hit rate < 0.8
+
+# API (FastAPI + LangGraph agent)
+uv sync --extra agent --extra api
+uv run alembic upgrade head
+LLM_PROVIDER=recorded uv run uvicorn api.main:app --reload   # or LLM_PROVIDER=anthropic with ANTHROPIC_API_KEY
+curl -X POST localhost:8000/api/conversations -H 'content-type: application/json' -d '{"language":"de"}'
+curl -N -X POST localhost:8000/api/conversations/<id>/messages -F 'text=Gestern hat jemand mein geparktes Auto angefahren …'
+
+# or everything in containers
+cp .env.example .env && docker compose up --build
 ```
 
 Data cards with licenses and checksums: [`data/README.md`](data/README.md). The API, agent and UI arrive in tasks 3–6 (see [`docs/ROADMAP.md`](docs/ROADMAP.md)).

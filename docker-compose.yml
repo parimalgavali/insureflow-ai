@@ -1,0 +1,42 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: claimpilot
+      POSTGRES_PASSWORD: claimpilot
+      POSTGRES_DB: claimpilot
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U claimpilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql+psycopg://claimpilot:claimpilot@db:5432/claimpilot
+      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5-20251001}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      DEMO_API_TOKEN: ${DEMO_API_TOKEN:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
+      UPLOAD_DIR: /app/data/uploads
+    volumes:
+      - uploads:/app/data/uploads
+      - models:/models
+      - ./data/processed:/app/data/processed:ro
+    ports: ["8000:8000"]
+    command: >
+      sh -c "alembic upgrade head &&
+             (python -m rag.ingest || echo 'ingest skipped (run scripts/fetch_data.py akb first)') &&
+             uvicorn api.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  pgdata:
+  uploads:
+  models:
