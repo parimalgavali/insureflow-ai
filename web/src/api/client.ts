@@ -159,10 +159,12 @@ export async function sendMessage(
   text: string,
   file: File | null,
   onEvent: (event: AgentEvent) => void,
+  language?: Language,
 ): Promise<void> {
   const form = new FormData();
   form.append("text", text);
   if (file) form.append("file", file);
+  if (language) form.append("language", language);
   const res = await expectOk(
     await fetch(`${BASE}/api/conversations/${conversationId}/messages`, { method: "POST", headers: headers(false), body: form }),
   );

@@ -25,6 +25,9 @@ button { font: inherit; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 8px; }
 .chip { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
 .chip:hover { border-color: var(--accent); }
+.chip.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.lang { display: flex; gap: 6px; }
 .composer { border-top: 1px solid var(--line); padding: 12px; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
 .composer textarea { width: 100%; resize: none; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; background: var(--bg); color: var(--text); min-height: 44px; max-height: 160px; }
 .composer .actions { display: flex; gap: 6px; }
