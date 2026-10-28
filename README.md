@@ -84,6 +84,24 @@ uv sync --extra data                      # deps incl. pandas/openml/kaggle
 uv run python scripts/fetch_data.py all   # AKB PDF→text, freMTPL2 parquet, 50 seed policyholders
                                           # + Kaggle fraud CSV if ~/.kaggle/kaggle.json exists
 uv run pytest && uv run ruff check .
+
+# RAG over the AKB (needs Postgres 16 + pgvector; DATABASE_URL defaults to localhost claimpilot/claimpilot)
+uv sync --extra rag
+uv run python -m rag.ingest          # 344 clause chunks → policy_chunks (multilingual-e5-small, HNSW)
+uv run python -m rag.eval            # 28 DE/EN questions, fails if top-3 hit rate < 0.8
+
+# API (FastAPI + LangGraph agent)
+uv sync --extra agent --extra api
+uv run alembic upgrade head
+LLM_PROVIDER=recorded uv run uvicorn api.main:app --reload   # or LLM_PROVIDER=anthropic with ANTHROPIC_API_KEY
+curl -X POST localhost:8000/api/conversations -H 'content-type: application/json' -d '{"language":"de"}'
+curl -N -X POST localhost:8000/api/conversations/<id>/messages -F 'text=Gestern hat jemand mein geparktes Auto angefahren …'
+
+# Frontend (Vue 3 + Vite), proxies /api to localhost:8000
+cd web && npm install && npm run dev            # http://localhost:5173
+
+# or everything in containers: db + api + web (http://localhost:8080)
+cp .env.example .env && docker compose up --build
 ```
 
 Data cards with licenses and checksums: [`data/README.md`](data/README.md). The API, agent and UI arrive in tasks 3–6 (see [`docs/ROADMAP.md`](docs/ROADMAP.md)).

@@ -1,0 +1,51 @@
+{
+  "extract": [
+    {
+      "incident_date": null,
+      "incident_time": null,
+      "location": "Supermarktparkplatz in Köln",
+      "event_type": "hit_and_run",
+      "description": "Unbekannter hat das geparkte Auto auf einem Supermarktparkplatz angefahren und ist weggefahren.",
+      "third_party_involved": true,
+      "third_party_known": false,
+      "injuries": null,
+      "police_report_filed": null,
+      "witnesses": null,
+      "damage_description": "Hintere Stoßstange eingedrückt",
+      "estimated_amount_eur": null,
+      "vehicle_drivable": null,
+      "photos_attached": false
+    },
+    {
+      "incident_date": "2026-10-25",
+      "incident_time": "19:00",
+      "location": null,
+      "event_type": "unknown",
+      "description": null,
+      "third_party_involved": null,
+      "third_party_known": null,
+      "injuries": null,
+      "police_report_filed": false,
+      "witnesses": false,
+      "damage_description": null,
+      "estimated_amount_eur": null,
+      "vehicle_drivable": null,
+      "photos_attached": false
+    }
+  ],
+  "followup": [
+    {
+      "question": "Das tut mir leid. Damit ich den Fall einordnen kann: Wann genau ist das passiert, und wurde die Polizei informiert?",
+      "asked_for": ["incident_date", "police_report_filed"]
+    }
+  ],
+  "compose": [
+    {
+      "answer": "Nach den Musterbedingungen ist ein Unfallschaden am eigenen Fahrzeug in der Vollkasko versichert [A.2.2.2.2]; dazu zählt auch, wenn ein Unbekannter Ihr geparktes Auto beschädigt. Ihre vereinbarte Selbstbeteiligung wird abgezogen [A.2.5.8] [Z.9.9]. Bitte beachten Sie Ihre Pflichten im Schadenfall: Schaden innerhalb einer Woche anzeigen [E.1.1.1] und alles zur Aufklärung Beitragen [E.1.1.3]. Ihr tatsächlicher Vertrag kann abweichen; ein Sachbearbeiter prüft den Fall.",
+      "coverage_status": "likely_covered",
+      "cited_clause_ids": ["A.2.2.2.2", "A.2.5.8", "E.1.1.1", "E.1.1.3", "Z.9.9"],
+      "missing_documents": ["Fotos der Stoßstange", "Nachträgliche Anzeige bei der Polizei (Unfallflucht)", "Kostenvoranschlag der Werkstatt"],
+      "next_steps": ["Fotos hochladen", "Polizeiliche Anzeige nachreichen", "Prüfung durch einen Sachbearbeiter"]
+    }
+  ]
+}
