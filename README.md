@@ -97,7 +97,10 @@ LLM_PROVIDER=recorded uv run uvicorn api.main:app --reload   # or LLM_PROVIDER=a
 curl -X POST localhost:8000/api/conversations -H 'content-type: application/json' -d '{"language":"de"}'
 curl -N -X POST localhost:8000/api/conversations/<id>/messages -F 'text=Gestern hat jemand mein geparktes Auto angefahren …'
 
-# or everything in containers
+# Frontend (Vue 3 + Vite), proxies /api to localhost:8000
+cd web && npm install && npm run dev            # http://localhost:5173
+
+# or everything in containers: db + api + web (http://localhost:8080)
 cp .env.example .env && docker compose up --build
 ```
 

@@ -36,6 +36,11 @@ services:
              (python -m rag.ingest || echo 'ingest skipped (run scripts/fetch_data.py akb first)') &&
              uvicorn api.main:app --host 0.0.0.0 --port 8000"
 
+  web:
+    build: ./web
+    depends_on: [api]
+    ports: ["8080:80"]
+
 volumes:
   pgdata:
   uploads:
