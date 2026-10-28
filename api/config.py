@@ -13,6 +13,14 @@ from db.session import database_url
 class Settings:
     database_url: str = field(default_factory=database_url)
     llm_provider: str = field(default_factory=lambda: os.environ.get("LLM_PROVIDER", "anthropic"))
+    eval_page: bool = field(
+        default_factory=lambda: (
+            os.environ.get(
+                "EVAL_PAGE", "1" if os.environ.get("LLM_PROVIDER") == "recorded" else "0"
+            )
+            == "1"
+        )
+    )
     demo_api_token: str | None = field(
         default_factory=lambda: os.environ.get("DEMO_API_TOKEN") or None
     )
