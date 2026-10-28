@@ -63,7 +63,7 @@ class AnthropicProvider:
     """Structured output via a forced tool call whose input schema is the pydantic JSON schema."""
 
     name = "anthropic"
-    DEFAULT_MODEL = "claude-3-5-haiku-latest"
+    DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 
     def __init__(self, model: str | None = None, api_key: str | None = None, client: Any = None):
         self.model = model or os.environ.get("ANTHROPIC_MODEL", self.DEFAULT_MODEL)
