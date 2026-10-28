@@ -399,6 +399,12 @@ data = [
 llm = [
     { name = "anthropic" },
 ]
+ml = [
+    { name = "joblib" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "scikit-learn" },
+]
 rag = [
     { name = "alembic" },
     { name = "pgvector" },
@@ -425,11 +431,14 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115,<1" },
     { name = "httpx", marker = "extra == 'agent'", specifier = ">=0.27,<1" },
     { name = "httpx", marker = "extra == 'api'", specifier = ">=0.27,<1" },
+    { name = "joblib", marker = "extra == 'ml'", specifier = ">=1.4,<2" },
     { name = "kaggle", marker = "extra == 'data'", specifier = ">=1.6,<2" },
     { name = "langgraph", marker = "extra == 'agent'", specifier = ">=0.4,<2" },
     { name = "langgraph-checkpoint-postgres", marker = "extra == 'agent'", specifier = ">=2.0,<4" },
+    { name = "numpy", marker = "extra == 'ml'", specifier = ">=1.26,<3" },
     { name = "openml", marker = "extra == 'data'", specifier = ">=0.15,<1" },
     { name = "pandas", marker = "extra == 'data'", specifier = ">=2.2,<3" },
+    { name = "pandas", marker = "extra == 'ml'", specifier = ">=2.2,<3" },
     { name = "pgvector", marker = "extra == 'rag'", specifier = ">=0.3,<1" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'api'", specifier = ">=3.2,<4" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'rag'", specifier = ">=3.2,<4" },
@@ -439,13 +448,14 @@ requires-dist = [
     { name = "pypdf", specifier = ">=5.0,<6" },
     { name = "python-multipart", marker = "extra == 'api'", specifier = ">=0.0.9,<1" },
     { name = "requests", specifier = ">=2.32,<3" },
+    { name = "scikit-learn", marker = "extra == 'ml'", specifier = ">=1.5,<2" },
     { name = "sentence-transformers", marker = "extra == 'rag'", specifier = ">=3.0,<6" },
     { name = "sqlalchemy", marker = "extra == 'api'", specifier = ">=2.0,<3" },
     { name = "sqlalchemy", marker = "extra == 'rag'", specifier = ">=2.0,<3" },
     { name = "torch", marker = "extra == 'rag'", specifier = ">=2.2,<3", index = "https://download.pytorch.org/whl/cpu" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.30,<1" },
 ]
-provides-extras = ["data", "rag", "llm", "api", "agent"]
+provides-extras = ["data", "rag", "llm", "api", "ml", "agent"]
 
 [package.metadata.requires-dev]
 dev = [

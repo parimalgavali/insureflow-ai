@@ -3,9 +3,10 @@ ENV PYTHONUNBUFFERED=1 UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy HF_HOME=/models
 COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /uvx /bin/
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project --extra rag --extra llm --extra agent --extra api
+RUN uv sync --frozen --no-dev --no-install-project --extra rag --extra llm --extra agent --extra api --extra ml
 COPY api ./api
 COPY rag ./rag
+COPY ml ./ml
 COPY db ./db
 COPY scripts ./scripts
 COPY alembic.ini ./
