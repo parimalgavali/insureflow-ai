@@ -37,6 +37,8 @@ data/synthetic/*.jsonl
 ml/artifacts/*
 !ml/artifacts/fraud_model.joblib
 !ml/artifacts/metrics.json
+!ml/artifacts/severity_model.joblib
+!ml/artifacts/severity_metrics.json
 
 .worktrees/
 worktrees/
