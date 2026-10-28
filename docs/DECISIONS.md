@@ -16,21 +16,4 @@ Architecture Decision Records for InsureFlow AI v2. Newest at the bottom. One pa
 | 10 | 2026-10-27 | **Drop from v2:** RabbitMQ, Prometheus/Grafana, Azure Bicep, Guidewire-style integration APIs, governance dashboard, three AI microservices, JWT role matrix. | Each was infrastructure without a user-visible purpose in a one-screen product. | — |
 | 11 | 2026-10-27 | **Work style: one task = one branch = one PR, with a one-page spec in `docs/specs/` before coding.** | Keeps reviews small and the roadmap honest. v1's 300-line phase plans were never re-read. | Big-bang rewrite. |
 | 12 | 2026-10-27 | **Retrieval = dense `multilingual-e5-small` + LLM query rewrites into German policy language; no lexical/BM25 component.** | Measured on the 28-question eval set (`rag/eval`): e5-small dense-only 0.71 top-3 (DE 0.83, EN 0.50); e5-base 0.68; `paraphrase-multilingual-mpnet` 0.36; BM25 fused with dense (RRF, lexical weight 0.3–0.7) dropped to 0.43–0.54 because German compounds ("Wildunfall" vs "Zusammenstoß mit Haarwild") rarely share tokens. Query rewriting attacks exactly that gap and is recorded to a fixture so CI needs no API key. | Larger embedding models (`bge-m3`, `e5-large`: >2 GB, too slow on CPU for a laptop demo); hybrid BM25 (measured worse); hand-written synonym maps (the v1 anti-pattern). |
-
-## 13. No damage-photo CNN (stretch item 1) — dataset provenance
-
-**Decision:** skip the deep-learning photo tagger instead of training it on an image set whose rights are unclear.
-
-**Why:** the spec required "a car-damage image set with an explicit license". Hugging Face has ~30 car-damage sets;
-the ones with a permissive tag (`DrBimmer/comprehensive-car-damage` MIT, several `*/car-parts-and-damage-dataset` MIT
-re-uploads, `Reverb/CarDamage` MIT) are uploader claims with `source_datasets: []`, no author, no origin — the photos
-are almost certainly scraped or re-uploaded from Kaggle/Roboflow collections whose original terms are unknown. The large
-one (`Naiscorp/car-damage-dataset`, 22k images) is `license: other` and unlabelled. A model card that says "trained on
-images we may not have had the right to use" would undermine the honesty the rest of this repo is built on.
-
-**What would unblock it:** an image set with a verifiable licence (e.g. the insurer's own photos, a CC-BY set with named
-authors, or a synthetic set). The integration point is ready: `ClaimFacts.photos_attached` + the upload path in
-`api/routers/conversations.py`; a tagger would add a `photo_tags` fact and a retrieval query per tag.
-
-**Status of task 8:** items 2 (severity model, #39), 3 (DE/EN toggle, #40) and 4 (eval page, #41) are done; item 1 is
-declined per this ADR; item 5 (more Musterbedingungen) stays open as a future idea.
+| 13 | 2026-10-28 | **No damage-photo CNN (stretch item 1): declined for lack of a verifiably licensed image set.** | The spec required an explicit licence. The permissively tagged Hugging Face sets (`DrBimmer/comprehensive-car-damage` MIT, the `*/car-parts-and-damage-dataset` MIT re-uploads, `Reverb/CarDamage`) are uploader claims with `source_datasets: []`, no author and no origin — most likely re-uploads of Kaggle/Roboflow collections with unknown terms; the large `Naiscorp/car-damage-dataset` (22k images) is `license: other` and unlabelled. A model card saying "trained on images we may not have had the right to use" would undermine the honesty the repo is built on. Unblocked by a set with a verifiable licence (insurer's own photos, a CC-BY set with named authors, or synthetic images); the integration point exists (`ClaimFacts.photos_attached`, upload path in `api/routers/conversations.py` → a `photo_tags` fact and one retrieval query per tag). Task 8 status: items 2–4 shipped (#39, #40, #41), item 1 declined, item 5 (more Musterbedingungen) open. |
