@@ -62,3 +62,11 @@ button { font: inherit; }
   .chat, .card { height: auto; }
   .chat .log { max-height: 55vh; }
 }
+
+.eval { grid-column: 1 / -1; overflow: auto; padding: 16px; }
+.eval h2 small { color: var(--muted); font-weight: 400; font-size: 13px; }
+.eval table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+.eval th, .eval td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--line); }
+.eval code { display: inline-block; margin: 1px 4px 1px 0; padding: 1px 5px; border-radius: 4px; background: var(--line); font-size: 12px; }
+.eval code.expected { background: var(--accent); color: #fff; }
+.eval tr.miss td { background: rgba(220, 38, 38, 0.06); }

@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { createConversation, reviewClaim, sendMessage, type Language } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
 import ClaimCard from "./components/ClaimCard.vue";
+import EvalPage from "./components/EvalPage.vue";
 import { applyReview, beginTurn, finishTurn, loadConversation, reduce, store } from "./store";
+
+const showEval = ref(location.hash === "#eval");
+window.addEventListener("hashchange", () => (showEval.value = location.hash === "#eval"));
 
 const canSend = computed(() => store.conversationId !== null && store.status !== "reviewed");
 
@@ -58,9 +62,12 @@ onMounted(() => start(navigator.language.toLowerCase().startsWith("de") ? "de" :
         <h1>ClaimPilot</h1>
         <p>File a motor claim by chat. Answers cite the GDV AKB 2015 model terms; a human adjuster reviews every case.</p>
       </div>
-      <p v-if="store.conversationId"><small>conversation {{ store.conversationId.slice(0, 8) }} · {{ store.language.toUpperCase() }}</small></p>
+      <p v-if="store.conversationId"><small>conversation {{ store.conversationId.slice(0, 8) }} · {{ store.language.toUpperCase() }} · <a :href="showEval ? '#' : '#eval'" data-testid="eval-link">{{ showEval ? "back to claim" : "retrieval eval" }}</a></small></p>
     </header>
+    <EvalPage v-if="showEval" />
+    <template v-else>
     <ChatColumn :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" @send="send" @retry="retry" />
     <ClaimCard :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :card="store.card" :status="store.status" :busy="store.busy" @review="review" />
+    </template>
   </div>
 </template>

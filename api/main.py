@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import Settings
 from api.routers import claims, conversations, health
+from api.routers import eval as eval_router
 from api.state import AppState, build_state
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -39,6 +40,7 @@ def create_app(state_factory: Callable[[], AppState] | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(conversations.router)
     app.include_router(claims.router)
+    app.include_router(eval_router.router)
     return app
 
 

@@ -172,3 +172,28 @@ export async function sendMessage(
   const tail = parseSse(buffer + "\n\n");
   tail.events.forEach(onEvent);
 }
+
+export interface EvalRow {
+  id: string;
+  lang: Language;
+  question: string;
+  expected: string[];
+  topic: string;
+  retrieved: string[];
+  rank: number | null;
+  hit: boolean;
+}
+
+export interface EvalReport {
+  k: number;
+  threshold: number;
+  passed: boolean;
+  summary: Record<string, number>;
+  results: EvalRow[];
+}
+
+/** Dev-only: retrieval eval over the hand-written DE/EN questions (404 when EVAL_PAGE is off). */
+export async function fetchEval(): Promise<EvalReport> {
+  const res = await expectOk(await fetch(`${BASE}/api/eval`, { headers: headers(true) }));
+  return (await res.json()) as EvalReport;
+}

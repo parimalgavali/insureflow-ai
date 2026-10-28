@@ -188,3 +188,21 @@ def test_bearer_token_required_when_configured(tmp_path: Path):
             ).status_code
             == 201
         )
+
+
+def test_eval_page_lists_questions_with_hits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("EVAL_PAGE", "1")
+    with TestClient(create_app(lambda: make_state(tmp_path))) as c:
+        r = c.get("/api/eval")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["k"] == 5 and body["threshold"] == 0.8
+        assert len(body["results"]) >= 25
+        row = body["results"][0]
+        assert {"id", "lang", "question", "expected", "retrieved", "rank", "hit"} <= set(row)
+        assert set(body["summary"]) >= {"top1", "top3", "mrr"}
+        assert c.get("/api/eval").json() == body  # cached per process
+
+
+def test_eval_page_disabled_by_default(client: TestClient):
+    assert client.get("/api/eval").status_code == 404
