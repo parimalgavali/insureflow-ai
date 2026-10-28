@@ -32,7 +32,6 @@ jobs:
       - run: uv python install 3.12
       - run: uv sync --all-extras
 ||||||| parent of 2cf0219 (Task 5: FastAPI backend — conversations/messages (SSE), claims review resume, uploads, bearer auth, SQLAlchemy models + Alembic 0002 (incl. LangGraph checkpoint tables), Dockerfile, docker-compose, CI image build)
-      - run: uv sync --extra data --extra rag --extra llm
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run alembic upgrade head
