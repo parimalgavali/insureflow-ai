@@ -8,6 +8,13 @@ const MSG2 = "Das war am 25.10.2026 gegen 19 Uhr. Die Polizei habe ich nicht ger
 
 test("file a motor claim by conversation and send it to an adjuster", async ({ page }) => {
   await page.goto("/");
+  // English UI by default (headless Chromium reports en-US); switch to German and back to prove the toggle
+  await expect(page.getByLabel("Your message")).toBeEnabled();
+  await page.getByTestId("lang-de").click();
+  await expect(page.getByRole("heading", { name: "Schadenkarte" })).toBeVisible();
+  await expect(page.getByRole("log")).toContainText(/Hallo! Ich bin ClaimPilot/);
+  await page.getByTestId("lang-en").click();
+  await expect(page.getByRole("heading", { name: "Claim card" })).toBeVisible();
   const composer = page.getByLabel("Your message");
   await expect(composer).toBeEnabled();
 

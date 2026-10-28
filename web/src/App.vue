@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { locale, setLocale, t } from "./i18n";
 import { createConversation, reviewClaim, sendMessage, type Language } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
 import ClaimCard from "./components/ClaimCard.vue";
@@ -23,7 +24,7 @@ async function send(text: string, file: File | null) {
   if (!store.conversationId) return;
   beginTurn(store, text);
   try {
-    await sendMessage(store.conversationId, text, file, (event) => reduce(store, event));
+    await sendMessage(store.conversationId, text, file, (event) => reduce(store, event), store.language);
   } catch (e) {
     store.error = (e as Error).message;
     finishTurn(store);
@@ -52,17 +53,31 @@ function retry() {
   if (last) return send(last, null);
 }
 
-onMounted(() => start(navigator.language.toLowerCase().startsWith("de") ? "de" : "en"));
+async function switchLanguage(lang: Language) {
+  setLocale(lang);
+  const hasUserMessages = store.messages.some((m) => m.role === "user");
+  if (!hasUserMessages) return start(lang); // fresh greeting in the new language
+  store.language = lang; // agent follows the toggle from the next message on
+}
+
+onMounted(() => start(locale.value));
 </script>
 
 <template>
   <div class="app">
     <header>
       <div>
-        <h1>ClaimPilot</h1>
-        <p>File a motor claim by chat. Answers cite the GDV AKB 2015 model terms; a human adjuster reviews every case.</p>
+        <h1>{{ t("app.title") }}</h1>
+        <p>{{ t("app.tagline") }}</p>
       </div>
-      <p v-if="store.conversationId"><small>conversation {{ store.conversationId.slice(0, 8) }} · {{ store.language.toUpperCase() }} · <a :href="showEval ? '#' : '#eval'" data-testid="eval-link">{{ showEval ? "back to claim" : "retrieval eval" }}</a></small></p>
+      <div class="meta">
+        <div class="lang" role="group" :aria-label="t('app.language')">
+          <button v-for="l in ['de', 'en'] as const" :key="l" type="button" class="chip" :class="{ active: locale === l }" :aria-pressed="locale === l" :data-testid="`lang-${l}`" @click="switchLanguage(l)">
+            {{ l.toUpperCase() }}
+          </button>
+        </div>
+        <p v-if="store.conversationId"><small>{{ t("app.conversation") }} {{ store.conversationId.slice(0, 8) }} · <a :href="showEval ? '#' : '#eval'" data-testid="eval-link">{{ showEval ? t("app.backToClaim") : t("app.evalLink") }}</a></small></p>
+      </div>
     </header>
     <EvalPage v-if="showEval" />
     <template v-else>

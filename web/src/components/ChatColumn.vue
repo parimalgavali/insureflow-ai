@@ -1,23 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import type { ChatItem } from "../store";
+import { t } from "../i18n";
 
 const props = defineProps<{ messages: ChatItem[]; missing: string[]; busy: boolean; error: string | null; canSend: boolean }>();
 const emit = defineEmits<{ send: [text: string, file: File | null]; retry: [] }>();
 
-const CHIPS: Record<string, string> = {
-  incident_date: "It happened on …",
-  event_type: "Someone hit my parked car and left",
-  third_party_involved: "No other vehicle or person was involved",
-  damage_description: "The rear bumper is dented",
-  police_report_filed: "The police were not informed",
-  location: "It happened in …",
-};
+const CHIP_KEYS = ["incident_date", "event_type", "third_party_involved", "damage_description", "police_report_filed", "location"];
 
 const draft = ref("");
 const file = ref<File | null>(null);
 const log = ref<HTMLElement | null>(null);
-const chips = computed(() => props.missing.map((m) => CHIPS[m]).filter(Boolean).slice(0, 3));
+const chips = computed(() => props.missing.filter((m) => CHIP_KEYS.includes(m)).slice(0, 3).map((m) => t(`chip.${m}`)));
 
 watch(
   () => props.messages.map((m) => m.content).join("\u0000"),
@@ -48,33 +42,33 @@ function onFile(e: Event) {
 </script>
 
 <template>
-  <section class="panel chat" aria-label="Conversation">
+  <section class="panel chat" :aria-label="t('chat.aria')">
     <div ref="log" class="log" role="log" aria-live="polite" aria-relevant="additions text">
       <div v-for="m in messages" :key="m.id" class="bubble" :class="[m.role, { streaming: m.streaming }]">{{ m.content }}</div>
     </div>
-    <div v-if="chips.length && !busy && canSend" class="chips" aria-label="Suggested answers">
+    <div v-if="chips.length && !busy && canSend" class="chips" :aria-label="t('chat.suggested')">
       <button v-for="c in chips" :key="c" type="button" class="chip" @click="draft = c">{{ c }}</button>
     </div>
     <div v-if="error" class="error" role="alert">
-      <span>Something went wrong: {{ error }}</span>
-      <button class="btn" type="button" @click="emit('retry')">Retry</button>
+      <span>{{ t("chat.error", { error }) }}</span>
+      <button class="btn" type="button" @click="emit('retry')">{{ t("chat.retry") }}</button>
     </div>
-    <div v-if="file" class="attach">Attached: {{ file.name }} <button class="chip" type="button" @click="file = null">remove</button></div>
+    <div v-if="file" class="attach">{{ t("chat.attached", { name: file.name }) }} <button class="chip" type="button" @click="file = null">{{ t("chat.remove") }}</button></div>
     <form class="composer" @submit.prevent="send">
       <textarea
         v-model="draft"
         rows="1"
         :disabled="busy || !canSend"
-        :placeholder="canSend ? 'Describe what happened to your car…' : 'This claim has been reviewed.'"
-        aria-label="Your message"
+        :placeholder="canSend ? t('chat.placeholder') : t('chat.placeholderReviewed')"
+        :aria-label="t('chat.yourMessage')"
         @keydown="onKey"
       />
       <div class="actions">
-        <label class="btn" title="Attach a photo or PDF">
-          📎<span class="sr-only">Attach file</span>
+        <label class="btn" :title="t('chat.attachTitle')">
+          📎<span class="sr-only">{{ t("chat.attachFile") }}</span>
           <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" class="sr-only" :disabled="busy || !canSend" @change="onFile" />
         </label>
-        <button class="btn primary" type="submit" :disabled="busy || !canSend || !draft.trim()">{{ busy ? "…" : "Send" }}</button>
+        <button class="btn primary" type="submit" :disabled="busy || !canSend || !draft.trim()">{{ busy ? "…" : t("chat.send") }}</button>
       </div>
     </form>
   </section>

@@ -104,12 +104,15 @@ def post_message(
     conversation_id: uuid.UUID,
     text: Annotated[str, Form(min_length=1, max_length=4000)],
     file: Annotated[UploadFile | None, File()] = None,
+    language: Annotated[Language | None, Form()] = None,
     state=Depends(get_state),
 ) -> StreamingResponse:
     with state.session() as session:
         conv = _load(session, conversation_id)
         if conv.status == "reviewed":
             raise HTTPException(409, "conversation already reviewed")
+        if language and language != conv.language:
+            conv.language = language  # UI toggle: the agent answers in the new language from now on
         attachment = _store_upload(state, conv.id, file) if file is not None else None
         user_text = (
             text
