@@ -84,6 +84,11 @@ uv sync --extra data                      # deps incl. pandas/openml/kaggle
 uv run python scripts/fetch_data.py all   # AKB PDF→text, freMTPL2 parquet, 50 seed policyholders
                                           # + Kaggle fraud CSV if ~/.kaggle/kaggle.json exists
 uv run pytest && uv run ruff check .
+
+# RAG over the AKB (needs Postgres 16 + pgvector; DATABASE_URL defaults to localhost claimpilot/claimpilot)
+uv sync --extra rag
+uv run python -m rag.ingest          # 344 clause chunks → policy_chunks (multilingual-e5-small, HNSW)
+uv run python -m rag.eval            # 28 DE/EN questions, fails if top-3 hit rate < 0.8
 ```
 
 Data cards with licenses and checksums: [`data/README.md`](data/README.md). The API, agent and UI arrive in tasks 3–6 (see [`docs/ROADMAP.md`](docs/ROADMAP.md)).

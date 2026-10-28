@@ -72,7 +72,7 @@ Offline training / ingestion live beside the API but are not part of its runtime
 
 - Chunking: split AKB on its clause numbering (`A.2.3.2`, `E.1.1.3` …) rather than fixed windows; each chunk keeps `clause_id`, `title`, `parent` and `page`.
 - Embeddings: multilingual sentence-transformer (small, CPU-friendly), stored as `vector(384)`; HNSW index.
-- Query: facts → one or two natural-language questions in German (the corpus language) + the user's own words; union of results, re-ranked by score; return top-5 with `clause_id`.
+- Query: the user's own words + up to three German policy-language rewrites from the LLM (`rag/query_rewrite.py`; EN→DE translation and colloquial→wording rephrase, e.g. "zerkratzt" → "mut- oder böswillige Handlungen"); union of results ranked by best cosine score; top-5 with `clause_id`. Rewrites for the eval set are recorded in `rag/eval/rewrites.json` so eval/CI run without an API key.
 - Evaluation: `rag/eval/questions.jsonl` — hand-written DE/EN questions with expected clause ids; `rag/eval.py` reports top-1/top-3 hit rate. Target ≥ 0.8 top-3.
 
 ## ML
