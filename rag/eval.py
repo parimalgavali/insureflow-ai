@@ -128,6 +128,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--json", type=Path, help="write summary + per-question results to this file"
     )
+    parser.add_argument("--rewriter", choices=["none", "recorded", "anthropic"], default="recorded")
+    parser.add_argument(
+        "--record", action="store_true", help="call Anthropic and save rewrites.json"
+    )
     args = parser.parse_args(argv)
 
     from rag.embeddings import Embedder

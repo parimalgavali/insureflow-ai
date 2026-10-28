@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 from typing import Protocol
 
-DEFAULT_MODEL = "claude-3-5-haiku-latest"
+DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 REWRITES_PATH = Path(__file__).parent / "eval" / "rewrites.json"
 
 SYSTEM_PROMPT = """You help a retrieval system find clauses in the German motor insurance model \

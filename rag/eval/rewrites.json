@@ -1,0 +1,142 @@
+{
+  "Zahlt die Teilkasko, wenn ich mit einem Reh zusammenstoße?": [
+    "Zusammenstoß mit Haarwild Teilkasko",
+    "Wildunfall Leistung Teilkasko",
+    "Haarwild Versicherungsschutz Teilkasko"
+  ],
+  "Mein Auto wurde gestohlen – ist das in der Teilkasko versichert?": [
+    "Entwendung Teilkasko Versicherungsschutz",
+    "Diebstahl Auto Teilkasko Leistung",
+    "Teilkasko Entwendung Versicherungsfall"
+  ],
+  "Ist ein Steinschlag in der Windschutzscheibe versichert?": [
+    "Steinschlag Windschutzscheibe Teilkasko",
+    "Glasbruch Versicherungsschutz",
+    "Beschädigungen durch Steinwurf Leistung"
+  ],
+  "Welche Schäden deckt die Vollkasko zusätzlich zur Teilkasko ab?": [
+    "Vollkasko Leistungsumfang zusätzliche Deckung",
+    "Unterschied Teilkasko Vollkasko Versicherungsschutz",
+    "Vollkasko Selbstbeteiligung Leistungen"
+  ],
+  "Sind Hagelschäden am Fahrzeug versichert?": [
+    "Hagelschaden Versicherungsschutz",
+    "Teilkasko Hagelschlag",
+    "Elementarschäden Hagel"
+  ],
+  "Jemand hat mein geparktes Auto mutwillig zerkratzt. Zahlt die Versicherung?": [
+    "mut- oder böswillige Handlungen Vollkasko",
+    "Beschädigungen durch Fremdeinwirkung Leistung",
+    "Vandalismus Versicherungsschutz Kasko"
+  ],
+  "Wie schnell muss ich einen Schaden bei der Versicherung melden?": [
+    "Anzeigepflicht Schadenmeldung Frist",
+    "Pflichten im Schadenfall Mitteilung",
+    "unverzüglich Schaden anzeigen"
+  ],
+  "Muss ich bei einem Wildunfall oder Diebstahl die Polizei informieren?": [
+    "Anzeigepflicht Wildunfall Zusammenstoß Haarwild",
+    "Anzeigepflicht Entwendung Diebstahl Polizei",
+    "Pflichten im Schadenfall Meldung Behörden"
+  ],
+  "Was passiert, wenn ich den Schaden zu spät melde oder meine Pflichten verletze?": [
+    "Anzeigepflicht Schadenmeldung Frist",
+    "Verletzung Pflichten im Schadenfall Leistungsfreiheit",
+    "verspätete Meldung Folgen Versicherungsschutz"
+  ],
+  "Darf ich den Unfallort verlassen, bevor die Polizei da ist?": [
+    "Pflichten im Schadenfall Unfallort verlassen",
+    "Anzeigepflicht Polizei Unfall",
+    "Sicherungspflicht Unfallstelle"
+  ],
+  "Was passiert, wenn ich den Unfall grob fahrlässig verursacht habe?": [
+    "grobe Fahrlässigkeit Leistungsfreiheit",
+    "grobe Fahrlässigkeit Versicherungsschutz",
+    "Leistungsfreiheit fahrlässiges Verhalten"
+  ],
+  "Wie wird die Selbstbeteiligung bei einem Kaskoschaden berücksichtigt?": [
+    "Selbstbeteiligung Kaskoschaden",
+    "Abzug Selbstbeteiligung Teilkasko Vollkasko",
+    "Leistung Selbstbeteiligung Schadensfall"
+  ],
+  "Gilt meine Kaskoversicherung auch im Ausland?": [
+    "Geltungsbereich Kaskoversicherung Ausland",
+    "räumlicher Geltungsbereich Vollkasko Teilkasko",
+    "Versicherungsschutz außerhalb Deutschland Kasko"
+  ],
+  "Wer ist in der Kfz-Haftpflichtversicherung mitversichert?": [
+    "versicherte Personen Haftpflicht",
+    "Fahrer Halter Mitversicherte",
+    "Versicherungsschutz wer ist versichert"
+  ],
+  "Zahlt die Versicherung die Abschleppkosten nach einem Unfall?": [
+    "Abschleppkosten Unfall",
+    "Bergungskosten Leistungen",
+    "Kosten Abtransport Fahrzeug"
+  ],
+  "Was bekomme ich bei einem Totalschaden erstattet?": [
+    "Totalschaden Leistung Entschädigung",
+    "Wiederbeschaffungswert Totalschaden",
+    "Selbstbeteiligung Totalschaden Abzug"
+  ],
+  "Was passiert, wenn ich unter Alkoholeinfluss gefahren bin?": [
+    "Fahren unter Alkoholeinfluss Leistungsfreiheit",
+    "grobe Fahrlässigkeit Alkohol Versicherungsschutz",
+    "Trunkenheit am Steuer Obliegenheitsverletzung"
+  ],
+  "Darf jemand ohne Führerschein mein Auto fahren?": [
+    "Fahrzeugführer ohne Fahrerlaubnis",
+    "Verstoß gegen Fahrererlaubnis Leistungsfreiheit",
+    "Fahren ohne Führerschein Versicherungsschutz"
+  ],
+  "Does fully comprehensive cover (Vollkasko) pay for an accident I caused myself?": [
+    "Vollkasko Leistungsfreiheit grobe Fahrlässigkeit",
+    "Vollkasko Selbstverschulden Entschädigung",
+    "Vollkasko Zusammenstoß eigenes Verschulden"
+  ],
+  "Is my car covered against theft?": [
+    "Entwendung Versicherungsschutz",
+    "Diebstahl Teilkasko Vollkasko",
+    "Entwendung des Fahrzeugs Leistung"
+  ],
+  "Someone hit my parked car and drove away. Is hit-and-run damage covered?": [
+    "Unfallflucht Parkplatz Deckung",
+    "Fremdschaden Zusammenstoß Leistung",
+    "Fahrerflucht Haftpflicht Vollkasko"
+  ],
+  "What are my duties after an accident?": [
+    "Pflichten im Schadenfall",
+    "Anzeigepflicht Unfall",
+    "Mitwirkungspflichten nach Schadenereignis"
+  ],
+  "Do I have to report a theft to the police?": [
+    "Anzeigepflicht Entwendung Polizei",
+    "Diebstahl Anzeige Pflichten Schadenfall",
+    "Entwendung Meldung Behörden erforderlich"
+  ],
+  "What happens if I report the claim late?": [
+    "Anzeigepflicht Frist Verzögerung",
+    "verspätete Schadenmeldung Leistungsfreiheit",
+    "Pflichten im Schadenfall Anzeige Frist"
+  ],
+  "How is the deductible applied to my claim?": [
+    "Selbstbeteiligung Anwendung Schadensfall",
+    "Selbstbeteiligung Leistung Versicherer",
+    "Selbstbeteiligung abzug Entschädigung"
+  ],
+  "Is windshield glass breakage covered?": [
+    "Glasbruchversicherung Windschutzscheibe",
+    "Bruchschaden Glas Teilkasko",
+    "Versicherungsschutz Glasbruch Scheibe"
+  ],
+  "Does my cover apply when driving abroad in Europe?": [
+    "Geltungsbereich Versicherungsschutz Ausland Europa",
+    "Deckung Kraftfahrzeug außerhalb Bundesrepublik",
+    "Versicherungsschutz grenzüberschreitender Verkehr"
+  ],
+  "Is damage from hitting a deer covered?": [
+    "Zusammenstoß mit Haarwild",
+    "Wildschaden Vollkasko",
+    "Schalenwild Versicherungsschutz"
+  ]
+}
