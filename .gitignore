@@ -34,7 +34,9 @@ data/synthetic/*.jsonl
 !data/sample/.gitkeep
 !data/synthetic/.gitkeep
 
-ml/artifacts/
+ml/artifacts/*
+!ml/artifacts/fraud_model.joblib
+!ml/artifacts/metrics.json
 
 .worktrees/
 worktrees/
@@ -43,3 +45,4 @@ worktrees/
 
 data/uploads/
 artifacts/
+web/.vite/
