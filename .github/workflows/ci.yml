@@ -31,7 +31,6 @@ jobs:
           enable-cache: true
       - run: uv python install 3.12
       - run: uv sync --all-extras
-||||||| parent of 2cf0219 (Task 5: FastAPI backend — conversations/messages (SSE), claims review resume, uploads, bearer auth, SQLAlchemy models + Alembic 0002 (incl. LangGraph checkpoint tables), Dockerfile, docker-compose, CI image build)
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run alembic upgrade head
@@ -78,3 +77,75 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build -t claimpilot-api:ci .
       - run: docker build -t claimpilot-web:ci web
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [python, web]
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: claimpilot
+          POSTGRES_PASSWORD: claimpilot
+          POSTGRES_DB: claimpilot
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U claimpilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://claimpilot:claimpilot@localhost:5432/claimpilot
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: uv python install 3.12
+      - run: uv sync --all-extras
+      - name: Cache embedding model and AKB download
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            data/raw/gdv
+          key: rag-${{ hashFiles('rag/embeddings.py', 'scripts/fetch_data.py') }}
+      - run: uv run alembic upgrade head
+      - run: uv run python scripts/fetch_data.py akb && uv run python -m rag.ingest
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npm run e2e
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report
+            web/test-results
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Python dependency audit (pip-audit on the lockfile)
+        run: |
+          uv export --all-extras --no-dev --no-emit-project --no-hashes --format requirements-txt \
+            | sed -E 's/\+cpu//; /^--/d' > /tmp/req.txt   # torch cpu wheels have a local version tag PyPI does not know
+          uvx pip-audit -r /tmp/req.txt --strict --no-deps
+      - name: npm dependency audit
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: web
