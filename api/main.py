@@ -24,7 +24,13 @@ def create_app(state_factory: Callable[[], AppState] | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        app.state.claimpilot = factory()
+        state = factory()
+        try:
+            state.settings.check_auth()
+        except RuntimeError:
+            state.close()
+            raise
+        app.state.claimpilot = state
         try:
             yield
         finally:

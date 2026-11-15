@@ -24,6 +24,7 @@ services:
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5-20251001}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       DEMO_API_TOKEN: ${DEMO_API_TOKEN:-}
+      ALLOW_OPEN_API: ${ALLOW_OPEN_API:-0}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
       UPLOAD_DIR: /app/data/uploads
     volumes:
