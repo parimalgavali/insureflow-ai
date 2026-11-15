@@ -90,10 +90,10 @@ Offline training / ingestion live beside the API but are not part of its runtime
 | POST | `/api/conversations` | start; returns id + greeting |
 | POST | `/api/conversations/{id}/messages` | user message (+ optional file); **SSE** stream of agent events: `facts`, `missing`, `token`, `question`, `citations`, `risk`, `card`, `done`, `error`. `token` events deliver the composed answer in word groups (the compose step uses structured output, so there is no model-level token stream). |
 | GET | `/api/conversations/{id}` | full state for reload |
-| POST | `/api/claims/{id}/review` | reviewer accept/edit → resumes the interrupted graph |
+| POST | `/api/claims/{id}/review` | adjuster accept/edit → resumes the interrupted graph; needs `ADJUSTER_API_TOKEN`, reviewer set by the server, `facts_patch` limited to known fact fields |
 | GET | `/api/health` | db, model, provider status |
 
-Auth is intentionally minimal for a demo (single demo user; bearer token from env). Stated in the README.
+Auth is intentionally minimal for a demo: a policyholder bearer token (`DEMO_API_TOKEN`) and a separate adjuster token (`ADJUSTER_API_TOKEN`) that alone can review claims. Stated in the README.
 
 ## Frontend
 

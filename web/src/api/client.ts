@@ -53,6 +53,7 @@ export interface ReviewDecision {
   decision: "accept" | "edit" | "request_info";
   facts_patch?: Record<string, unknown>;
   note?: string | null;
+  reviewer?: string;
 }
 
 export interface ClaimCard {
@@ -125,12 +126,16 @@ export async function getConversation(id: string): Promise<Conversation> {
   return (await expectOk(await fetch(`${BASE}/api/conversations/${id}`, { headers: headers(false) }))).json();
 }
 
-export async function reviewClaim(claimId: string, decision: ReviewDecision): Promise<{ status: ClaimStatus; card: ClaimCard }> {
-  const res = await fetch(`${BASE}/api/claims/${claimId}/review`, {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify(decision),
-  });
+/** Review needs the adjuster credential (ADJUSTER_API_TOKEN), asked for each time and never stored. */
+export async function reviewClaim(
+  claimId: string,
+  decision: ReviewDecision,
+  askToken: () => string | null = () => null,
+): Promise<{ status: ClaimStatus; card: ClaimCard }> {
+  const token = askToken();
+  const h: Record<string, string> = { "content-type": "application/json" };
+  if (token) h.authorization = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/claims/${claimId}/review`, { method: "POST", headers: h, body: JSON.stringify(decision) });
   return (await expectOk(res)).json();
 }
 

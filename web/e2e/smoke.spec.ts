@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { adjusterToken } from "../playwright.config";
 
 // Scripted hit-and-run conversation replayed by the recorded LLM provider
 // (tests/fixtures/agent/hit_and_run.json) through the real API, Postgres and pgvector.
@@ -37,6 +38,14 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(card.getByTestId("popover")).toContainText(/Aufklärungspflicht/);
   await expect(card.getByTestId("risk")).toHaveText(/low|medium|high/);
 
+  // the policyholder session has no adjuster token: the review is refused and the prompt is dismissed
+  page.once("dialog", (d) => d.dismiss());
+  await card.getByTestId("review").click();
+  await expect(page.getByRole("alert")).toContainText(/40[13]/);
+  await expect(card.getByTestId("status")).toHaveText(/awaiting adjuster/i);
+
+  // the adjuster enters their token when prompted
+  page.once("dialog", (d) => d.accept(adjusterToken));
   await card.getByTestId("review").click();
   await expect(card.getByTestId("status")).toHaveText(/reviewed/i);
   await expect(composer).toBeDisabled();

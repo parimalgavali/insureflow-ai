@@ -24,6 +24,9 @@ class Settings:
     demo_api_token: str | None = field(
         default_factory=lambda: os.environ.get("DEMO_API_TOKEN") or None
     )
+    adjuster_api_token: str | None = field(
+        default_factory=lambda: os.environ.get("ADJUSTER_API_TOKEN") or None
+    )
     allow_open_api: bool = field(default_factory=lambda: os.environ.get("ALLOW_OPEN_API") == "1")
     upload_dir: Path = field(
         default_factory=lambda: Path(os.environ.get("UPLOAD_DIR", "data/uploads"))
