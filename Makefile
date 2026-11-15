@@ -5,7 +5,7 @@ demo:            ## fetch data, train/ingest, docker compose up (http://localhos
 
 dev:             ## API + Vite dev server against local Postgres (recorded LLM)
 	uv run alembic upgrade head
-	(LLM_PROVIDER=$${LLM_PROVIDER:-recorded} ADJUSTER_API_TOKEN=$${ADJUSTER_API_TOKEN:-local-adjuster} uv run uvicorn api.main:app --reload &) && cd web && npm run dev
+	(LLM_PROVIDER=$${LLM_PROVIDER:-recorded} ALLOW_OPEN_API=$${ALLOW_OPEN_API:-1} ADJUSTER_API_TOKEN=$${ADJUSTER_API_TOKEN:-local-adjuster} uv run uvicorn api.main:app --reload &) && cd web && npm run dev
 
 test:            ## python + web unit tests
 	uv run pytest -q

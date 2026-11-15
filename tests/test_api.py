@@ -31,11 +31,15 @@ ADJUSTER = {"Authorization": f"Bearer {ADJUSTER_TOKEN}"}
 
 
 def make_state(
-    tmp_path: Path, token: str | None = None, adjuster_token: str | None = ADJUSTER_TOKEN
+    tmp_path: Path,
+    token: str | None = None,
+    adjuster_token: str | None = ADJUSTER_TOKEN,
+    allow_open_api: bool = True,
 ) -> AppState:
     settings = Settings(
         demo_api_token=token,
         adjuster_api_token=adjuster_token,
+        allow_open_api=allow_open_api,
         upload_dir=tmp_path / "uploads",
         llm_provider="recorded",
     )
@@ -235,6 +239,19 @@ def test_review_needs_adjuster_role(tmp_path: Path):
         conv = c.post("/api/conversations", json={}).json()
         r = c.post(f"/api/claims/{conv['claim_id']}/review", json={"decision": "accept"})
         assert r.status_code == 403 and "disabled" in r.json()["detail"]
+
+
+def test_startup_fails_without_token_unless_open_api_allowed(tmp_path: Path):
+    with pytest.raises(RuntimeError, match="DEMO_API_TOKEN"):
+        with TestClient(create_app(lambda: make_state(tmp_path, allow_open_api=False))):
+            pass
+
+
+def test_requests_rejected_when_no_token_and_open_api_not_allowed(tmp_path: Path):
+    app = create_app(lambda: make_state(tmp_path))
+    with TestClient(app) as c:
+        app.state.claimpilot.settings = Settings(demo_api_token=None, allow_open_api=False)
+        assert c.post("/api/conversations", json={}).status_code == 503
 
 
 def test_eval_page_lists_questions_with_hits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

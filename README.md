@@ -118,7 +118,8 @@ uv run python -m rag.eval                   # retrieval eval, fails below 0.8 to
 uv run python -m api.agent.demo             # live Anthropic run of the hit-and-run script
 ```
 
-Demo auth: set `DEMO_API_TOKEN` in `.env` to require a bearer token (open when unset). Claim review
+Demo auth: the API requires a bearer token from `DEMO_API_TOKEN` and refuses to start without one, unless
+`ALLOW_OPEN_API=1` is set (local dev only; `make dev`, pytest and the e2e set it). Claim review
 (`POST /api/claims/{id}/review`) needs the separate `ADJUSTER_API_TOKEN` and is off when it is unset;
 the UI asks for it on every "Send to adjuster" and never stores it (`make dev` uses `local-adjuster`). Uploads are
 limited to JPEG/PNG/WebP/PDF ≤ `MAX_UPLOAD_MB` (10). `.env` is git-ignored; only `.env.example` is committed.
