@@ -220,5 +220,24 @@ def test_eval_page_lists_questions_with_hits(tmp_path: Path, monkeypatch: pytest
         assert c.get("/api/eval").json() == body  # cached per process
 
 
+def test_eval_page_requires_token_and_caches_every_k(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    from api.routers import eval as eval_router
+
+    monkeypatch.setenv("EVAL_PAGE", "1")
+    eval_router._run.cache_clear()
+    with TestClient(create_app(lambda: make_state(tmp_path, token="s3cret"))) as c:
+        assert c.get("/api/eval").status_code == 401
+        auth = {"Authorization": "Bearer s3cret"}
+        for _ in range(2):
+            for k in range(eval_router.K_MIN, eval_router.K_MAX + 1):
+                assert c.get(f"/api/eval?k={k}", headers=auth).status_code == 200
+        info = eval_router._run.cache_info()
+        assert info.misses == eval_router.K_MAX - eval_router.K_MIN + 1
+        assert c.get("/api/eval?k=99", headers=auth).json()["k"] == eval_router.K_MAX
+        assert eval_router._run.cache_info().misses == info.misses
+
+
 def test_eval_page_disabled_by_default(client: TestClient):
     assert client.get("/api/eval").status_code == 404

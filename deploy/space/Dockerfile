@@ -28,6 +28,6 @@ COPY --chown=user --from=web /web/dist ./static
 COPY --chown=user deploy/space/entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh
 USER user
-ENV STATIC_DIR=/app/static UPLOAD_DIR=/app/data/uploads PORT=7860 EVAL_PAGE=1
+ENV STATIC_DIR=/app/static UPLOAD_DIR=/app/data/uploads PORT=7860
 EXPOSE 7860
 CMD ["./entrypoint.sh"]
