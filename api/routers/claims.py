@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from api.agent.graph import resume_review, thread_config
-from api.agent.schemas import ClaimCard, ReviewDecision
-from api.security import get_state, require_token
+from api.agent.schemas import ClaimCard, ReviewDecision, ReviewRequest
+from api.security import get_state, require_adjuster, require_token
 from db.models import Claim
 
 router = APIRouter(prefix="/api/claims", tags=["claims"], dependencies=[Depends(require_token)])
@@ -40,9 +40,13 @@ def get_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
 
 @router.post("/{claim_id}/review", response_model=ClaimOut)
 def review_claim(
-    claim_id: uuid.UUID, decision: ReviewDecision, state=Depends(get_state)
+    claim_id: uuid.UUID,
+    body: ReviewRequest,
+    reviewer: str = Depends(require_adjuster),
+    state=Depends(get_state),
 ) -> ClaimOut:
-    """Resume the interrupted graph with the reviewer's decision and persist the reviewed card."""
+    """Resume the interrupted graph with the adjuster's decision and persist the reviewed card."""
+    decision = ReviewDecision(**body.model_dump(), reviewer=reviewer)
     with state.session() as session:
         claim = session.get(Claim, claim_id)
         if claim is None:

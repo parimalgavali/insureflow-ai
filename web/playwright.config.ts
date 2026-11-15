@@ -4,6 +4,7 @@ import { defineConfig } from "@playwright/test";
 // `npm run e2e` starts both servers; set E2E_API_URL to reuse a running API instead.
 const apiPort = 8000;
 const webPort = 5173;
+export const adjusterToken = process.env.ADJUSTER_API_TOKEN ?? "e2e-adjuster";
 
 export default defineConfig({
   testDir: "e2e",
@@ -13,7 +14,7 @@ export default defineConfig({
   use: { baseURL: `http://localhost:${webPort}`, trace: "retain-on-failure" },
   webServer: [
     {
-      command: `cd .. && LLM_PROVIDER=recorded uv run uvicorn api.main:app --port ${apiPort}`,
+      command: `cd .. && LLM_PROVIDER=recorded ADJUSTER_API_TOKEN=${adjusterToken} uv run uvicorn api.main:app --port ${apiPort}`,
       url: `http://localhost:${apiPort}/api/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

@@ -44,6 +44,7 @@
   "card.nextSteps": "Nächste Schritte",
   "card.reviewedBadge": "Vom Sachbearbeiter geprüft",
   "card.sendToAdjuster": "An Sachbearbeiter senden",
+  "card.adjusterToken": "Sachbearbeiter-Token (nur Sachbearbeiter dürfen einen Schaden prüfen):",
   "card.editFacts": "Fakten bearbeiten",
   "card.doneEditing": "Bearbeitung beenden",
   "fact.incident_date": "Datum",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Language = Literal["de", "en"]
 EventType = Literal[
@@ -87,10 +87,30 @@ class RiskSignal(BaseModel):
     model_version: str = "unknown"
 
 
-class ReviewDecision(BaseModel):
+class FactsPatch(ClaimFacts):
+    """Adjuster corrections: only known ClaimFacts fields, with their types."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ReviewRequest(BaseModel):
+    """Body of POST /api/claims/{id}/review; the reviewer comes from the credential."""
+
+    model_config = ConfigDict(extra="forbid")
+
     decision: Literal["accept", "edit", "request_info"]
     facts_patch: dict = Field(default_factory=dict)
-    note: str | None = None
+    note: str | None = Field(None, max_length=2000)
+
+    @field_validator("facts_patch")
+    @classmethod
+    def _known_facts_only(cls, value: dict) -> dict:
+        return FactsPatch.model_validate(value).model_dump(exclude_unset=True)
+
+
+class ReviewDecision(ReviewRequest):
+    model_config = ConfigDict(extra="ignore")
+
     reviewer: str = "adjuster"
 
 

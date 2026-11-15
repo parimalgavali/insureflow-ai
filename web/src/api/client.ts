@@ -53,6 +53,7 @@ export interface ReviewDecision {
   decision: "accept" | "edit" | "request_info";
   facts_patch?: Record<string, unknown>;
   note?: string | null;
+  reviewer?: string;
 }
 
 export interface ClaimCard {
@@ -125,12 +126,27 @@ export async function getConversation(id: string): Promise<Conversation> {
   return (await expectOk(await fetch(`${BASE}/api/conversations/${id}`, { headers: headers(false) }))).json();
 }
 
-export async function reviewClaim(claimId: string, decision: ReviewDecision): Promise<{ status: ClaimStatus; card: ClaimCard }> {
-  const res = await fetch(`${BASE}/api/claims/${claimId}/review`, {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify(decision),
-  });
+export const ADJUSTER_TOKEN_KEY = "claimpilot_adjuster_token";
+
+/** Review needs the adjuster credential (ADJUSTER_API_TOKEN), never the policyholder token. */
+export async function reviewClaim(
+  claimId: string,
+  decision: ReviewDecision,
+  askToken: () => string | null = () => null,
+): Promise<{ status: ClaimStatus; card: ClaimCard }> {
+  const post = (token: string | null) => {
+    const h: Record<string, string> = { "content-type": "application/json" };
+    if (token) h.authorization = `Bearer ${token}`;
+    return fetch(`${BASE}/api/claims/${claimId}/review`, { method: "POST", headers: h, body: JSON.stringify(decision) });
+  };
+  let res = await post(localStorage.getItem(ADJUSTER_TOKEN_KEY));
+  if (res.status === 401 || res.status === 403) {
+    const token = askToken();
+    if (token) {
+      res = await post(token);
+      if (res.ok) localStorage.setItem(ADJUSTER_TOKEN_KEY, token);
+    }
+  }
   return (await expectOk(res)).json();
 }
 

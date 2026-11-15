@@ -26,9 +26,18 @@ MSG2 = (
 )
 
 
-def make_state(tmp_path: Path, token: str | None = None) -> AppState:
+ADJUSTER_TOKEN = "adj-s3cret"
+ADJUSTER = {"Authorization": f"Bearer {ADJUSTER_TOKEN}"}
+
+
+def make_state(
+    tmp_path: Path, token: str | None = None, adjuster_token: str | None = ADJUSTER_TOKEN
+) -> AppState:
     settings = Settings(
-        demo_api_token=token, upload_dir=tmp_path / "uploads", llm_provider="recorded"
+        demo_api_token=token,
+        adjuster_api_token=adjuster_token,
+        upload_dir=tmp_path / "uploads",
+        llm_provider="recorded",
     )
     provider = RecordedProvider(FIXTURE)
     deps = AgentDeps(
@@ -136,15 +145,34 @@ def test_full_conversation_flow(client: TestClient, tmp_path: Path):
     assert full["status"] == "awaiting_review" and full["card"]["facts"]["photos_attached"] is True
     assert full["policy"]["deductible_eur"] == 500
 
-    blocked = client.post(f"/api/claims/{claim_id}/review", json={"decision": "accept"})
+    review_url = f"/api/claims/{claim_id}/review"
+    assert client.post(review_url, json={"decision": "accept"}).status_code == 401
+    assert (
+        client.post(
+            review_url, json={"decision": "accept"}, headers={"Authorization": "Bearer nope"}
+        ).status_code
+        == 403
+    )
+    for bad in (
+        {"decision": "accept", "reviewer": "senior adjuster"},
+        {"decision": "edit", "facts_patch": {"fraud_score": 0}},
+        {"decision": "edit", "facts_patch": {"estimated_amount_eur": "a lot"}},
+    ):
+        assert client.post(review_url, json=bad, headers=ADJUSTER).status_code == 422
+    assert client.get(f"/api/claims/{claim_id}").json()["status"] == "awaiting_review"
+
+    blocked = client.post(
+        review_url,
+        json={"decision": "edit", "facts_patch": {"witnesses": True}},
+        headers=ADJUSTER,
+    )
     assert blocked.status_code == 200
     reviewed = blocked.json()
-    assert reviewed["status"] == "reviewed" and reviewed["card"]["review"]["decision"] == "accept"
+    assert reviewed["status"] == "reviewed" and reviewed["card"]["review"]["decision"] == "edit"
+    assert reviewed["card"]["review"]["reviewer"] == "adjuster"
+    assert reviewed["card"]["facts"]["witnesses"] is True
     assert client.get(f"/api/claims/{claim_id}").json()["status"] == "reviewed"
-    assert (
-        client.post(f"/api/claims/{claim_id}/review", json={"decision": "accept"}).status_code
-        == 409
-    )
+    assert client.post(review_url, json={"decision": "accept"}, headers=ADJUSTER).status_code == 409
     assert (
         client.post(f"/api/conversations/{cid}/messages", data={"text": "noch was"}).status_code
         == 409
@@ -155,7 +183,7 @@ def test_review_before_assessment_is_rejected(client: TestClient):
     conv = client.post("/api/conversations", json={}).json()
     assert (
         client.post(
-            f"/api/claims/{conv['claim_id']}/review", json={"decision": "accept"}
+            f"/api/claims/{conv['claim_id']}/review", json={"decision": "accept"}, headers=ADJUSTER
         ).status_code
         == 409
     )
@@ -188,6 +216,25 @@ def test_bearer_token_required_when_configured(tmp_path: Path):
             ).status_code
             == 201
         )
+
+
+def test_review_needs_adjuster_role(tmp_path: Path):
+    from alembic import command
+    from alembic.config import Config
+
+    command.upgrade(Config("alembic.ini"), "head")
+    policyholder = {"Authorization": "Bearer s3cret"}
+    with TestClient(create_app(lambda: make_state(tmp_path / "a", token="s3cret"))) as c:
+        conv = c.post("/api/conversations", json={}, headers=policyholder).json()
+        url = f"/api/claims/{conv['claim_id']}/review"
+        assert c.post(url, json={"decision": "accept"}, headers=policyholder).status_code == 403
+        # the adjuster token also works on the policyholder routes, and passes the role check
+        assert c.get(f"/api/conversations/{conv['id']}", headers=ADJUSTER).status_code == 200
+        assert c.post(url, json={"decision": "accept"}, headers=ADJUSTER).status_code == 409
+    with TestClient(create_app(lambda: make_state(tmp_path / "b", adjuster_token=None))) as c:
+        conv = c.post("/api/conversations", json={}).json()
+        r = c.post(f"/api/claims/{conv['claim_id']}/review", json={"decision": "accept"})
+        assert r.status_code == 403 and "disabled" in r.json()["detail"]
 
 
 def test_eval_page_lists_questions_with_hits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

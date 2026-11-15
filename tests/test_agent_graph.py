@@ -215,3 +215,13 @@ def test_recorded_provider_exhaustion(tmp_path: Path):
         provider.complete(
             [ChatMessage(role="user", content="hi")], response_schema=FollowupOutput, tag="followup"
         )
+
+
+def test_review_facts_patch_only_accepts_known_typed_fields():
+    import pydantic
+
+    ok = ReviewDecision(decision="edit", facts_patch={"estimated_amount_eur": "1200"})
+    assert ok.facts_patch == {"estimated_amount_eur": 1200.0}
+    for bad in ({"fraud_score": 0}, {"event_type": "act_of_god"}, {"injuries": "maybe"}):
+        with pytest.raises(pydantic.ValidationError):
+            ReviewDecision(decision="edit", facts_patch=bad)

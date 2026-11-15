@@ -36,7 +36,7 @@ async function review(patch: Record<string, unknown>) {
   store.busy = true;
   try {
     const decision = Object.keys(patch).length ? { decision: "edit" as const, facts_patch: patch } : { decision: "accept" as const };
-    const result = await reviewClaim(store.claimId, decision);
+    const result = await reviewClaim(store.claimId, decision, () => window.prompt(t("card.adjusterToken")));
     applyReview(store, result.status, result.card);
   } catch (e) {
     store.error = (e as Error).message;

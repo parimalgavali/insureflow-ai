@@ -44,6 +44,7 @@
   "card.nextSteps": "Next steps",
   "card.reviewedBadge": "Reviewed by adjuster",
   "card.sendToAdjuster": "Send to adjuster",
+  "card.adjusterToken": "Adjuster token (only claims staff can review a claim):",
   "card.editFacts": "Edit facts",
   "card.doneEditing": "Done editing",
   "fact.incident_date": "Date",
