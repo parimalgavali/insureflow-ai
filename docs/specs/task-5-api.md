@@ -9,7 +9,7 @@
 - `routers/claims.py`: `POST /api/claims/{id}/review` (accept / edit facts / request more info) → resumes the graph; `GET /api/claims/{id}`.
 - `routers/health.py`: db, model artifact, provider reachability.
 - Uploads: `POST .../messages` accepts multipart with optional image/PDF; stored on disk under `data/uploads/` (volume), metadata in `Attachment`; the agent only receives the filename + type in v2 (content understanding is task 8).
-- Auth: single bearer token from `DEMO_API_TOKEN`; CORS for the web dev server.
+- Auth: single bearer token from `DEMO_API_TOKEN` (compared with `hmac.compare_digest`); the API fails closed and won't start without it unless `ALLOW_OPEN_API=1` (local dev/tests only); CORS for the web dev server.
 - `docker-compose.yml`: `db` (pgvector image), `api`; `web` is added in task 6. `.env.example`.
 - CI (`.github/workflows/ci.yml`): ruff, mypy (loose), pytest for `api/ ml/ rag/` with a Postgres service; builds the api image.
 

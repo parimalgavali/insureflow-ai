@@ -17,4 +17,5 @@ policy wording (pgvector RAG), shows an explainable fraud-risk signal and hands 
 adjuster. Source, model cards and decision log: https://github.com/parimalgavali/insureflow-ai
 
 Space secrets: `DATABASE_URL` (Postgres with pgvector, e.g. Neon), `ANTHROPIC_API_KEY`,
-optional `DEMO_API_TOKEN`, `ANTHROPIC_MODEL`. This Space is mirrored from `main` by GitHub Actions.
+`DEMO_API_TOKEN` (required: the API refuses to start without it), optional `ANTHROPIC_MODEL`.
+Never set `ALLOW_OPEN_API` on the Space. This Space is mirrored from `main` by GitHub Actions.
