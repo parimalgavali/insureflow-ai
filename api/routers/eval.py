@@ -1,8 +1,9 @@
 """Dev-only retrieval evaluation page data: the 28 DE/EN questions, what was retrieved, hit/miss.
 
-Enabled with EVAL_PAGE=1 (default on when LLM_PROVIDER=recorded, i.e. local/demo runs). Results are
-computed once per process against the live retriever and cached — this is the same code path as
-`python -m rag.eval`, just served as JSON so the UI can show that the retriever is measured.
+Enabled with EVAL_PAGE=1 (default on when LLM_PROVIDER=recorded, i.e. local/demo runs; off in the
+public Space) and behind the demo token. Results are computed once per process and allowed `k`
+against the live retriever and cached — the same code path as `python -m rag.eval`, just served as
+JSON so the UI can show that the retriever is measured.
 """
 
 from __future__ import annotations
@@ -13,12 +14,14 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.security import get_state
+from api.security import get_state, require_token
 
-router = APIRouter(prefix="/api", tags=["eval"])
+K_MIN, K_MAX = 3, 10
+
+router = APIRouter(prefix="/api", tags=["eval"], dependencies=[Depends(require_token)])
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=K_MAX - K_MIN + 1)
 def _run(state_id: int, retriever: Any, k: int) -> dict:
     from rag.eval import THRESHOLD, evaluate, load_questions, summarise
 
@@ -47,4 +50,4 @@ def retrieval_eval(k: int = 5, state=Depends(get_state)) -> dict:
         raise HTTPException(404, "eval page disabled (set EVAL_PAGE=1)")
     if state.retriever is None:
         raise HTTPException(503, "retriever unavailable")
-    return _run(id(state), state.retriever, min(max(k, 3), 10))
+    return _run(id(state), state.retriever, min(max(k, K_MIN), K_MAX))
