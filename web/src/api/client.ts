@@ -126,27 +126,16 @@ export async function getConversation(id: string): Promise<Conversation> {
   return (await expectOk(await fetch(`${BASE}/api/conversations/${id}`, { headers: headers(false) }))).json();
 }
 
-export const ADJUSTER_TOKEN_KEY = "claimpilot_adjuster_token";
-
-/** Review needs the adjuster credential (ADJUSTER_API_TOKEN), never the policyholder token. */
+/** Review needs the adjuster credential (ADJUSTER_API_TOKEN), asked for each time and never stored. */
 export async function reviewClaim(
   claimId: string,
   decision: ReviewDecision,
   askToken: () => string | null = () => null,
 ): Promise<{ status: ClaimStatus; card: ClaimCard }> {
-  const post = (token: string | null) => {
-    const h: Record<string, string> = { "content-type": "application/json" };
-    if (token) h.authorization = `Bearer ${token}`;
-    return fetch(`${BASE}/api/claims/${claimId}/review`, { method: "POST", headers: h, body: JSON.stringify(decision) });
-  };
-  let res = await post(localStorage.getItem(ADJUSTER_TOKEN_KEY));
-  if (res.status === 401 || res.status === 403) {
-    const token = askToken();
-    if (token) {
-      res = await post(token);
-      if (res.ok) localStorage.setItem(ADJUSTER_TOKEN_KEY, token);
-    }
-  }
+  const token = askToken();
+  const h: Record<string, string> = { "content-type": "application/json" };
+  if (token) h.authorization = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api/claims/${claimId}/review`, { method: "POST", headers: h, body: JSON.stringify(decision) });
   return (await expectOk(res)).json();
 }
 
