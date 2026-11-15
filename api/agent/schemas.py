@@ -100,7 +100,7 @@ class ReviewRequest(BaseModel):
 
     decision: Literal["accept", "edit", "request_info"]
     facts_patch: dict = Field(default_factory=dict)
-    note: str | None = Field(None, max_length=2000)
+    note: str | None = None
 
     @field_validator("facts_patch")
     @classmethod
@@ -108,9 +108,12 @@ class ReviewRequest(BaseModel):
         return FactsPatch.model_validate(value).model_dump(exclude_unset=True)
 
 
-class ReviewDecision(ReviewRequest):
-    model_config = ConfigDict(extra="ignore")
+class ReviewDecision(BaseModel):
+    """Stored review (also read back from saved cards, so no request-time validation here)."""
 
+    decision: Literal["accept", "edit", "request_info"]
+    facts_patch: dict = Field(default_factory=dict)
+    note: str | None = None
     reviewer: str = "adjuster"
 
 
