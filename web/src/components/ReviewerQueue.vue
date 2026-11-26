@@ -93,8 +93,8 @@ async function saveDecision(decision: ReviewDecision) {
   }
 }
 
-function review(patch: Record<string, unknown>) {
-  return saveDecision({ decision: Object.keys(patch).length ? "edit" : "accept", facts_patch: patch });
+function review(patch: Record<string, unknown>, note?: string) {
+  return saveDecision({ decision: Object.keys(patch).length ? "edit" : "accept", facts_patch: patch, ...(note ? { note } : {}) });
 }
 
 function requestInfo(note: string) {
@@ -142,7 +142,7 @@ onUnmounted(lock);
         <button v-if="hasMore" class="btn" :disabled="busy" @click="load(true)">{{ t("queue.more") }}</button>
       </template>
     </div>
-    <ClaimCard v-if="selected?.card" :key="selected.id" :facts="selected.card.facts" :missing="[]" :citations="selected.card.citations" :risk="selected.card.risk" :card="selected.card" :status="selected.status" :busy="busy" reviewer @review="review" @request-info="requestInfo" @reassess="reassess" />
+    <ClaimCard v-if="selected?.card" :key="selected.id" :facts="selected.card.facts" :missing="[]" :citations="selected.card.citations" :risk="selected.card.risk" :card="selected.card" :status="selected.status" :busy="busy" :claim-id="selected.id" :history="selected.history || []" reviewer @review="review" @request-info="requestInfo" @reassess="reassess" />
     <p v-else-if="credential && !busy" class="panel queue-list">{{ t("queue.choose") }}</p>
   </section>
 </template>

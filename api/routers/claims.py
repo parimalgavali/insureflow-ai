@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from api.agent.graph import resume_review, submit_for_review, thread_config
 from api.agent.schemas import ClaimCard, ReviewDecision, ReviewRequest
+from api.history import HistoryEntry, history_out, record_event, record_review_events
 from api.security import get_state, require_adjuster, require_token
 from db.models import Claim, Message
 
@@ -21,6 +22,7 @@ class ClaimOut(BaseModel):
     status: str
     card: ClaimCard | None
     submitted_at: datetime | None
+    history: list[HistoryEntry]
 
 
 def _out(claim: Claim) -> ClaimOut:
@@ -30,6 +32,7 @@ def _out(claim: Claim) -> ClaimOut:
         status=claim.status,
         card=ClaimCard.model_validate(claim.card) if claim.card else None,
         submitted_at=claim.submitted_at,
+        history=history_out(claim),
     )
 
 
@@ -114,6 +117,14 @@ def submit_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
         claim.status = result["status"]
         claim.submitted_at = datetime.now(UTC)
         claim.conversation.status = result["status"]
+        record_event(
+            session,
+            claim,
+            operation_id=result.get("submission_id") or uuid.uuid4().hex,
+            kind="submitted",
+            actor="customer",
+            created_at=claim.submitted_at,
+        )
         session.commit()
         return _out(claim)
 
@@ -173,5 +184,18 @@ def review_claim(
             claim.conversation.messages.append(
                 Message(role="assistant", content=result["messages"][-1].content)
             )
+        operation_id = result.get("review_action_id") or (
+            "legacy-" + str(snapshot.config["configurable"]["checkpoint_id"])
+        )
+        record_review_events(session, claim, decision, result, operation_id)
         session.commit()
         return _out(claim)
+
+
+@router.get("/{claim_id}/history", response_model=list[HistoryEntry])
+def get_history(claim_id: uuid.UUID, state=Depends(get_state)) -> list[HistoryEntry]:
+    with state.session() as session:
+        claim = session.get(Claim, claim_id)
+        if claim is None:
+            raise HTTPException(404, "claim not found")
+        return history_out(claim)

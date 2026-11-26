@@ -134,3 +134,11 @@ it("keeps correction drafts until saved and does not turn invalid amounts into n
   expect(w.get('[data-testid="review"]').text()).toBe("Record adjuster review");
   expect(w.find("form.request-info").exists()).toBe(true);
 });
+
+it("lets a reviewer attach an optional note to a completed review", async () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false, reviewer: true, claimId: "claim-1", history: [] } });
+  await w.get("#review-note").setValue("  Checked the updated details.  ");
+  await w.get('[data-testid="review"]').trigger("click");
+  expect(w.emitted("review")?.[0]).toEqual([{}, "Checked the updated details."]);
+  expect(w.get('[data-testid="saved-history-link"]').attributes("href")).toBe("#history/claim-1");
+});

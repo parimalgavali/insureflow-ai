@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal } from "../api/client";
+import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal, HistoryEntry } from "../api/client";
 import CitationPill from "./CitationPill.vue";
+import ClaimHistory from "./ClaimHistory.vue";
 import { t } from "../i18n";
 
 const props = defineProps<{
@@ -13,9 +14,12 @@ const props = defineProps<{
   status: ClaimStatus;
   busy: boolean;
   reviewer?: boolean;
+  history?: HistoryEntry[];
+  claimId?: string | null;
 }>();
-const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>]; requestInfo: [note: string]; reassess: [] }>();
+const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: [] }>();
 const requestNote = ref("");
+const reviewNote = ref("");
 
 const FACT_KEYS = [
   "incident_date",
@@ -46,7 +50,7 @@ watch(
 );
 watch(
   () => props.facts,
-  () => { Object.keys(edits).forEach((k) => delete edits[k]); editing.value = false; },
+  () => { Object.keys(edits).forEach((k) => delete edits[k]); editing.value = false; reviewNote.value = ""; },
 );
 
 const factRows = computed(() =>
@@ -114,8 +118,14 @@ function toggleEditing() {
 function submitReview() {
   if (!canReview.value) return;
   if (editing.value) {
-    if (Object.keys(draftPatch.value).length) emit("review", draftPatch.value);
-  } else if (!props.card?.assessment_stale) emit("review", {});
+    if (Object.keys(draftPatch.value).length) {
+      if (reviewNote.value.trim()) emit("review", draftPatch.value, reviewNote.value.trim());
+      else emit("review", draftPatch.value);
+    }
+  } else if (!props.card?.assessment_stale) {
+    if (reviewNote.value.trim()) emit("review", {}, reviewNote.value.trim());
+    else emit("review", {});
+  }
 }
 </script>
 
@@ -220,6 +230,10 @@ function submitReview() {
       </ul>
     </section>
 
+    <div v-if="reviewer && status === 'awaiting_review'" class="review-note">
+      <label for="review-note">{{ t("history.reviewNote") }}</label>
+      <input id="review-note" v-model="reviewNote" maxlength="2000" :disabled="busy" />
+    </div>
     <section class="review">
       <template v-if="status === 'information_needed'">
         <strong>{{ t("card.informationNeeded") }}</strong>
@@ -247,5 +261,9 @@ function submitReview() {
       <textarea id="information-request-note" v-model="requestNote" maxlength="2000" :disabled="busy" required />
       <button class="btn" data-testid="request-info" :disabled="busy || !requestNote.trim()">{{ t("card.requestInfo") }}</button>
     </form>
+    <template v-if="claimId">
+      <ClaimHistory :entries="history || []" />
+      <a :href="`#history/${claimId}`" data-testid="saved-history-link">{{ t("history.openSaved") }}</a>
+    </template>
   </aside>
 </template>
