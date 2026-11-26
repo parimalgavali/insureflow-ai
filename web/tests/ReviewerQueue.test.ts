@@ -124,4 +124,38 @@ describe("reviewer queue", () => {
     expect(w.find('[data-testid="review-claim-claim-1"]').exists()).toBe(true);
     w.unmount();
   });
+
+  it("keeps the selected claim and credential when a correction needs fixing", async () => {
+    const w = mountQueue();
+    await unlock(w);
+    await w.get('[data-testid="review-claim-claim-1"]').trigger("click");
+    await flushPromises();
+    vi.mocked(reviewClaim).mockRejectedValue(new Error("422 Unprocessable Entity"));
+    w.getComponent(ClaimCard).vm.$emit("review", { witnesses: "maybe" });
+    await flushPromises();
+    expect(w.get('[role="alert"]').text()).toContain("correction is not valid");
+    expect(w.findComponent(ClaimCard).exists()).toBe(true);
+    expect(w.find('input[type="password"]').exists()).toBe(false);
+    expect(w.getComponent(ClaimCard).props("busy")).toBe(false);
+    w.unmount();
+  });
+
+  it("keeps corrections pending and retries a failed assessment without accepting the claim", async () => {
+    const w = mountQueue();
+    await unlock(w);
+    await w.get('[data-testid="review-claim-claim-1"]').trigger("click");
+    await flushPromises();
+    vi.mocked(reviewClaim).mockResolvedValueOnce({ status: "awaiting_review", card: { ...detail.card!, assessment_stale: true, assessment_error: "Refresh failed" } })
+      .mockResolvedValueOnce({ status: "awaiting_review", card: { ...detail.card!, assessment_stale: false, risk: { ...detail.card!.risk!, band: "low", reasons: ["Updated reason"] } } });
+    w.getComponent(ClaimCard).vm.$emit("review", { police_report_filed: false });
+    await flushPromises();
+    expect(w.getComponent(ClaimCard).props("card")?.assessment_stale).toBe(true);
+    w.getComponent(ClaimCard).vm.$emit("reassess");
+    await flushPromises();
+    expect(reviewClaim).toHaveBeenLastCalledWith("claim-1", { decision: "reassess" }, expect.any(Function));
+    expect(w.getComponent(ClaimCard).props("card")?.assessment_stale).toBe(false);
+    expect(w.getComponent(ClaimCard).props("risk")?.reasons).toEqual(["Updated reason"]);
+    expect(w.getComponent(ClaimCard).props("status")).toBe("awaiting_review");
+    w.unmount();
+  });
 });

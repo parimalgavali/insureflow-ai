@@ -133,6 +133,8 @@ export function applyReview(state: State, status: ClaimStatus, card: ClaimCard):
   state.status = status;
   state.card = card;
   state.facts = card.facts;
+  state.citations = card.citations;
+  state.risk = card.risk;
 }
 
 export const store = reactive(initialState());

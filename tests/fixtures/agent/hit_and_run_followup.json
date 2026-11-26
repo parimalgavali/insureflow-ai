@@ -80,7 +80,20 @@
       "next_steps": [
         "Aktualisierten Schaden erneut zur Prüfung einreichen"
       ]
+    },
+    {
+      "answer": "Die bestätigte Zeugenaussage wurde berücksichtigt. Die aktualisierte Einschätzung bezieht sich auf die Unfallklausel [A.2.2.2.2]. Ein Sachbearbeiter prüft den Fall.",
+      "coverage_status": "likely_covered",
+      "cited_clause_ids": [
+        "A.2.2.2.2"
+      ],
+      "missing_documents": [
+        "Fotos der Stoßstange"
+      ],
+      "next_steps": [
+        "Aktualisierte Einschätzung prüfen und die Prüfung abschließen"
+      ]
     }
   ],
-  "_fixture_note": "The first two extraction replies and first composition come from the original recorded scenario. The final extraction and composition are synthetic extensions for testing a reviewer information request."
+  "_fixture_note": "The original extraction and coverage replies are recorded. The follow-up extraction and two additional compositions are synthetic extensions for testing information requests and refreshed reviewer corrections."
 }

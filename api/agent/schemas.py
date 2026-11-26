@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from datetime import date, time
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -91,6 +93,25 @@ class FactsPatch(ClaimFacts):
     """Adjuster corrections: only known ClaimFacts fields, with their types."""
 
     model_config = ConfigDict(extra="forbid")
+    estimated_amount_eur: float | None = Field(None, ge=0, allow_inf_nan=False)
+
+    @field_validator("incident_date")
+    @classmethod
+    def _valid_date(cls, value: str | None) -> str | None:
+        if value is not None:
+            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+                raise ValueError("use YYYY-MM-DD for the incident date")
+            date.fromisoformat(value)
+        return value
+
+    @field_validator("incident_time")
+    @classmethod
+    def _valid_time(cls, value: str | None) -> str | None:
+        if value is not None:
+            if not re.fullmatch(r"\d{2}:\d{2}", value):
+                raise ValueError("use HH:MM for the incident time")
+            time.fromisoformat(value)
+        return value
 
 
 class ReviewRequest(BaseModel):
@@ -98,7 +119,7 @@ class ReviewRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    decision: Literal["accept", "edit", "request_info"]
+    decision: Literal["accept", "edit", "request_info", "reassess"]
     facts_patch: dict = Field(default_factory=dict)
     note: str | None = Field(None, max_length=2000)
 
@@ -109,6 +130,10 @@ class ReviewRequest(BaseModel):
 
     @model_validator(mode="after")
     def _information_request(self):
+        if self.decision == "edit" and not self.facts_patch:
+            raise ValueError("provide the facts to correct")
+        if self.decision in ("accept", "reassess") and self.facts_patch:
+            raise ValueError("save corrections separately before completing the review")
         if self.decision == "request_info":
             if not self.note or not self.note.strip():
                 raise ValueError("explain what information is needed")
@@ -121,7 +146,7 @@ class ReviewRequest(BaseModel):
 class ReviewDecision(BaseModel):
     """Stored review (also read back from saved cards, so no request-time validation here)."""
 
-    decision: Literal["accept", "edit", "request_info"]
+    decision: Literal["accept", "edit", "request_info", "reassess"]
     facts_patch: dict = Field(default_factory=dict)
     note: str | None = None
     reviewer: str = "adjuster"
@@ -137,6 +162,12 @@ class CostContext(BaseModel):
     basis: str = "freMTPL2 (French motor TPL, 2004–2005)"
 
 
+class FactChange(BaseModel):
+    field: str
+    before: str | float | bool | None
+    after: str | float | bool | None
+
+
 class ClaimCard(BaseModel):
     facts: ClaimFacts
     policy: PolicyContext
@@ -149,6 +180,9 @@ class ClaimCard(BaseModel):
     next_steps: list[str] = Field(default_factory=list)
     status: ClaimStatus = "collecting"
     review: ReviewDecision | None = None
+    assessment_stale: bool = False
+    assessment_error: str | None = None
+    corrections: list[FactChange] = Field(default_factory=list)
 
 
 class ComposeOutput(BaseModel):

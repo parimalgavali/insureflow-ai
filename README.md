@@ -131,6 +131,10 @@ Reviewers can also **Request information** with a note. The customer sees **Info
 replies in chat, and submits the refreshed claim again. Recorded demo mode uses the original
 hit-and-run replies plus a labeled synthetic follow-up turn for this request/reply path.
 
+Reviewer fact edits use **Save corrections and refresh** before a separate final review.
+If coverage or risk cannot be refreshed, corrections stay saved, guidance is labeled
+**Out of date**, and completion is blocked until **Retry assessment** succeeds.
+
 ### Measured numbers
 
 RAG over AKB 2015 — 28 hand-written DE/EN questions, hit if the expected clause is in the top 3

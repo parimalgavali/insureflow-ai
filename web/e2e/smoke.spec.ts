@@ -80,6 +80,16 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await page.getByRole("button", { name: "Open queue" }).click();
   await page.getByTestId(`review-claim-${submitted.id}`).click();
   await expect(page.getByTestId("fact-estimated_amount_eur")).toHaveText("1200");
+  await page.getByRole("button", { name: "Edit facts", exact: true }).click();
+  await page.getByLabel("Witnesses", { exact: true }).fill("maybe");
+  await page.getByRole("button", { name: "Save corrections and refresh" }).click();
+  await expect(page.getByRole("alert")).toContainText("correction is not valid");
+  await page.getByLabel("Witnesses", { exact: true }).fill("yes");
+  await page.getByRole("button", { name: "Save corrections and refresh" }).click();
+  await expect(page.getByTestId("correction-witnesses")).toContainText("no → yes");
+  await expect(reviewCard.getByTestId("status")).toHaveText(/awaiting adjuster/i);
+  await expect(page.getByTestId("fact-witnesses")).toHaveText("yes");
+  await expect(page.getByTestId("assessment-stale")).toHaveCount(0);
   await page.getByLabel("Claim card").getByTestId("review").click();
   await expect(reviewCard.getByTestId("status")).toHaveText(/reviewed/i);
   await expect(row).toHaveCount(0);
