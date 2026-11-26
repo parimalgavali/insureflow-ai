@@ -1,7 +1,7 @@
 """The ClaimPilot agent as a LangGraph state graph.
 
     extract → check_missing ─┬─ ask_followup → END (wait for the user)
-                             └─ retrieve → score_risk → compose → human_review (interrupt) → END
+                             └─ retrieve → score_risk → compose → submit → human_review → END
 
 Every LLM call goes through ``Provider.complete`` so tests replay recorded responses; retrieval and
 risk scoring are injected (``AgentDeps``) so the graph can run with an in-memory corpus.
@@ -281,13 +281,20 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             cost=state.get("cost"),
             missing_documents=output.missing_documents,
             next_steps=output.next_steps,
-            status="awaiting_review",
+            status="assessed",
         )
         return {
             "messages": [ChatMessage(role="assistant", content=answer)],
             "card": card,
-            "status": "awaiting_review",
+            "status": "assessed",
         }
+
+    def submit(state: AgentState) -> dict:
+        confirmed = interrupt({"action": "submit", "card": state["card"].model_dump()})
+        if confirmed is not True:
+            raise ValueError("submission requires customer confirmation")
+        card = state["card"].model_copy(update={"status": "awaiting_review"})
+        return {"card": card, "status": "awaiting_review"}
 
     def human_review(state: AgentState) -> dict:
         card: ClaimCard = state["card"]
@@ -308,6 +315,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
     graph.add_node("retrieve", retrieve)
     graph.add_node("score_risk", score_risk)
     graph.add_node("compose", compose)
+    graph.add_node("submit", submit)
     graph.add_node("human_review", human_review)
     graph.add_edge(START, "extract")
     graph.add_edge("extract", "check_missing")
@@ -315,7 +323,8 @@ def build_graph(deps: AgentDeps, checkpointer=None):
     graph.add_edge("ask_followup", END)
     graph.add_edge("retrieve", "score_risk")
     graph.add_edge("score_risk", "compose")
-    graph.add_edge("compose", "human_review")
+    graph.add_edge("compose", "submit")
+    graph.add_edge("submit", "human_review")
     graph.add_edge("human_review", END)
     return graph.compile(checkpointer=checkpointer)
 
@@ -394,7 +403,18 @@ def run_turn(graph, thread_id: str, user_text: str, policy: PolicyContext | None
 
 
 def resume_review(graph, thread_id: str, decision: ReviewDecision) -> dict:
+    if graph.get_state(thread_config(thread_id)).next != ("human_review",):
+        raise ValueError("claim must be submitted before review")
     return graph.invoke(Command(resume=decision.model_dump()), thread_config(thread_id))
+
+
+def submit_for_review(graph, thread_id: str) -> dict:
+    snapshot = graph.get_state(thread_config(thread_id))
+    if snapshot.values.get("status") in ("awaiting_review", "reviewed"):
+        return snapshot.values
+    if snapshot.next != ("submit",):
+        raise ValueError("claim is not ready to submit")
+    return graph.invoke(Command(resume=True), thread_config(thread_id))
 
 
 def pending_interrupt(result: dict) -> dict | None:

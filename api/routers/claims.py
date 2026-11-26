@@ -4,8 +4,9 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select
 
-from api.agent.graph import resume_review, thread_config
+from api.agent.graph import resume_review, submit_for_review, thread_config
 from api.agent.schemas import ClaimCard, ReviewDecision, ReviewRequest
 from api.security import get_state, require_adjuster, require_token
 from db.models import Claim
@@ -35,6 +36,29 @@ def get_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
         claim = session.get(Claim, claim_id)
         if claim is None:
             raise HTTPException(404, "claim not found")
+        return _out(claim)
+
+
+@router.post("/{claim_id}/submit", response_model=ClaimOut)
+def submit_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
+    """Submit once; a retry returns the saved claim without recording a review."""
+    with state.session() as session:
+        # Serialize competing submissions for the same claim across API workers.
+        claim = session.scalar(select(Claim).where(Claim.id == claim_id).with_for_update())
+        if claim is None:
+            raise HTTPException(404, "claim not found")
+        if claim.status in ("awaiting_review", "reviewed"):
+            return _out(claim)
+        if claim.status != "assessed":
+            raise HTTPException(409, "claim is not ready to submit")
+        try:
+            result = submit_for_review(state.graph, str(claim.conversation_id))
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        claim.card = result["card"].model_dump(mode="json")
+        claim.status = result["status"]
+        claim.conversation.status = result["status"]
+        session.commit()
         return _out(claim)
 
 

@@ -13,7 +13,7 @@ const props = defineProps<{
   status: ClaimStatus;
   busy: boolean;
 }>();
-const emit = defineEmits<{ review: [patch: Record<string, unknown>] }>();
+const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>] }>();
 
 const FACT_KEYS = [
   "incident_date",
@@ -192,7 +192,12 @@ function submitReview() {
         <small v-if="card?.review?.note" class="disclaimer">{{ card.review.note }}</small>
       </template>
       <template v-else>
-        <button class="btn primary" :disabled="!canReview" data-testid="review" @click="submitReview">{{ t("card.sendToAdjuster") }}</button>
+        <template v-if="status === 'assessed'">
+          <p>{{ t("card.readyToSubmit") }}</p>
+          <button class="btn primary" :disabled="busy" data-testid="submit" @click="emit('submit')">{{ t("card.sendToAdjuster") }}</button>
+        </template>
+        <p v-if="status === 'awaiting_review'">{{ t("card.submitted") }}</p>
+        <button v-if="status === 'awaiting_review'" class="btn primary" :disabled="!canReview" data-testid="review" @click="submitReview">{{ t("card.recordReview") }}</button>
         <button v-if="status === 'awaiting_review'" class="btn" type="button" @click="editing = !editing">
           {{ editing ? t("card.doneEditing") : t("card.editFacts") }}
         </button>

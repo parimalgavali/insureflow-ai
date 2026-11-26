@@ -28,7 +28,8 @@ describe("ClaimCard", () => {
     expect(w.get('[data-testid="fact-incident_date"]').text()).toBe("missing");
     expect(w.get('[data-testid="fact-location"]').text()).toBe("Köln");
     expect(w.get('[data-testid="status"]').text()).toBe("Collecting facts");
-    expect((w.get('[data-testid="review"]').element as HTMLButtonElement).disabled).toBe(true);
+    expect(w.find('[data-testid="review"]').exists()).toBe(false);
+    expect(w.find('[data-testid="submit"]').exists()).toBe(false);
   });
 
   it("renders citation pills inside the summary and opens a popover", async () => {
@@ -67,4 +68,19 @@ it("shows the expected-cost context as context only", () => {
   const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false } });
   expect(w.get('[data-testid="cost"]').text()).toMatch(/1,900/);
   expect(w.get('[data-testid="cost"]').text()).toMatch(/context only/);
+});
+
+it("submits a ready claim without emitting a review or asking for credentials", async () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card: { ...card, status: "assessed" }, status: "assessed", busy: false } });
+  expect(w.get('[data-testid="status"]').text()).toBe("Ready to submit");
+  expect(w.find('[data-testid="review"]').exists()).toBe(false);
+  await w.get('[data-testid="submit"]').trigger("click");
+  expect(w.emitted("submit")).toHaveLength(1);
+  expect(w.emitted("review")).toBeUndefined();
+  await w.setProps({ busy: true });
+  expect((w.get('[data-testid="submit"]').element as HTMLButtonElement).disabled).toBe(true);
+  await w.setProps({ busy: false, status: "awaiting_review", card });
+  expect(w.find('[data-testid="submit"]').exists()).toBe(false);
+  expect(w.text()).toContain("waiting for an adjuster");
+  expect(w.get('[data-testid="review"]').text()).toBe("Record adjuster review");
 });

@@ -10,7 +10,7 @@
   "chat.attached": "Angehängt: {name}",
   "chat.remove": "entfernen",
   "chat.placeholder": "Beschreiben Sie, was mit Ihrem Auto passiert ist…",
-  "chat.placeholderReviewed": "Dieser Schaden wurde bereits geprüft.",
+  "chat.placeholderReviewed": "Der Chat ist pausiert. Beachten Sie den Schadenstatus und die verfügbaren Aktionen.",
   "chat.yourMessage": "Ihre Nachricht",
   "chat.attachTitle": "Foto oder PDF anhängen",
   "chat.attachFile": "Datei anhängen",
@@ -66,12 +66,15 @@
   "status.unclear": "Unklar",
   "status.no_evidence": "Keine Klausel gefunden",
   "status.collecting": "Fakten werden gesammelt",
-  "status.assessed": "Bewertet",
+  "status.assessed": "Bereit zum Einreichen",
   "status.awaiting_review": "Wartet auf Sachbearbeiter",
   "status.reviewed": "Geprüft",
   "band.low": "niedrig",
   "band.medium": "mittel",
   "band.high": "hoch",
   "app.evalLink": "Retrieval-Eval",
-  "app.backToClaim": "zurück zum Schaden"
+  "app.backToClaim": "zurück zum Schaden",
+  "card.readyToSubmit": "Ihre Schadenübersicht ist bereit. Senden Sie den Fall zur Prüfung, wenn Sie bereit sind.",
+  "card.submitted": "Ihr Schaden wurde eingereicht und wartet auf die Prüfung durch einen Sachbearbeiter.",
+  "card.recordReview": "Sachbearbeiterprüfung erfassen"
 }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -131,9 +132,9 @@ def test_full_conversation_flow(client: TestClient, tmp_path: Path):
     assert {c["clause_id"] for c in by_kind["citations"]["citations"]} & {"A.2.2.2.2", "E.1.1.1"}
     assert by_kind["card"]["card"]["coverage_status"] == "likely_covered"
     assert by_kind["done"] == {
-        "status": "awaiting_review",
+        "status": "assessed",
         "claim_id": claim_id,
-        "awaiting_review": True,
+        "awaiting_review": False,
     }
     assert len(list((tmp_path / "uploads").rglob("*_bumper.png"))) == 1
 
@@ -146,10 +147,27 @@ def test_full_conversation_flow(client: TestClient, tmp_path: Path):
         "assistant",
     ]
     assert "[Attachment: bumper.png (image/png)]" in full["messages"][3]["content"]
-    assert full["status"] == "awaiting_review" and full["card"]["facts"]["photos_attached"] is True
+    assert full["status"] == "assessed" and full["card"]["facts"]["photos_attached"] is True
     assert full["policy"]["deductible_eur"] == 500
 
     review_url = f"/api/claims/{claim_id}/review"
+    assert client.post(review_url, json={"decision": "accept"}, headers=ADJUSTER).status_code == 409
+    assert (
+        client.post(f"/api/conversations/{cid}/messages", data={"text": "extra"}).status_code == 409
+    )
+    submit_url = f"/api/claims/{claim_id}/submit"
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        submissions = list(pool.map(lambda _: client.post(submit_url), range(2)))
+    submitted = submissions[0]
+    assert submitted.status_code == 200
+    assert submissions[1].status_code == 200
+    assert submissions[1].json() == submitted.json()
+    assert submitted.json()["status"] == "awaiting_review"
+    assert submitted.json()["card"]["review"] is None
+    assert client.post(submit_url).json() == submitted.json()
+    assert client.get(f"/api/conversations/{cid}").json()["status"] == "awaiting_review"
+    assert len(client.get(f"/api/conversations/{cid}").json()["messages"]) == len(full["messages"])
+
     assert client.post(review_url, json={"decision": "accept"}).status_code == 401
     assert (
         client.post(
@@ -177,6 +195,7 @@ def test_full_conversation_flow(client: TestClient, tmp_path: Path):
     assert reviewed["card"]["facts"]["witnesses"] is True
     assert client.get(f"/api/claims/{claim_id}").json()["status"] == "reviewed"
     assert client.post(review_url, json={"decision": "accept"}, headers=ADJUSTER).status_code == 409
+    assert client.post(submit_url).json() == reviewed
     assert (
         client.post(f"/api/conversations/{cid}/messages", data={"text": "noch was"}).status_code
         == 409
@@ -191,6 +210,8 @@ def test_review_before_assessment_is_rejected(client: TestClient):
         ).status_code
         == 409
     )
+    assert client.post(f"/api/claims/{conv['claim_id']}/submit").status_code == 409
+    assert client.post("/api/claims/00000000-0000-0000-0000-000000000000/submit").status_code == 404
     assert client.get("/api/conversations/00000000-0000-0000-0000-000000000000").status_code == 404
 
 
@@ -208,6 +229,7 @@ def test_bearer_token_required_when_configured(tmp_path: Path):
     with TestClient(create_app(lambda: make_state(tmp_path, token="s3cret"))) as c:
         assert c.get("/api/health").status_code == 200  # health stays open
         assert c.post("/api/conversations", json={}).status_code == 401
+        assert c.post("/api/claims/00000000-0000-0000-0000-000000000000/submit").status_code == 401
         assert (
             c.post(
                 "/api/conversations", json={}, headers={"Authorization": "Bearer wrong"}

@@ -30,7 +30,8 @@ Agent: Nach den Musterbedingungen ist ein Unfallschaden am eigenen Fahrzeug in d
 Card:  hit_and_run · Köln · 2026-10-25 19:00 · third party unknown · police report: no
        Coverage: likely covered (4 cited clauses, click to read)   Risk: low (model hgb-v1)
        Please provide: Polizeibericht/Anzeigenummer, Fotos, Kostenvoranschlag
-       [Send to adjuster] → status "Reviewed by adjuster"
+       [Send to adjuster] → status "Awaiting adjuster"
+       [Record adjuster review] (authorized reviewer) → status "Reviewed"
 ```
 
 Every sentence above maps to a component:
@@ -40,7 +41,7 @@ Every sentence above maps to a component:
 | Follow-up questions | A **LangGraph** state graph with a conditional loop: `extract → check_missing → ask / continue` |
 | Coverage with citations | **RAG** over the GDV *Allgemeine Bedingungen für die Kfz-Versicherung (AKB 2015)* — real German motor policy wording, clause-chunked, embedded with a multilingual transformer, stored in **pgvector** |
 | Risk signal with reasons | A **scikit-learn** gradient-boosting model trained on 15,420 real vehicle claims (Kaggle vehicle-insurance-fraud, CC0), evaluated as an imbalanced problem (AUPRC, recall at fixed precision), with per-prediction feature contributions |
-| "Send to adjuster" | A LangGraph **human-in-the-loop interrupt**; the conversation state is checkpointed in Postgres |
+| "Send to adjuster" | Separate LangGraph pauses for customer submission and **human review**; the conversation state is checkpointed in Postgres |
 | The LLM | Anthropic Claude via a provider interface; **Ollama** fallback so the demo runs offline |
 | Bilingual | Corpus is German, UI is English, user may write either; multilingual embeddings handle DE↔EN retrieval |
 
@@ -121,7 +122,7 @@ uv run python -m api.agent.demo             # live Anthropic run of the hit-and-
 Demo auth: the API requires a bearer token from `DEMO_API_TOKEN` and refuses to start without one, unless
 `ALLOW_OPEN_API=1` is set (local dev only; `make dev`, pytest and the e2e set it). Claim review
 (`POST /api/claims/{id}/review`) needs the separate `ADJUSTER_API_TOKEN` and is off when it is unset;
-the UI asks for it on every "Send to adjuster" and never stores it (`make dev` uses `local-adjuster`). Uploads are
+the UI asks for it on every "Record adjuster review" and never stores it (`make dev` uses `local-adjuster`). Uploads are
 limited to JPEG/PNG/WebP/PDF ≤ `MAX_UPLOAD_MB` (10). `.env` is git-ignored; only `.env.example` is committed.
 
 ### Measured numbers

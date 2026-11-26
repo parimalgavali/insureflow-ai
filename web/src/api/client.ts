@@ -126,6 +126,12 @@ export async function getConversation(id: string): Promise<Conversation> {
   return (await expectOk(await fetch(`${BASE}/api/conversations/${id}`, { headers: headers(false) }))).json();
 }
 
+/** Submit using customer access; this never records an adjuster decision. */
+export async function submitClaim(claimId: string): Promise<{ status: ClaimStatus; card: ClaimCard }> {
+  const res = await fetch(`${BASE}/api/claims/${claimId}/submit`, { method: "POST", headers: headers() });
+  return (await expectOk(res)).json();
+}
+
 /** Review needs the adjuster credential (ADJUSTER_API_TOKEN), asked for each time and never stored. */
 export async function reviewClaim(
   claimId: string,
