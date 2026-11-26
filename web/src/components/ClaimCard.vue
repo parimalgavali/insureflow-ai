@@ -12,6 +12,7 @@ const props = defineProps<{
   card: ClaimCard | null;
   status: ClaimStatus;
   busy: boolean;
+  reviewer?: boolean;
 }>();
 const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>] }>();
 
@@ -78,7 +79,7 @@ const summaryParts = computed(() => {
 });
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en");
-const canReview = computed(() => props.status === "awaiting_review" && !props.busy);
+const canReview = computed(() => props.reviewer && props.status === "awaiting_review" && !props.busy);
 
 function submitReview() {
   const patch: Record<string, unknown> = {};
@@ -111,7 +112,7 @@ function submitReview() {
       <dl v-else class="facts">
         <template v-for="row in factRows" :key="row.key">
           <dt>{{ row.label }}</dt>
-          <dd v-if="editing && status === 'awaiting_review'">
+          <dd v-if="reviewer && editing && status === 'awaiting_review'">
             <input v-model="edits[row.key]" :placeholder="display(row.value)" :aria-label="row.label" />
           </dd>
           <dd v-else :class="{ missing: row.missing }" :data-testid="`fact-${row.key}`">
@@ -197,8 +198,8 @@ function submitReview() {
           <button class="btn primary" :disabled="busy" data-testid="submit" @click="emit('submit')">{{ t("card.sendToAdjuster") }}</button>
         </template>
         <p v-if="status === 'awaiting_review'">{{ t("card.submitted") }}</p>
-        <button v-if="status === 'awaiting_review'" class="btn primary" :disabled="!canReview" data-testid="review" @click="submitReview">{{ t("card.recordReview") }}</button>
-        <button v-if="status === 'awaiting_review'" class="btn" type="button" @click="editing = !editing">
+        <button v-if="reviewer && status === 'awaiting_review'" class="btn primary" :disabled="!canReview" data-testid="review" @click="submitReview">{{ t("card.recordReview") }}</button>
+        <button v-if="reviewer && status === 'awaiting_review'" class="btn" type="button" :disabled="busy" @click="editing = !editing">
           {{ editing ? t("card.doneEditing") : t("card.editFacts") }}
         </button>
       </template>

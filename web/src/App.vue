@@ -1,15 +1,23 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { locale, setLocale, t } from "./i18n";
-import { createConversation, reviewClaim, sendMessage, submitClaim, type Language } from "./api/client";
+import { createConversation, sendMessage, submitClaim, type Language, type ReviewerClaim } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
 import ClaimCard from "./components/ClaimCard.vue";
 import EvalPage from "./components/EvalPage.vue";
+import ReviewerQueue from "./components/ReviewerQueue.vue";
 import { applyReview, beginTurn, finishTurn, loadConversation, reduce, store } from "./store";
 
 const showEval = ref(location.hash === "#eval");
+const showReviewer = ref(location.hash === "#review");
 const retrySubmission = ref(false);
-window.addEventListener("hashchange", () => (showEval.value = location.hash === "#eval"));
+function navigate() {
+  showEval.value = location.hash === "#eval";
+  showReviewer.value = location.hash === "#review";
+  if (!showEval.value && !showReviewer.value && !store.conversationId) start(locale.value);
+}
+window.addEventListener("hashchange", navigate);
+onUnmounted(() => window.removeEventListener("hashchange", navigate));
 
 const canSend = computed(() => store.conversationId !== null && store.status === "collecting");
 
@@ -32,20 +40,6 @@ async function send(text: string, file: File | null) {
   }
 }
 
-async function review(patch: Record<string, unknown>) {
-  if (!store.claimId) return;
-  store.busy = true;
-  try {
-    const decision = Object.keys(patch).length ? { decision: "edit" as const, facts_patch: patch } : { decision: "accept" as const };
-    const result = await reviewClaim(store.claimId, decision, () => window.prompt(t("card.adjusterToken")));
-    applyReview(store, result.status, result.card);
-  } catch (e) {
-    store.error = (e as Error).message;
-  } finally {
-    store.busy = false;
-  }
-}
-
 async function submit() {
   if (!store.claimId || store.busy) return;
   store.busy = true;
@@ -62,6 +56,10 @@ async function submit() {
   }
 }
 
+function onReviewed(claim: ReviewerClaim) {
+  if (claim.id === store.claimId && claim.card) applyReview(store, claim.status, claim.card);
+}
+
 function retry() {
   store.error = null;
   if (retrySubmission.value) return submit();
@@ -73,12 +71,15 @@ function retry() {
 
 async function switchLanguage(lang: Language) {
   setLocale(lang);
+  if (showReviewer.value || showEval.value) return;
   const hasUserMessages = store.messages.some((m) => m.role === "user");
   if (!hasUserMessages) return start(lang); // fresh greeting in the new language
   store.language = lang; // agent follows the toggle from the next message on
 }
 
-onMounted(() => start(locale.value));
+onMounted(() => {
+  if (!showReviewer.value && !showEval.value) start(locale.value);
+});
 </script>
 
 <template>
@@ -89,6 +90,9 @@ onMounted(() => start(locale.value));
         <p>{{ t("app.tagline") }}</p>
       </div>
       <div class="meta">
+        <nav>
+          <a :href="showReviewer ? '#' : '#review'" data-testid="reviewer-link">{{ showReviewer ? t("app.backToClaim") : t("queue.title") }}</a>
+        </nav>
         <div class="lang" role="group" :aria-label="t('app.language')">
           <button v-for="l in ['de', 'en'] as const" :key="l" type="button" class="chip" :class="{ active: locale === l }" :aria-pressed="locale === l" :data-testid="`lang-${l}`" @click="switchLanguage(l)">
             {{ l.toUpperCase() }}
@@ -97,10 +101,11 @@ onMounted(() => start(locale.value));
         <p v-if="store.conversationId"><small>{{ t("app.conversation") }} {{ store.conversationId.slice(0, 8) }} · <a :href="showEval ? '#' : '#eval'" data-testid="eval-link">{{ showEval ? t("app.backToClaim") : t("app.evalLink") }}</a></small></p>
       </div>
     </header>
-    <EvalPage v-if="showEval" />
+    <ReviewerQueue v-if="showReviewer" @reviewed="onReviewed" />
+    <EvalPage v-else-if="showEval" />
     <template v-else>
     <ChatColumn :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" @send="send" @retry="retry" />
-    <ClaimCard :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :card="store.card" :status="store.status" :busy="store.busy" @submit="submit" @review="review" />
+    <ClaimCard :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :card="store.card" :status="store.status" :busy="store.busy" @submit="submit" />
     </template>
   </div>
 </template>

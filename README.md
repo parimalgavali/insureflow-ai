@@ -122,7 +122,9 @@ uv run python -m api.agent.demo             # live Anthropic run of the hit-and-
 Demo auth: the API requires a bearer token from `DEMO_API_TOKEN` and refuses to start without one, unless
 `ALLOW_OPEN_API=1` is set (local dev only; `make dev`, pytest and the e2e set it). Claim review
 (`POST /api/claims/{id}/review`) needs the separate `ADJUSTER_API_TOKEN` and is off when it is unset;
-the UI asks for it on every "Record adjuster review" and never stores it (`make dev` uses `local-adjuster`). Uploads are
+open **Reviewer queue** and enter it there (`make dev` uses `local-adjuster`). The queue keeps the
+credential only in memory until you lock it or leave that screen; it never writes it to browser
+storage. Customer submission never asks for a reviewer credential. Uploads are
 limited to JPEG/PNG/WebP/PDF ≤ `MAX_UPLOAD_MB` (10). `.env` is git-ignored; only `.env.example` is committed.
 
 ### Measured numbers

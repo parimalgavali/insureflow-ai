@@ -21,6 +21,7 @@ function mountApp() {
     ClaimCard: { emits: ["submit", "review"], template: '<button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button>' },
     ChatColumn: { emits: ["retry"], template: '<button data-testid="retry-action" @click="$emit(\'retry\')">Retry</button>' },
     EvalPage: true,
+    ReviewerQueue: true,
   } } });
 }
 

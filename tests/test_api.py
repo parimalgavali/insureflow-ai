@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -164,6 +166,7 @@ def test_full_conversation_flow(client: TestClient, tmp_path: Path):
     assert submissions[1].json() == submitted.json()
     assert submitted.json()["status"] == "awaiting_review"
     assert submitted.json()["card"]["review"] is None
+    assert datetime.fromisoformat(submitted.json()["submitted_at"]).tzinfo is not None
     assert client.post(submit_url).json() == submitted.json()
     assert client.get(f"/api/conversations/{cid}").json()["status"] == "awaiting_review"
     assert len(client.get(f"/api/conversations/{cid}").json()["messages"]) == len(full["messages"])
@@ -213,6 +216,69 @@ def test_review_before_assessment_is_rejected(client: TestClient):
     assert client.post(f"/api/claims/{conv['claim_id']}/submit").status_code == 409
     assert client.post("/api/claims/00000000-0000-0000-0000-000000000000/submit").status_code == 404
     assert client.get("/api/conversations/00000000-0000-0000-0000-000000000000").status_code == 404
+
+
+def test_reviewer_queue_is_protected_and_lists_pending_claims(client, tmp_path):
+    from api.agent.schemas import Citation, ClaimCard, ClaimFacts, PolicyContext, RiskSignal
+    from db.models import Claim, Conversation
+
+    state = make_state(tmp_path / "queue", token="customer-token")
+    ids = {}
+    with state.session() as session:
+        for index, status in enumerate(
+            ("awaiting_review", "awaiting_review", "collecting", "reviewed")
+        ):
+            conv = Conversation(status=status)
+            card = ClaimCard(
+                facts=ClaimFacts(event_type="theft", location="Berlin"),
+                policy=PolicyContext(),
+                citations=[
+                    Citation(clause_id="A.2.2.1.2", excerpt="Theft policy wording", page=10)
+                ],
+                risk=RiskSignal(score=0.3, band="medium", reasons=["example reason"]),
+                status=status,
+            )
+            conv.claim = Claim(
+                status=status,
+                card=card.model_dump(mode="json"),
+                submitted_at=datetime(1900, 1, index + 1, tzinfo=UTC),
+            )
+            session.add(conv)
+            session.flush()
+            ids[index] = str(conv.claim.id)
+        session.commit()
+    with TestClient(create_app(lambda: state)) as c:
+        url = "/api/claims/review-queue"
+        detail = f"{url}/{ids[0]}"
+        for path in (url, detail):
+            assert c.get(path).status_code == 401
+            assert (
+                c.get(path, headers={"Authorization": "Bearer customer-token"}).status_code == 403
+            )
+        first = c.get(url + "?limit=1", headers=ADJUSTER).json()
+        assert first["has_more"] is True
+        assert first["items"][0]["id"] == ids[0]
+        assert first["items"][0]["submitted_at"].startswith("1900-01-01")
+        second = c.get(url + "?limit=1&offset=1", headers=ADJUSTER).json()
+        assert second["items"][0]["id"] == ids[1]
+        listed = c.get(url + "?limit=100", headers=ADJUSTER).json()["items"]
+        assert not {ids[2], ids[3]} & {item["id"] for item in listed}
+        selected = c.get(detail, headers=ADJUSTER).json()
+        assert selected["card"]["facts"]["location"] == "Berlin"
+        assert selected["card"]["risk"]["reasons"] == ["example reason"]
+        assert selected["card"]["citations"][0]["page"] == 10
+        assert (
+            c.get(url + "/00000000-0000-0000-0000-000000000000", headers=ADJUSTER).status_code
+            == 404
+        )
+        for query in ("limit=0", "limit=101", "offset=-1"):
+            assert c.get(url + "?" + query, headers=ADJUSTER).status_code == 422
+    # Keep repeated local runs independent without deleting unrelated test data.
+    with state.session() as session:
+        for claim_id in ids.values():
+            claim = session.get(Claim, uuid.UUID(claim_id))
+            session.delete(claim)
+        session.commit()
 
 
 def test_upload_type_rejected(client: TestClient):

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -19,6 +20,7 @@ class ClaimOut(BaseModel):
     conversation_id: uuid.UUID
     status: str
     card: ClaimCard | None
+    submitted_at: datetime | None
 
 
 def _out(claim: Claim) -> ClaimOut:
@@ -27,7 +29,60 @@ def _out(claim: Claim) -> ClaimOut:
         conversation_id=claim.conversation_id,
         status=claim.status,
         card=ClaimCard.model_validate(claim.card) if claim.card else None,
+        submitted_at=claim.submitted_at,
     )
+
+
+class QueueItem(BaseModel):
+    id: uuid.UUID
+    submitted_at: datetime | None
+    event_type: str
+    location: str | None
+
+
+class ReviewQueue(BaseModel):
+    items: list[QueueItem]
+    has_more: bool
+
+
+@router.get("/review-queue", response_model=ReviewQueue)
+def review_queue(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    reviewer: str = Depends(require_adjuster),
+    state=Depends(get_state),
+) -> ReviewQueue:
+    with state.session() as session:
+        claims = list(
+            session.scalars(
+                select(Claim)
+                .where(Claim.status == "awaiting_review")
+                .order_by(Claim.submitted_at.asc().nullslast(), Claim.created_at, Claim.id)
+                .offset(offset)
+                .limit(limit + 1)
+            )
+        )
+        return ReviewQueue(
+            items=[
+                QueueItem(
+                    id=claim.id,
+                    submitted_at=claim.submitted_at,
+                    event_type=(claim.card or {}).get("facts", {}).get("event_type", "unknown"),
+                    location=(claim.card or {}).get("facts", {}).get("location"),
+                )
+                for claim in claims[:limit]
+            ],
+            has_more=len(claims) > limit,
+        )
+
+
+@router.get("/review-queue/{claim_id}", response_model=ClaimOut)
+def reviewer_claim(
+    claim_id: uuid.UUID,
+    reviewer: str = Depends(require_adjuster),
+    state=Depends(get_state),
+) -> ClaimOut:
+    return get_claim(claim_id, state)
 
 
 @router.get("/{claim_id}", response_model=ClaimOut)
@@ -57,6 +112,7 @@ def submit_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
             raise HTTPException(409, str(exc)) from exc
         claim.card = result["card"].model_dump(mode="json")
         claim.status = result["status"]
+        claim.submitted_at = datetime.now(UTC)
         claim.conversation.status = result["status"]
         session.commit()
         return _out(claim)
