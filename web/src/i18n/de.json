@@ -76,5 +76,19 @@
   "app.backToClaim": "zurück zum Schaden",
   "card.readyToSubmit": "Ihre Schadenübersicht ist bereit. Senden Sie den Fall zur Prüfung, wenn Sie bereit sind.",
   "card.submitted": "Ihr Schaden wurde eingereicht und wartet auf die Prüfung durch einen Sachbearbeiter.",
-  "card.recordReview": "Sachbearbeiterprüfung erfassen"
+  "card.recordReview": "Sachbearbeiterprüfung erfassen",
+  "queue.title": "Prüfliste",
+  "queue.help": "Schäden, die auf eine berechtigte Prüfung warten. Der Zugang bleibt nur bis zum Sperren oder Verlassen dieser Ansicht im Arbeitsspeicher.",
+  "queue.token": "Sachbearbeiter-Token",
+  "queue.open": "Prüfliste öffnen",
+  "queue.refresh": "Liste aktualisieren",
+  "queue.lock": "Prüfliste sperren",
+  "queue.loading": "Schäden werden geladen…",
+  "queue.empty": "Keine Schäden warten auf eine Prüfung.",
+  "queue.dateUnknown": "Datum nicht verfügbar (älterer Schaden)",
+  "queue.submitted": "Eingereicht",
+  "queue.locationUnknown": "Ort nicht angegeben",
+  "queue.more": "Weitere laden",
+  "queue.choose": "Wählen Sie einen Schaden aus, um Fakten, Vertragsklauseln und Risikogründe zu sehen.",
+  "queue.failed": "Die Anfrage zur Prüfung ist fehlgeschlagen."
 }

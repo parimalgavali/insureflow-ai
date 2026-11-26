@@ -48,7 +48,7 @@ describe("ClaimCard", () => {
   });
 
   it("emits review with an accept decision, and a patch when facts were edited", async () => {
-    const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false } });
+    const w = mount(ClaimCard, { props: { reviewer: true, facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false } });
     await w.get('[data-testid="review"]').trigger("click");
     expect(w.emitted("review")?.[0]).toEqual([{}]);
     await w.get("button.btn:not(.primary)").trigger("click"); // Edit facts
@@ -82,5 +82,7 @@ it("submits a ready claim without emitting a review or asking for credentials", 
   await w.setProps({ busy: false, status: "awaiting_review", card });
   expect(w.find('[data-testid="submit"]').exists()).toBe(false);
   expect(w.text()).toContain("waiting for an adjuster");
+  expect(w.find('[data-testid="review"]').exists()).toBe(false);
+  await w.setProps({ reviewer: true });
   expect(w.get('[data-testid="review"]').text()).toBe("Record adjuster review");
 });

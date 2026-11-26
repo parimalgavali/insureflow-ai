@@ -100,6 +100,40 @@ export type AgentEvent =
 
 const BASE = import.meta.env.VITE_API_BASE ?? "";
 
+export interface ReviewerClaim {
+  id: string;
+  conversation_id: string;
+  status: ClaimStatus;
+  card: ClaimCard | null;
+  submitted_at: string | null;
+}
+
+export interface QueueItem {
+  id: string;
+  submitted_at: string | null;
+  event_type: string;
+  location: string | null;
+}
+
+export interface ReviewQueue {
+  items: QueueItem[];
+  has_more: boolean;
+}
+
+export async function fetchReviewQueue(token: string, offset = 0): Promise<ReviewQueue> {
+  const res = await fetch(`${BASE}/api/claims/review-queue?offset=${offset}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return (await expectOk(res)).json();
+}
+
+export async function fetchReviewerClaim(claimId: string, token: string): Promise<ReviewerClaim> {
+  const res = await fetch(`${BASE}/api/claims/review-queue/${claimId}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return (await expectOk(res)).json();
+}
+
 function headers(json = true): HeadersInit {
   const h: Record<string, string> = {};
   if (json) h["content-type"] = "application/json";

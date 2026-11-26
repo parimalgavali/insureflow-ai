@@ -76,5 +76,19 @@
   "app.backToClaim": "back to claim",
   "card.readyToSubmit": "Your claim summary is ready. Send it to an adjuster when you are ready.",
   "card.submitted": "Your claim has been sent and is waiting for an adjuster to review it.",
-  "card.recordReview": "Record adjuster review"
+  "card.recordReview": "Record adjuster review",
+  "queue.title": "Reviewer queue",
+  "queue.help": "Claims waiting for an authorized reviewer. The credential stays in memory until you lock or leave this screen.",
+  "queue.token": "Reviewer token",
+  "queue.open": "Open queue",
+  "queue.refresh": "Refresh list",
+  "queue.lock": "Lock queue",
+  "queue.loading": "Loading claims…",
+  "queue.empty": "No claims are waiting for review.",
+  "queue.dateUnknown": "Date unavailable (earlier claim)",
+  "queue.submitted": "Submitted",
+  "queue.locationUnknown": "Location not provided",
+  "queue.more": "Load more",
+  "queue.choose": "Choose a claim to see its facts, coverage references and risk reasons.",
+  "queue.failed": "The reviewer request failed."
 }
