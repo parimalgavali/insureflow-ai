@@ -24,6 +24,18 @@ describe("parseSse", () => {
 });
 
 describe("reduce", () => {
+  it("clears old guidance when replying to a reviewer request", () => {
+    const s = initialState();
+    s.status = "information_needed";
+    s.card = card as any;
+    s.citations = [...card.citations];
+    s.risk = { ...card.risk, reasons: [...card.risk.reasons] };
+    beginTurn(s, "Here is the requested information");
+    expect(s.status).toBe("collecting");
+    expect(s.card).toBeNull();
+    expect(s.citations).toEqual([]);
+    expect(s.risk).toBeNull();
+  });
   it("streams tokens into the pending assistant bubble and finishes on done", () => {
     const s = initialState();
     beginTurn(s, "hi");

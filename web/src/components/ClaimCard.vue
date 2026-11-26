@@ -14,7 +14,8 @@ const props = defineProps<{
   busy: boolean;
   reviewer?: boolean;
 }>();
-const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>] }>();
+const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>]; requestInfo: [note: string] }>();
+const requestNote = ref("");
 
 const FACT_KEYS = [
   "incident_date",
@@ -188,6 +189,11 @@ function submitReview() {
     </section>
 
     <section class="review">
+      <template v-if="status === 'information_needed'">
+        <strong>{{ t("card.informationNeeded") }}</strong>
+        <p data-testid="information-request">{{ card?.review?.note }}</p>
+        <p v-if="!reviewer">{{ t("card.replyInstructions") }}</p>
+      </template>
       <template v-if="status === 'reviewed'">
         <span class="badge reviewed">{{ t("card.reviewedBadge") }}</span>
         <small v-if="card?.review?.note" class="disclaimer">{{ card.review.note }}</small>
@@ -204,5 +210,10 @@ function submitReview() {
         </button>
       </template>
     </section>
+    <form v-if="reviewer && status === 'awaiting_review'" class="request-info" @submit.prevent="emit('requestInfo', requestNote.trim())">
+      <label for="information-request-note">{{ t("card.requestDetails") }}</label>
+      <textarea id="information-request-note" v-model="requestNote" maxlength="2000" :disabled="busy" required />
+      <button class="btn" data-testid="request-info" :disabled="busy || !requestNote.trim()">{{ t("card.requestInfo") }}</button>
+    </form>
   </aside>
 </template>

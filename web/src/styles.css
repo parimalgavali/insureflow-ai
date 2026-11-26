@@ -47,7 +47,7 @@ button { font: inherit; }
 .facts input { font: inherit; width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; background: var(--bg); color: var(--text); }
 .badge { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; color: #fff; background: var(--neutral); }
 .badge.likely_covered, .badge.low, .badge.reviewed { background: var(--ok); }
-.badge.unclear, .badge.medium, .badge.awaiting_review { background: var(--warn); }
+.badge.unclear, .badge.medium, .badge.awaiting_review, .badge.information_needed { background: var(--warn); }
 .badge.likely_not_covered, .badge.high { background: var(--bad); }
 .summary { font-size: 14px; line-height: 1.5; margin: 8px 0 0; }
 .pill { display: inline-block; border: 1px solid var(--accent); color: var(--accent); background: transparent; border-radius: 6px; padding: 0 6px; font-size: 12px; font-family: ui-monospace, monospace; cursor: pointer; }
@@ -65,6 +65,8 @@ button { font: inherit; }
 .queue-list h2, .queue-list p { margin: 0; }
 .queue-list form { display: grid; gap: 10px; }
 .queue-list input { font: inherit; padding: 10px; min-width: 0; }
+.request-info { display: grid; gap: 8px; }
+.request-info textarea { width: 100%; min-height: 80px; font: inherit; padding: 10px; }
 .queue-items { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .queue-items button { width: 100%; text-align: left; display: grid; gap: 4px; overflow-wrap: anywhere; }
 .queue-items button[aria-pressed="true"] { border-color: var(--accent); }

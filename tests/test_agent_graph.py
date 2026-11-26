@@ -136,6 +136,61 @@ def test_compose_without_evidence_cites_nothing_and_skips_llm():
     assert "compose" not in [c["tag"] for c in provider.calls]
 
 
+def test_information_request_reopens_the_claim_and_requires_resubmission():
+    provider = RecordedProvider(FIXTURE.with_name("hit_and_run_followup.json"))
+    graph = build_graph(
+        AgentDeps(provider=provider, retriever=make_retriever(), risk_scorer=FakeScorer()),
+        checkpointer=MemorySaver(),
+    )
+    thread = "request-info"
+    run_turn(graph, thread, "Mein geparktes Auto wurde angefahren.")
+    run_turn(graph, thread, "Am 25.10.2026, keine Polizei.")
+    submit_for_review(graph, thread)
+    requested = resume_review(
+        graph,
+        thread,
+        ReviewDecision(
+            decision="request_info", note="Please provide the police report and repair estimate."
+        ),
+    )
+    assert requested["status"] == requested["card"].status == "information_needed"
+    assert "Please provide" in requested["messages"][-1].content
+    assert graph.get_state(thread_config(thread)).next == ()
+    with pytest.raises(ValueError, match="not ready"):
+        submit_for_review(graph, thread)
+    updated = run_turn(
+        graph,
+        thread,
+        "Die Polizei wurde inzwischen informiert. Der Kostenvoranschlag beträgt 1200 Euro.",
+    )
+    assert updated["status"] == "assessed"
+    assert updated["facts"].police_report_filed is True
+    assert updated["facts"].estimated_amount_eur == 1200
+    assert updated["card"].review is None
+    assert any("Please provide" in m["content"] for m in provider.calls[-2]["messages"])
+    assert submit_for_review(graph, thread)["status"] == "awaiting_review"
+    assert resume_review(graph, thread, ReviewDecision(decision="accept"))["status"] == "reviewed"
+
+
+def test_information_request_needs_a_clear_note_and_cannot_change_facts():
+    from pydantic import ValidationError
+
+    from api.agent.schemas import ReviewRequest
+
+    for body in (
+        {"decision": "request_info"},
+        {"decision": "request_info", "note": "   "},
+        {"decision": "request_info", "note": "x" * 2001},
+        {"decision": "request_info", "note": "Details please", "facts_patch": {"witnesses": True}},
+    ):
+        with pytest.raises(ValidationError):
+            ReviewRequest(**body)
+    assert (
+        ReviewRequest(decision="request_info", note="  Police report please  ").note
+        == "Police report please"
+    )
+
+
 def test_extract_failure_degrades_to_rephrase_request(tmp_path: Path):
     fixture = tmp_path / "bad.json"
     fixture.write_text('{"extract": [{"event_type": "spaceship"}, {"event_type": "spaceship"}]}')

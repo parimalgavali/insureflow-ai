@@ -10,7 +10,7 @@ from sqlalchemy import select
 from api.agent.graph import resume_review, submit_for_review, thread_config
 from api.agent.schemas import ClaimCard, ReviewDecision, ReviewRequest
 from api.security import get_state, require_adjuster, require_token
-from db.models import Claim
+from db.models import Claim, Message
 
 router = APIRouter(prefix="/api/claims", tags=["claims"], dependencies=[Depends(require_token)])
 
@@ -125,23 +125,33 @@ def review_claim(
     reviewer: str = Depends(require_adjuster),
     state=Depends(get_state),
 ) -> ClaimOut:
-    """Resume the interrupted graph with the adjuster's decision and persist the reviewed card."""
+    """Record an authorized review or reopen the claim for more information."""
     decision = ReviewDecision(**body.model_dump(), reviewer=reviewer)
     with state.session() as session:
-        claim = session.get(Claim, claim_id)
+        claim = session.scalar(select(Claim).where(Claim.id == claim_id).with_for_update())
         if claim is None:
             raise HTTPException(404, "claim not found")
         if claim.status != "awaiting_review":
             raise HTTPException(409, f"claim is {claim.status}, not awaiting_review")
         thread = str(claim.conversation_id)
-    snapshot = state.graph.get_state(thread_config(thread))
-    if not snapshot.next or "human_review" not in snapshot.next:
-        raise HTTPException(409, "agent is not waiting for review on this conversation")
-    result = resume_review(state.graph, thread, decision)
-    with state.session() as session:
-        claim = session.get(Claim, claim_id)
+        snapshot = state.graph.get_state(thread_config(thread))
+        if snapshot.next == ("human_review",):
+            result = resume_review(state.graph, thread, decision)
+        elif (
+            snapshot.values.get("status") in ("information_needed", "reviewed")
+            and snapshot.values.get("review") == decision
+        ):
+            # Checkpoints and claim rows commit separately. Recover the exact saved
+            # decision after a failed row commit without invoking the graph again.
+            result = snapshot.values
+        else:
+            raise HTTPException(409, "agent is not waiting for review on this conversation")
         claim.card = result["card"].model_dump(mode="json")
         claim.status = result["status"]
         claim.conversation.status = result["status"]
+        if decision.decision == "request_info":
+            claim.conversation.messages.append(
+                Message(role="assistant", content=result["messages"][-1].content)
+            )
         session.commit()
         return _out(claim)

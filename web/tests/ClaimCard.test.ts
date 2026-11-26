@@ -86,3 +86,21 @@ it("submits a ready claim without emitting a review or asking for credentials", 
   await w.setProps({ reviewer: true });
   expect(w.get('[data-testid="review"]').text()).toBe("Record adjuster review");
 });
+
+it("requires a clear information request and keeps it separate from a final review", async () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false, reviewer: true } });
+  expect((w.get('[data-testid="request-info"]').element as HTMLButtonElement).disabled).toBe(true);
+  await w.get("textarea").setValue("   ");
+  expect((w.get('[data-testid="request-info"]').element as HTMLButtonElement).disabled).toBe(true);
+  await w.get("textarea").setValue("  Please provide the police report.  ");
+  await w.get("form.request-info").trigger("submit");
+  expect(w.emitted("requestInfo")?.[0]).toEqual(["Please provide the police report."]);
+  expect(w.emitted("review")).toBeUndefined();
+  await w.setProps({ status: "information_needed", reviewer: false, card: { ...card, status: "information_needed", review: { decision: "request_info", note: "Please provide the police report." } } });
+  expect(w.get('[data-testid="status"]').text()).toBe("Information needed");
+  expect(w.get('[data-testid="information-request"]').text()).toContain("police report");
+  expect(w.text()).toContain("Reply in the chat");
+  expect(w.find('[data-testid="review"]').exists()).toBe(false);
+  expect(w.find('[data-testid="submit"]').exists()).toBe(false);
+  expect(w.find("form.request-info").exists()).toBe(false);
+});

@@ -109,7 +109,7 @@ def post_message(
 ) -> StreamingResponse:
     with state.session() as session:
         conv = _load(session, conversation_id)
-        if conv.status != "collecting":
+        if conv.status not in ("collecting", "information_needed"):
             raise HTTPException(409, "claim assessment is complete; use the claim actions")
         if language and language != conv.language:
             conv.language = language  # UI toggle: the agent answers in the new language from now on
@@ -187,10 +187,13 @@ def _stream_turn(
                 conv.claim.status = card.status
             else:
                 conv.claim.status = conv.status
+                # A fresh collection round must not retain an old assessment or review.
                 conv.claim.card = (
-                    {**(conv.claim.card or {}), "facts": final["facts"].model_dump(mode="json")}
+                    ClaimCard(facts=final["facts"], policy=policy, status=conv.status).model_dump(
+                        mode="json"
+                    )
                     if final.get("facts")
-                    else conv.claim.card
+                    else {}
                 )
             session.commit()
             claim_id = str(conv.claim.id)

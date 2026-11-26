@@ -2,7 +2,7 @@
 
 export type Language = "de" | "en";
 export type CoverageStatus = "likely_covered" | "likely_not_covered" | "unclear" | "no_evidence";
-export type ClaimStatus = "collecting" | "assessed" | "awaiting_review" | "reviewed";
+export type ClaimStatus = "collecting" | "assessed" | "awaiting_review" | "information_needed" | "reviewed";
 
 export interface ClaimFacts {
   incident_date: string | null;

@@ -38,6 +38,7 @@ def make_state(
     token: str | None = None,
     adjuster_token: str | None = ADJUSTER_TOKEN,
     allow_open_api: bool = True,
+    fixture: Path = FIXTURE,
 ) -> AppState:
     settings = Settings(
         demo_api_token=token,
@@ -46,7 +47,7 @@ def make_state(
         upload_dir=tmp_path / "uploads",
         llm_provider="recorded",
     )
-    provider = RecordedProvider(FIXTURE)
+    provider = RecordedProvider(fixture)
     deps = AgentDeps(
         provider=provider,
         retriever=make_retriever(),
@@ -66,12 +67,14 @@ def make_state(
 
 
 @pytest.fixture
-def client(tmp_path: Path):
+def client(tmp_path: Path, request):
     from alembic import command
     from alembic.config import Config
 
     command.upgrade(Config("alembic.ini"), "head")
-    with TestClient(create_app(lambda: make_state(tmp_path))) as c:
+    with TestClient(
+        create_app(lambda: make_state(tmp_path, fixture=getattr(request, "param", FIXTURE)))
+    ) as c:
         yield c
 
 
@@ -216,6 +219,90 @@ def test_review_before_assessment_is_rejected(client: TestClient):
     assert client.post(f"/api/claims/{conv['claim_id']}/submit").status_code == 409
     assert client.post("/api/claims/00000000-0000-0000-0000-000000000000/submit").status_code == 404
     assert client.get("/api/conversations/00000000-0000-0000-0000-000000000000").status_code == 404
+
+
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
+def test_request_information_reply_and_resubmit(client: TestClient):
+    conv = client.post("/api/conversations", json={"language": "en"}).json()
+    cid, claim_id = conv["id"], conv["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    first_submission = client.post(f"/api/claims/{claim_id}/submit").json()
+    url = f"/api/claims/{claim_id}/review"
+    for note in (None, " ", "x" * 2001):
+        assert (
+            client.post(
+                url, json={"decision": "request_info", "note": note}, headers=ADJUSTER
+            ).status_code
+            == 422
+        )
+    body = {
+        "decision": "request_info",
+        "note": "Please provide the police report and repair estimate.",
+    }
+    assert client.post(url, json=body).status_code == 401
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(
+            pool.map(lambda _: client.post(url, json=body, headers=ADJUSTER), range(2))
+        )
+    assert sorted(r.status_code for r in responses) == [200, 409]
+    result = next(r.json() for r in responses if r.status_code == 200)
+    assert result["status"] == "information_needed"
+    assert result["card"]["review"]["decision"] == "request_info"
+    saved = client.get(f"/api/conversations/{cid}").json()
+    assert saved["status"] == saved["card"]["status"] == "information_needed"
+    assert sum(body["note"] in m["content"] for m in saved["messages"]) == 1
+    assert client.post(f"/api/claims/{claim_id}/submit").status_code == 409
+    pending = client.get("/api/claims/review-queue?limit=100", headers=ADJUSTER).json()["items"]
+    assert claim_id not in {i["id"] for i in pending}
+    reply = client.post(
+        f"/api/conversations/{cid}/messages",
+        data={"text": "The police have now been informed. The repair estimate is 1200 Euro."},
+    )
+    assert dict(parse_sse(reply.text))["done"]["status"] == "assessed"
+    updated = client.get(f"/api/conversations/{cid}").json()
+    assert updated["card"]["facts"]["police_report_filed"] is True
+    assert updated["card"]["review"] is None
+    assert client.post(url, json={"decision": "accept"}, headers=ADJUSTER).status_code == 409
+    submitted = client.post(f"/api/claims/{claim_id}/submit").json()
+    assert submitted["submitted_at"] > first_submission["submitted_at"]
+    assert submitted["status"] == "awaiting_review"
+    assert (
+        client.post(url, json={"decision": "accept"}, headers=ADJUSTER).json()["status"]
+        == "reviewed"
+    )
+
+
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
+def test_information_request_recovers_after_claim_commit_failure(client, monkeypatch):
+    from sqlalchemy.orm import Session
+
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim_id = conv["id"], conv["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    client.post(f"/api/claims/{claim_id}/submit")
+    url = f"/api/claims/{claim_id}/review"
+    body = {"decision": "request_info", "note": "Police report please"}
+
+    def fail_commit(_session):
+        raise RuntimeError("simulated database failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Session, "commit", fail_commit)
+        with pytest.raises(RuntimeError, match="simulated database failure"):
+            client.post(url, json=body, headers=ADJUSTER)
+    assert client.get(f"/api/claims/{claim_id}").json()["status"] == "awaiting_review"
+    assert (
+        client.post(
+            url, json={"decision": "request_info", "note": "A different request"}, headers=ADJUSTER
+        ).status_code
+        == 409
+    )
+    recovered = client.post(url, json=body, headers=ADJUSTER)
+    assert recovered.status_code == 200 and recovered.json()["status"] == "information_needed"
+    saved = client.get(f"/api/conversations/{cid}").json()
+    assert sum(body["note"] in m["content"] for m in saved["messages"]) == 1
 
 
 def test_reviewer_queue_is_protected_and_lists_pending_claims(client, tmp_path):
