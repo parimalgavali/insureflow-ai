@@ -96,6 +96,22 @@ describe("reviewer queue", () => {
     w.unmount();
   });
 
+  it("sends an information request without accepting the claim", async () => {
+    const w = mountQueue();
+    await unlock(w);
+    await w.get('[data-testid="review-claim-claim-1"]').trigger("click");
+    await flushPromises();
+    vi.mocked(reviewClaim).mockResolvedValue({ status: "information_needed", card: { ...detail.card!, status: "information_needed", review: { decision: "request_info", note: "Police report please" } } });
+    vi.mocked(fetchReviewQueue).mockResolvedValue({ items: [], has_more: false });
+    w.getComponent(ClaimCard).vm.$emit("requestInfo", "Police report please");
+    await flushPromises();
+    expect(reviewClaim).toHaveBeenCalledWith("claim-1", { decision: "request_info", note: "Police report please" }, expect.any(Function));
+    expect(w.getComponent(ClaimCard).props("status")).toBe("information_needed");
+    expect(w.emitted("reviewed")?.[0]?.[0]).toMatchObject({ status: "information_needed" });
+    expect(w.find('[data-testid="review-claim-claim-1"]').exists()).toBe(false);
+    w.unmount();
+  });
+
   it("loads more claims and labels missing historical dates honestly", async () => {
     vi.mocked(fetchReviewQueue).mockResolvedValueOnce({ items: [item], has_more: true })
       .mockResolvedValueOnce({ items: [{ ...item, id: "claim-2", submitted_at: null }], has_more: false });

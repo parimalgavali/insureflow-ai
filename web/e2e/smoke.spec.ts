@@ -61,7 +61,26 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   const reviewCard = page.getByLabel("Claim card");
   await expect(reviewCard.getByTestId("risk")).toHaveText(/low|medium|high/);
   await expect(reviewCard.getByTestId("summary")).toContainText(/A\.2\.2/);
-  await reviewCard.getByTestId("review").click();
+  // Ask for more information rather than completing the review.
+  await reviewCard.getByLabel("What information does the customer need to provide?").fill("Please provide the police report and repair estimate.");
+  await reviewCard.getByTestId("request-info").click();
+  await expect(reviewCard.getByTestId("status")).toHaveText("Information needed");
+  await expect(row).toHaveCount(0);
+  await page.getByRole("button", { name: "Lock queue" }).click();
+  await page.getByTestId("reviewer-link").click();
+  await expect(page.getByTestId("information-request")).toContainText("police report and repair estimate");
+  await expect(composer).toBeEnabled();
+  await composer.fill("The police have now been informed. The repair estimate is 1200 Euro.");
+  await composer.press("Enter");
+  await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText("Ready to submit");
+  await page.getByTestId("submit").click();
+  await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/awaiting adjuster/i);
+  await page.getByTestId("reviewer-link").click();
+  await page.getByLabel("Reviewer token").fill(adjusterToken);
+  await page.getByRole("button", { name: "Open queue" }).click();
+  await page.getByTestId(`review-claim-${submitted.id}`).click();
+  await expect(page.getByTestId("fact-estimated_amount_eur")).toHaveText("1200");
+  await page.getByLabel("Claim card").getByTestId("review").click();
   await expect(reviewCard.getByTestId("status")).toHaveText(/reviewed/i);
   await expect(row).toHaveCount(0);
   await page.getByRole("button", { name: "Lock queue" }).click();

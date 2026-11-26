@@ -127,6 +127,10 @@ credential only in memory until you lock it or leave that screen; it never write
 storage. Customer submission never asks for a reviewer credential. Uploads are
 limited to JPEG/PNG/WebP/PDF ≤ `MAX_UPLOAD_MB` (10). `.env` is git-ignored; only `.env.example` is committed.
 
+Reviewers can also **Request information** with a note. The customer sees **Information needed**,
+replies in chat, and submits the refreshed claim again. Recorded demo mode uses the original
+hit-and-run replies plus a labeled synthetic follow-up turn for this request/reply path.
+
 ### Measured numbers
 
 RAG over AKB 2015 — 28 hand-written DE/EN questions, hit if the expected clause is in the top 3

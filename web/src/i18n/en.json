@@ -90,5 +90,10 @@
   "queue.locationUnknown": "Location not provided",
   "queue.more": "Load more",
   "queue.choose": "Choose a claim to see its facts, coverage references and risk reasons.",
-  "queue.failed": "The reviewer request failed."
+  "queue.failed": "The reviewer request failed.",
+  "status.information_needed": "Information needed",
+  "card.informationNeeded": "The reviewer needs more information",
+  "card.replyInstructions": "Reply in the chat, then submit the updated claim for review again.",
+  "card.requestDetails": "What information does the customer need to provide?",
+  "card.requestInfo": "Request information"
 }

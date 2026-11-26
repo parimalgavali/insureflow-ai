@@ -45,7 +45,7 @@ class Settings:
     )
     recorded_fixture: Path = field(
         default_factory=lambda: Path(
-            os.environ.get("RECORDED_FIXTURE", "tests/fixtures/agent/hit_and_run.json")
+            os.environ.get("RECORDED_FIXTURE", "tests/fixtures/agent/hit_and_run_followup.json")
         )
     )
 

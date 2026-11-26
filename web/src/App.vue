@@ -19,7 +19,7 @@ function navigate() {
 window.addEventListener("hashchange", navigate);
 onUnmounted(() => window.removeEventListener("hashchange", navigate));
 
-const canSend = computed(() => store.conversationId !== null && store.status === "collecting");
+const canSend = computed(() => store.conversationId !== null && ["collecting", "information_needed"].includes(store.status));
 
 async function start(language: Language) {
   try {

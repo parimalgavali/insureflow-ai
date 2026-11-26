@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onUnmounted, ref } from "vue";
-import { fetchReviewQueue, fetchReviewerClaim, reviewClaim, type QueueItem, type ReviewerClaim } from "../api/client";
+import { fetchReviewQueue, fetchReviewerClaim, reviewClaim, type QueueItem, type ReviewerClaim, type ReviewDecision } from "../api/client";
 import { locale, t } from "../i18n";
 import ClaimCard from "./ClaimCard.vue";
 
@@ -68,16 +68,14 @@ async function selectClaim(id: string) {
   }
 }
 
-async function review(patch: Record<string, unknown>) {
+async function saveDecision(decision: ReviewDecision) {
   if (!selected.value || busy.value) return;
   const current = epoch;
   const claim = selected.value;
   busy.value = true;
   error.value = "";
   try {
-    const result = await reviewClaim(claim.id, {
-      decision: Object.keys(patch).length ? "edit" : "accept", facts_patch: patch,
-    }, () => credential.value);
+    const result = await reviewClaim(claim.id, decision, () => credential.value);
     if (current !== epoch) return;
     selected.value = { ...claim, ...result };
     emit("reviewed", selected.value);
@@ -90,6 +88,14 @@ async function review(patch: Record<string, unknown>) {
   } finally {
     if (current === epoch) busy.value = false;
   }
+}
+
+function review(patch: Record<string, unknown>) {
+  return saveDecision({ decision: Object.keys(patch).length ? "edit" : "accept", facts_patch: patch });
+}
+
+function requestInfo(note: string) {
+  return saveDecision({ decision: "request_info", note });
 }
 
 function submittedAt(value: string | null): string {
@@ -129,7 +135,7 @@ onUnmounted(lock);
         <button v-if="hasMore" class="btn" :disabled="busy" @click="load(true)">{{ t("queue.more") }}</button>
       </template>
     </div>
-    <ClaimCard v-if="selected?.card" :key="selected.id" :facts="selected.card.facts" :missing="[]" :citations="selected.card.citations" :risk="selected.card.risk" :card="selected.card" :status="selected.status" :busy="busy" reviewer @review="review" />
+    <ClaimCard v-if="selected?.card" :key="selected.id" :facts="selected.card.facts" :missing="[]" :citations="selected.card.citations" :risk="selected.card.risk" :card="selected.card" :status="selected.status" :busy="busy" reviewer @review="review" @request-info="requestInfo" />
     <p v-else-if="credential && !busy" class="panel queue-list">{{ t("queue.choose") }}</p>
   </section>
 </template>

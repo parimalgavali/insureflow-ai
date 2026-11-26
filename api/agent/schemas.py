@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Language = Literal["de", "en"]
 EventType = Literal[
@@ -20,7 +20,7 @@ EventType = Literal[
     "unknown",
 ]
 CoverageStatus = Literal["likely_covered", "likely_not_covered", "unclear", "no_evidence"]
-ClaimStatus = Literal["collecting", "assessed", "awaiting_review", "reviewed"]
+ClaimStatus = Literal["collecting", "assessed", "awaiting_review", "information_needed", "reviewed"]
 RiskBand = Literal["low", "medium", "high"]
 
 
@@ -100,12 +100,22 @@ class ReviewRequest(BaseModel):
 
     decision: Literal["accept", "edit", "request_info"]
     facts_patch: dict = Field(default_factory=dict)
-    note: str | None = None
+    note: str | None = Field(None, max_length=2000)
 
     @field_validator("facts_patch")
     @classmethod
     def _known_facts_only(cls, value: dict) -> dict:
         return FactsPatch.model_validate(value).model_dump(exclude_unset=True)
+
+    @model_validator(mode="after")
+    def _information_request(self):
+        if self.decision == "request_info":
+            if not self.note or not self.note.strip():
+                raise ValueError("explain what information is needed")
+            if self.facts_patch:
+                raise ValueError("request information separately from correcting facts")
+            self.note = self.note.strip()
+        return self
 
 
 class ReviewDecision(BaseModel):

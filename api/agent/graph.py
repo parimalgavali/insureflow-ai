@@ -35,6 +35,7 @@ from api.agent.schemas import (
     Language,
     PolicyContext,
     ReviewDecision,
+    ReviewRequest,
     RiskSignal,
 )
 from api.llm.provider import Provider, ProviderError
@@ -172,7 +173,14 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             "facts": facts,
             "policy": state.get("policy") or PolicyContext(),
             "extract_failed": failed,
-            "status": state.get("status") or "collecting",
+            "status": "collecting",
+            "card": None,
+            "review": None,
+            "followups_asked": (
+                0
+                if state.get("status") == "information_needed"
+                else state.get("followups_asked", 0)
+            ),
         }
 
     def check_missing(state: AgentState) -> dict:
@@ -301,6 +309,18 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         decision_raw = interrupt({"card": card.model_dump(), "language": state["language"]})
         decision = ReviewDecision.model_validate(decision_raw)
         facts = state["facts"]
+        if decision.decision == "request_info":
+            request = ReviewRequest(**decision.model_dump(exclude={"reviewer"}))
+            label = (
+                "Rückfrage des Sachbearbeiters" if state["language"] == "de" else "Reviewer request"
+            )
+            card = card.model_copy(update={"status": "information_needed", "review": decision})
+            return {
+                "card": card,
+                "review": decision,
+                "status": "information_needed",
+                "messages": [ChatMessage(role="assistant", content=f"{label}: {request.note}")],
+            }
         if decision.facts_patch:
             facts = facts.merge(ClaimFacts(**{**facts.model_dump(), **decision.facts_patch}))
         reviewed = card.model_copy(

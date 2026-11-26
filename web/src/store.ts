@@ -59,6 +59,12 @@ export function loadConversation(state: State, conv: Conversation): void {
 }
 
 export function beginTurn(state: State, text: string): void {
+  if (state.status === "information_needed") {
+    state.status = "collecting";
+    state.card = null;
+    state.citations = [];
+    state.risk = null;
+  }
   state.messages.push({ id: nextId(), role: "user", content: text });
   state.messages.push({ id: nextId(), role: "assistant", content: "", streaming: true });
   state.busy = true;

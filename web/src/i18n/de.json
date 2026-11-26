@@ -90,5 +90,10 @@
   "queue.locationUnknown": "Ort nicht angegeben",
   "queue.more": "Weitere laden",
   "queue.choose": "Wählen Sie einen Schaden aus, um Fakten, Vertragsklauseln und Risikogründe zu sehen.",
-  "queue.failed": "Die Anfrage zur Prüfung ist fehlgeschlagen."
+  "queue.failed": "Die Anfrage zur Prüfung ist fehlgeschlagen.",
+  "status.information_needed": "Weitere Angaben benötigt",
+  "card.informationNeeded": "Der Sachbearbeiter benötigt weitere Angaben",
+  "card.replyInstructions": "Antworten Sie im Chat und reichen Sie den aktualisierten Schaden erneut zur Prüfung ein.",
+  "card.requestDetails": "Welche Angaben soll der Kunde nachreichen?",
+  "card.requestInfo": "Angaben anfordern"
 }
