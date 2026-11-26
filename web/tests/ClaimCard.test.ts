@@ -104,3 +104,33 @@ it("requires a clear information request and keeps it separate from a final revi
   expect(w.find('[data-testid="submit"]').exists()).toBe(false);
   expect(w.find("form.request-info").exists()).toBe(false);
 });
+
+it("labels failed guidance as out of date and blocks completion until it is refreshed", async () => {
+  const stale = { ...card, assessment_stale: true, assessment_error: "The assessment could not be refreshed.", corrections: [{ field: "witnesses", before: false, after: true }] };
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card: stale, status: "awaiting_review", busy: false, reviewer: true } });
+  expect(w.get('[data-testid="assessment-stale"]').text()).toContain("Out of date");
+  expect(w.get('[data-testid="coverage"]').text()).toBe("Out of date");
+  expect(w.get('[data-testid="risk"]').text()).toBe("Out of date");
+  expect(w.get('[data-testid="correction-witnesses"]').text()).toContain("no → yes");
+  expect((w.get('[data-testid="review"]').element as HTMLButtonElement).disabled).toBe(true);
+  await w.get('[data-testid="reassess"]').trigger("click");
+  expect(w.emitted("reassess")).toHaveLength(1);
+  expect(w.emitted("review")).toBeUndefined();
+  await w.setProps({ card: { ...stale, assessment_stale: false, assessment_error: null } });
+  expect(w.find('[data-testid="assessment-stale"]').exists()).toBe(false);
+  expect((w.get('[data-testid="review"]').element as HTMLButtonElement).disabled).toBe(false);
+});
+
+it("keeps correction drafts until saved and does not turn invalid amounts into null", async () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false, reviewer: true } });
+  await w.findAll("button").find((b) => b.text() === "Edit facts")!.trigger("click");
+  expect(w.get('[data-testid="review"]').text()).toBe("Save corrections and refresh");
+  await w.get('input[aria-label="Estimated amount (EUR)"]').setValue("not an amount");
+  await w.get('[data-testid="review"]').trigger("click");
+  expect(w.emitted("review")?.[0]).toEqual([{ estimated_amount_eur: "not an amount" }]);
+  expect(w.find('input[aria-label="Estimated amount (EUR)"]').exists()).toBe(true);
+  expect(w.find("form.request-info").exists()).toBe(false);
+  await w.findAll("button").find((b) => b.text() === "Cancel edits")!.trigger("click");
+  expect(w.get('[data-testid="review"]').text()).toBe("Record adjuster review");
+  expect(w.find("form.request-info").exists()).toBe(true);
+});

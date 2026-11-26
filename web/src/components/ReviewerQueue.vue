@@ -84,7 +84,10 @@ async function saveDecision(decision: ReviewDecision) {
     items.value = queue.items;
     hasMore.value = queue.has_more;
   } catch (e) {
-    if (current === epoch) failure(e);
+    if (current === epoch) {
+      if (e instanceof Error && e.message.startsWith("422 ")) error.value = t("queue.invalidCorrection");
+      else failure(e);
+    }
   } finally {
     if (current === epoch) busy.value = false;
   }
@@ -96,6 +99,10 @@ function review(patch: Record<string, unknown>) {
 
 function requestInfo(note: string) {
   return saveDecision({ decision: "request_info", note });
+}
+
+function reassess() {
+  return saveDecision({ decision: "reassess" });
 }
 
 function submittedAt(value: string | null): string {
@@ -135,7 +142,7 @@ onUnmounted(lock);
         <button v-if="hasMore" class="btn" :disabled="busy" @click="load(true)">{{ t("queue.more") }}</button>
       </template>
     </div>
-    <ClaimCard v-if="selected?.card" :key="selected.id" :facts="selected.card.facts" :missing="[]" :citations="selected.card.citations" :risk="selected.card.risk" :card="selected.card" :status="selected.status" :busy="busy" reviewer @review="review" @request-info="requestInfo" />
+    <ClaimCard v-if="selected?.card" :key="selected.id" :facts="selected.card.facts" :missing="[]" :citations="selected.card.citations" :risk="selected.card.risk" :card="selected.card" :status="selected.status" :busy="busy" reviewer @review="review" @request-info="requestInfo" @reassess="reassess" />
     <p v-else-if="credential && !busy" class="panel queue-list">{{ t("queue.choose") }}</p>
   </section>
 </template>

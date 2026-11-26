@@ -95,5 +95,12 @@
   "card.informationNeeded": "The reviewer needs more information",
   "card.replyInstructions": "Reply in the chat, then submit the updated claim for review again.",
   "card.requestDetails": "What information does the customer need to provide?",
-  "card.requestInfo": "Request information"
+  "card.requestInfo": "Request information",
+  "card.outOfDate": "Out of date",
+  "card.refreshRequired": "The saved guidance is out of date. Refresh the assessment before completing the review.",
+  "card.retryAssessment": "Retry assessment",
+  "card.savedChanges": "Saved corrections",
+  "card.saveCorrections": "Save corrections and refresh",
+  "card.cancelEdits": "Cancel edits",
+  "queue.invalidCorrection": "The correction is not valid. Check the date (YYYY-MM-DD), time (HH:MM), amount and yes/no answers, then try again."
 }

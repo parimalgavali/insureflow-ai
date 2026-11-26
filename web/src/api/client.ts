@@ -50,7 +50,7 @@ export interface RiskSignal {
 }
 
 export interface ReviewDecision {
-  decision: "accept" | "edit" | "request_info";
+  decision: "accept" | "edit" | "request_info" | "reassess";
   facts_patch?: Record<string, unknown>;
   note?: string | null;
   reviewer?: string;
@@ -68,6 +68,9 @@ export interface ClaimCard {
   next_steps: string[];
   status: ClaimStatus;
   review: ReviewDecision | null;
+  assessment_stale?: boolean;
+  assessment_error?: string | null;
+  corrections?: { field: string; before: string | number | boolean | null; after: string | number | boolean | null }[];
 }
 
 export interface Message {

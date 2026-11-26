@@ -135,7 +135,27 @@ def review_claim(
             raise HTTPException(409, f"claim is {claim.status}, not awaiting_review")
         thread = str(claim.conversation_id)
         snapshot = state.graph.get_state(thread_config(thread))
-        if snapshot.next == ("human_review",):
+        if decision.decision == "accept" and (
+            (claim.card or {}).get("assessment_stale")
+            or getattr(snapshot.values.get("card"), "assessment_stale", False)
+        ):
+            raise HTTPException(409, "refresh the out-of-date assessment before completing review")
+        if (
+            (
+                decision.decision == "edit"
+                or (
+                    decision.decision == "reassess"
+                    and not getattr(snapshot.values.get("card"), "assessment_stale", True)
+                )
+            )
+            and snapshot.values.get("status") == "awaiting_review"
+            and snapshot.values.get("review") == decision
+        ):
+            # Recover saved corrections or a successful recheck without another model call.
+            result = snapshot.values
+        elif snapshot.next == ("reassess",) and decision.decision == "reassess":
+            result = state.graph.invoke(None, thread_config(thread))
+        elif snapshot.next == ("human_review",):
             result = resume_review(state.graph, thread, decision)
         elif (
             snapshot.values.get("status") in ("information_needed", "reviewed")

@@ -95,5 +95,12 @@
   "card.informationNeeded": "Der Sachbearbeiter benötigt weitere Angaben",
   "card.replyInstructions": "Antworten Sie im Chat und reichen Sie den aktualisierten Schaden erneut zur Prüfung ein.",
   "card.requestDetails": "Welche Angaben soll der Kunde nachreichen?",
-  "card.requestInfo": "Angaben anfordern"
+  "card.requestInfo": "Angaben anfordern",
+  "card.outOfDate": "Veraltet",
+  "card.refreshRequired": "Die gespeicherte Einschätzung ist veraltet. Aktualisieren Sie die Bewertung, bevor Sie die Prüfung abschließen.",
+  "card.retryAssessment": "Bewertung erneut versuchen",
+  "card.savedChanges": "Gespeicherte Korrekturen",
+  "card.saveCorrections": "Korrekturen speichern und neu bewerten",
+  "card.cancelEdits": "Änderungen verwerfen",
+  "queue.invalidCorrection": "Die Korrektur ist ungültig. Prüfen Sie Datum (JJJJ-MM-TT), Uhrzeit (HH:MM), Betrag und Ja/Nein-Antworten und versuchen Sie es erneut."
 }

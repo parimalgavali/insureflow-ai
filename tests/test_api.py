@@ -92,6 +92,7 @@ def test_health(client: TestClient):
     assert body["risk_model"] == "fake-0"
 
 
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
 def test_full_conversation_flow(client: TestClient, tmp_path: Path):
     created = client.post(
         "/api/conversations",
@@ -195,8 +196,15 @@ def test_full_conversation_flow(client: TestClient, tmp_path: Path):
         headers=ADJUSTER,
     )
     assert blocked.status_code == 200
-    reviewed = blocked.json()
-    assert reviewed["status"] == "reviewed" and reviewed["card"]["review"]["decision"] == "edit"
+    corrected = blocked.json()
+    assert corrected["status"] == "awaiting_review"
+    assert corrected["card"]["review"] is None
+    assert corrected["card"]["assessment_stale"] is False
+    assert corrected["card"]["corrections"] == [
+        {"field": "witnesses", "before": False, "after": True}
+    ]
+    reviewed = client.post(review_url, json={"decision": "accept"}, headers=ADJUSTER).json()
+    assert reviewed["status"] == "reviewed" and reviewed["card"]["review"]["decision"] == "accept"
     assert reviewed["card"]["review"]["reviewer"] == "adjuster"
     assert reviewed["card"]["facts"]["witnesses"] is True
     assert client.get(f"/api/claims/{claim_id}").json()["status"] == "reviewed"
@@ -303,6 +311,88 @@ def test_information_request_recovers_after_claim_commit_failure(client, monkeyp
     assert recovered.status_code == 200 and recovered.json()["status"] == "information_needed"
     saved = client.get(f"/api/conversations/{cid}").json()
     assert sum(body["note"] in m["content"] for m in saved["messages"]) == 1
+
+
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
+def test_saved_corrections_stay_pending_and_failed_rechecks_block_completion(client, monkeypatch):
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim_id = conv["id"], conv["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    client.post(f"/api/claims/{claim_id}/submit")
+    url = f"/api/claims/{claim_id}/review"
+    for patch in ({"incident_date": "2026-02-30"}, {"estimated_amount_eur": -5}):
+        assert (
+            client.post(
+                url, json={"decision": "edit", "facts_patch": patch}, headers=ADJUSTER
+            ).status_code
+            == 422
+        )
+    assert (
+        client.post(
+            url, json={"decision": "accept", "facts_patch": {"witnesses": True}}, headers=ADJUSTER
+        ).status_code
+        == 422
+    )
+    body = {"decision": "edit", "facts_patch": {"witnesses": True}}
+    assert client.post(url, json=body).status_code == 401
+    state = client.app.state.claimpilot
+
+    def fail_retrieval(*args, **kwargs):
+        raise RuntimeError("simulated retrieval failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(state.retriever, "retrieve_many", fail_retrieval)
+        failed = client.post(url, json=body, headers=ADJUSTER)
+    assert failed.status_code == 200
+    saved = client.get(f"/api/claims/{claim_id}").json()
+    assert saved["status"] == "awaiting_review"
+    assert saved["card"]["facts"]["witnesses"] is True
+    assert saved["card"]["assessment_stale"] is True
+    assert saved["card"]["corrections"] == [{"field": "witnesses", "before": False, "after": True}]
+    assert saved["card"]["review"] is None
+    assert client.post(url, json={"decision": "accept"}, headers=ADJUSTER).status_code == 409
+    calls = len(state.provider.calls)
+    assert client.post(url, json=body, headers=ADJUSTER).json() == saved
+    assert len(state.provider.calls) == calls
+    refreshed = client.post(url, json={"decision": "reassess"}, headers=ADJUSTER)
+    assert refreshed.status_code == 200 and refreshed.json()["card"]["assessment_stale"] is False
+    assert refreshed.json()["card"]["facts"]["witnesses"] is True
+    assert (
+        client.post(url, json={"decision": "accept"}, headers=ADJUSTER).json()["status"]
+        == "reviewed"
+    )
+
+
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
+def test_correction_retry_recovers_a_failed_database_write_without_rerunning_models(
+    client, monkeypatch
+):
+    from sqlalchemy.orm import Session
+
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim_id = conv["id"], conv["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    client.post(f"/api/claims/{claim_id}/submit")
+    url = f"/api/claims/{claim_id}/review"
+    body = {"decision": "edit", "facts_patch": {"witnesses": True}}
+
+    def fail_commit(_session):
+        raise RuntimeError("simulated correction commit failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Session, "commit", fail_commit)
+        with pytest.raises(RuntimeError, match="simulated correction commit failure"):
+            client.post(url, json=body, headers=ADJUSTER)
+    assert client.get(f"/api/claims/{claim_id}").json()["card"]["facts"]["witnesses"] is False
+    calls = len(client.app.state.claimpilot.provider.calls)
+    saved = client.post(url, json=body, headers=ADJUSTER)
+    assert saved.status_code == 200 and saved.json()["card"]["assessment_stale"] is False
+    assert saved.json()["card"]["facts"]["witnesses"] is True
+    assert saved.json()["card"]["corrections"][0]["field"] == "witnesses"
+    assert saved.json()["status"] == "awaiting_review"
+    assert len(client.app.state.claimpilot.provider.calls) == calls
 
 
 def test_reviewer_queue_is_protected_and_lists_pending_claims(client, tmp_path):

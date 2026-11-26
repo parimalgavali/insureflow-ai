@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseSse } from "../src/api/client";
-import { beginTurn, initialState, reduce } from "../src/store";
+import { applyReview, beginTurn, initialState, reduce } from "../src/store";
 
 const card = {
   facts: { event_type: "hit_and_run", incident_date: "2026-10-25", photos_attached: false } as any,
@@ -24,6 +24,14 @@ describe("parseSse", () => {
 });
 
 describe("reduce", () => {
+  it("updates the displayed risk and citations after a reviewer refresh", () => {
+    const s = initialState();
+    const refreshed = { ...card, risk: { ...card.risk, band: "low", reasons: ["New evidence"] }, citations: [] };
+    applyReview(s, "awaiting_review", refreshed as any);
+    expect(s.risk?.band).toBe("low");
+    expect(s.risk?.reasons).toEqual(["New evidence"]);
+    expect(s.citations).toEqual([]);
+  });
   it("clears old guidance when replying to a reviewer request", () => {
     const s = initialState();
     s.status = "information_needed";
