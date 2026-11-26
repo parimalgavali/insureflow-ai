@@ -32,6 +32,13 @@ describe("reduce", () => {
     expect(s.risk?.reasons).toEqual(["New evidence"]);
     expect(s.citations).toEqual([]);
   });
+
+  it("keeps server history when applying a claim action", () => {
+    const s = initialState();
+    const history = [{ id: 1, kind: "submitted" as const, actor: "customer", decision: null, note: null, changes: [], created_at: "2026-11-27T10:00:00Z" }];
+    applyReview(s, "awaiting_review", card as any, history);
+    expect(s.history).toEqual(history);
+  });
   it("clears old guidance when replying to a reviewer request", () => {
     const s = initialState();
     s.status = "information_needed";

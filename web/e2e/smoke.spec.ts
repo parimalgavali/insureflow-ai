@@ -90,6 +90,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(reviewCard.getByTestId("status")).toHaveText(/awaiting adjuster/i);
   await expect(page.getByTestId("fact-witnesses")).toHaveText("yes");
   await expect(page.getByTestId("assessment-stale")).toHaveCount(0);
+  await page.getByLabel("Review note (optional)").fill("Checked the updated claim details.");
   await page.getByLabel("Claim card").getByTestId("review").click();
   await expect(reviewCard.getByTestId("status")).toHaveText(/reviewed/i);
   await expect(row).toHaveCount(0);
@@ -98,4 +99,11 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByLabel("Claim card")).toHaveCount(0);
   await page.getByTestId("reviewer-link").click();
   await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
+  await expect(page.getByTestId("history-event")).toHaveCount(6);
+  await page.getByTestId("saved-history-link").click();
+  await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
+  await expect(page.getByTestId("claim-history")).toContainText("Reviewer (shared demo access)");
+  await page.reload();
+  await expect(page.getByTestId("history-event")).toHaveCount(6);
+  await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
 });

@@ -6,15 +6,18 @@ import ChatColumn from "./components/ChatColumn.vue";
 import ClaimCard from "./components/ClaimCard.vue";
 import EvalPage from "./components/EvalPage.vue";
 import ReviewerQueue from "./components/ReviewerQueue.vue";
+import HistoryPage from "./components/HistoryPage.vue";
 import { applyReview, beginTurn, finishTurn, loadConversation, reduce, store } from "./store";
 
 const showEval = ref(location.hash === "#eval");
 const showReviewer = ref(location.hash === "#review");
+const historyId = ref(location.hash.startsWith("#history/") ? location.hash.slice(9) : null);
 const retrySubmission = ref(false);
 function navigate() {
   showEval.value = location.hash === "#eval";
   showReviewer.value = location.hash === "#review";
-  if (!showEval.value && !showReviewer.value && !store.conversationId) start(locale.value);
+  historyId.value = location.hash.startsWith("#history/") ? location.hash.slice(9) : null;
+  if (!showEval.value && !showReviewer.value && !historyId.value && !store.conversationId) start(locale.value);
 }
 window.addEventListener("hashchange", navigate);
 onUnmounted(() => window.removeEventListener("hashchange", navigate));
@@ -46,7 +49,7 @@ async function submit() {
   store.error = null;
   try {
     const result = await submitClaim(store.claimId);
-    applyReview(store, result.status, result.card);
+    applyReview(store, result.status, result.card, result.history);
     retrySubmission.value = false;
   } catch (e) {
     store.error = (e as Error).message;
@@ -57,7 +60,7 @@ async function submit() {
 }
 
 function onReviewed(claim: ReviewerClaim) {
-  if (claim.id === store.claimId && claim.card) applyReview(store, claim.status, claim.card);
+  if (claim.id === store.claimId && claim.card) applyReview(store, claim.status, claim.card, claim.history);
 }
 
 function retry() {
@@ -71,14 +74,14 @@ function retry() {
 
 async function switchLanguage(lang: Language) {
   setLocale(lang);
-  if (showReviewer.value || showEval.value) return;
+  if (showReviewer.value || showEval.value || historyId.value) return;
   const hasUserMessages = store.messages.some((m) => m.role === "user");
   if (!hasUserMessages) return start(lang); // fresh greeting in the new language
   store.language = lang; // agent follows the toggle from the next message on
 }
 
 onMounted(() => {
-  if (!showReviewer.value && !showEval.value) start(locale.value);
+  if (!showReviewer.value && !showEval.value && !historyId.value) start(locale.value);
 });
 </script>
 
@@ -103,9 +106,10 @@ onMounted(() => {
     </header>
     <ReviewerQueue v-if="showReviewer" @reviewed="onReviewed" />
     <EvalPage v-else-if="showEval" />
+    <HistoryPage v-else-if="historyId" :claim-id="historyId" />
     <template v-else>
     <ChatColumn :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" @send="send" @retry="retry" />
-    <ClaimCard :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :card="store.card" :status="store.status" :busy="store.busy" @submit="submit" />
+    <ClaimCard :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :card="store.card" :status="store.status" :busy="store.busy" :claim-id="store.claimId" :history="store.history" @submit="submit" />
     </template>
   </div>
 </template>

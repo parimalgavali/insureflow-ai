@@ -135,6 +135,11 @@ Reviewer fact edits use **Save corrections and refresh** before a separate final
 If coverage or risk cannot be refreshed, corrections stay saved, guidance is labeled
 **Out of date**, and completion is blocked until **Retry assessment** succeeds.
 
+The claim card also shows a saved history of submissions, reviewer requests, corrections and
+completed reviews. **Open saved history** provides a link that survives a reload. Entries show
+server-recorded times and the available demo access role; they do not identify a named reviewer
+when a shared credential was used. Earlier activity may not be available.
+
 ### Measured numbers
 
 RAG over AKB 2015 — 28 hand-written DE/EN questions, hit if the expected clause is in the top 3

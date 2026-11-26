@@ -88,6 +88,23 @@ export interface Conversation {
   messages: Message[];
   claim_id: string | null;
   card: ClaimCard | null;
+  history?: HistoryEntry[];
+}
+
+export interface HistoryEntry {
+  id: number;
+  kind: "submitted" | "information_requested" | "corrected" | "assessment_refreshed" | "assessment_refresh_failed" | "review_completed";
+  actor: string;
+  decision: string | null;
+  note: string | null;
+  changes: { field: string; before: string | number | boolean | null; after: string | number | boolean | null }[];
+  created_at: string;
+}
+
+export interface ClaimActionResult {
+  status: ClaimStatus;
+  card: ClaimCard;
+  history?: HistoryEntry[];
 }
 
 export type AgentEvent =
@@ -109,6 +126,7 @@ export interface ReviewerClaim {
   status: ClaimStatus;
   card: ClaimCard | null;
   submitted_at: string | null;
+  history?: HistoryEntry[];
 }
 
 export interface QueueItem {
@@ -163,8 +181,15 @@ export async function getConversation(id: string): Promise<Conversation> {
   return (await expectOk(await fetch(`${BASE}/api/conversations/${id}`, { headers: headers(false) }))).json();
 }
 
+export async function fetchClaimHistory(claimId: string, token?: string): Promise<HistoryEntry[]> {
+  const res = await fetch(`${BASE}/api/claims/${encodeURIComponent(claimId)}/history`, {
+    headers: token ? { authorization: `Bearer ${token}` } : headers(false),
+  });
+  return (await expectOk(res)).json();
+}
+
 /** Submit using customer access; this never records an adjuster decision. */
-export async function submitClaim(claimId: string): Promise<{ status: ClaimStatus; card: ClaimCard }> {
+export async function submitClaim(claimId: string): Promise<ClaimActionResult> {
   const res = await fetch(`${BASE}/api/claims/${claimId}/submit`, { method: "POST", headers: headers() });
   return (await expectOk(res)).json();
 }
@@ -174,7 +199,7 @@ export async function reviewClaim(
   claimId: string,
   decision: ReviewDecision,
   askToken: () => string | null = () => null,
-): Promise<{ status: ClaimStatus; card: ClaimCard }> {
+): Promise<ClaimActionResult> {
   const token = askToken();
   const h: Record<string, string> = { "content-type": "application/json" };
   if (token) h.authorization = `Bearer ${token}`;

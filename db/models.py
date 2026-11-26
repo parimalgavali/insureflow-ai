@@ -34,7 +34,7 @@ class PolicyChunk(Base):
 import uuid  # noqa: E402
 from datetime import UTC, datetime  # noqa: E402
 
-from sqlalchemy import DateTime, ForeignKey  # noqa: E402
+from sqlalchemy import DateTime, ForeignKey, UniqueConstraint  # noqa: E402
 from sqlalchemy.dialects.postgresql import JSONB, UUID  # noqa: E402
 from sqlalchemy.orm import relationship  # noqa: E402
 
@@ -99,6 +99,32 @@ class Claim(Base):
     )
 
     conversation: Mapped[Conversation] = relationship(back_populates="claim")
+    events: Mapped[list[ClaimEvent]] = relationship(
+        back_populates="claim", order_by="ClaimEvent.id", cascade="all, delete-orphan"
+    )
+
+
+class ClaimEvent(Base):
+    __tablename__ = "claim_events"
+    __table_args__ = (
+        UniqueConstraint("claim_id", "operation_id", "kind", name="uq_claim_event_operation"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    claim_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("claims.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    operation_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor: Mapped[str] = mapped_column(String(32), nullable=False)
+    decision: Mapped[str | None] = mapped_column(String(32))
+    note: Mapped[str | None] = mapped_column(Text)
+    changes: Mapped[list[dict]] = mapped_column(JSONB, default=list, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
+    )
+
+    claim: Mapped[Claim] = relationship(back_populates="events")
 
 
 class Attachment(Base):

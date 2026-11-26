@@ -1,6 +1,6 @@
 /** One reactive store; every SSE event is reduced here so components stay dumb. */
 import { reactive } from "vue";
-import type { AgentEvent, Citation, ClaimCard, ClaimFacts, ClaimStatus, Conversation, Language, RiskSignal } from "./api/client";
+import type { AgentEvent, Citation, ClaimCard, ClaimFacts, ClaimStatus, Conversation, Language, RiskSignal, HistoryEntry } from "./api/client";
 
 export interface ChatItem {
   id: string;
@@ -23,6 +23,7 @@ export interface State {
   busy: boolean;
   error: string | null;
   lastUserText: string | null;
+  history: HistoryEntry[];
 }
 
 export function initialState(): State {
@@ -40,6 +41,7 @@ export function initialState(): State {
     busy: false,
     error: null,
     lastUserText: null,
+    history: [],
   };
 }
 
@@ -56,6 +58,7 @@ export function loadConversation(state: State, conv: Conversation): void {
   state.facts = conv.card?.facts ?? null;
   state.citations = conv.card?.citations ?? [];
   state.risk = conv.card?.risk ?? null;
+  state.history = conv.history ?? [];
 }
 
 export function beginTurn(state: State, text: string): void {
@@ -129,12 +132,13 @@ export function finishTurn(state: State): void {
   state.busy = false;
 }
 
-export function applyReview(state: State, status: ClaimStatus, card: ClaimCard): void {
+export function applyReview(state: State, status: ClaimStatus, card: ClaimCard, history?: HistoryEntry[]): void {
   state.status = status;
   state.card = card;
   state.facts = card.facts;
   state.citations = card.citations;
   state.risk = card.risk;
+  if (history) state.history = history;
 }
 
 export const store = reactive(initialState());

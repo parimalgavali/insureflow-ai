@@ -13,6 +13,7 @@ import json
 import logging
 import operator
 import re
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
@@ -128,6 +129,9 @@ class AgentState(TypedDict, total=False):
     status: ClaimStatus
     review: ReviewDecision | None
     reassessment_needed: bool
+    submission_id: str
+    review_action_id: str
+    review_changes: list[FactChange]
 
 
 def _conversation(state: AgentState) -> list[ChatMessage]:
@@ -305,7 +309,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         if confirmed is not True:
             raise ValueError("submission requires customer confirmation")
         card = state["card"].model_copy(update={"status": "awaiting_review"})
-        return {"card": card, "status": "awaiting_review"}
+        return {"card": card, "status": "awaiting_review", "submission_id": uuid.uuid4().hex}
 
     def human_review(state: AgentState) -> dict:
         card: ClaimCard = state["card"]
@@ -315,6 +319,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         facts = state["facts"]
         if decision.decision == "accept" and card.assessment_stale:
             raise ValueError("refresh the out-of-date assessment before completing the review")
+        action_id = uuid.uuid4().hex
         if decision.decision in ("edit", "reassess"):
             updated = ClaimFacts(**{**facts.model_dump(), **decision.facts_patch})
             changes = [
@@ -337,6 +342,8 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                 "status": "awaiting_review",
                 "review": decision,
                 "reassessment_needed": True,
+                "review_action_id": action_id,
+                "review_changes": changes,
             }
         if decision.decision == "request_info":
             request = ReviewRequest(**decision.model_dump(exclude={"reviewer"}))
@@ -349,11 +356,22 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                 "review": decision,
                 "status": "information_needed",
                 "messages": [ChatMessage(role="assistant", content=f"{label}: {request.note}")],
+                "review_action_id": action_id,
+                "reassessment_needed": False,
+                "review_changes": [],
             }
         reviewed = card.model_copy(
             update={"facts": facts, "status": "reviewed", "review": decision}
         )
-        return {"facts": facts, "card": reviewed, "review": decision, "status": "reviewed"}
+        return {
+            "facts": facts,
+            "card": reviewed,
+            "review": decision,
+            "status": "reviewed",
+            "review_action_id": action_id,
+            "reassessment_needed": False,
+            "review_changes": [],
+        }
 
     def reassess(state: AgentState) -> dict:
         """Refresh authoritative corrected facts without extracting them again from old chat."""

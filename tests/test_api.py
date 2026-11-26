@@ -309,6 +309,7 @@ def test_information_request_recovers_after_claim_commit_failure(client, monkeyp
     )
     recovered = client.post(url, json=body, headers=ADJUSTER)
     assert recovered.status_code == 200 and recovered.json()["status"] == "information_needed"
+    assert [e["kind"] for e in recovered.json()["history"]].count("information_requested") == 1
     saved = client.get(f"/api/conversations/{cid}").json()
     assert sum(body["note"] in m["content"] for m in saved["messages"]) == 1
 
@@ -357,6 +358,12 @@ def test_saved_corrections_stay_pending_and_failed_rechecks_block_completion(cli
     assert len(state.provider.calls) == calls
     refreshed = client.post(url, json={"decision": "reassess"}, headers=ADJUSTER)
     assert refreshed.status_code == 200 and refreshed.json()["card"]["assessment_stale"] is False
+    assert [e["kind"] for e in refreshed.json()["history"]] == [
+        "submitted",
+        "corrected",
+        "assessment_refresh_failed",
+        "assessment_refreshed",
+    ]
     assert refreshed.json()["card"]["facts"]["witnesses"] is True
     assert (
         client.post(url, json={"decision": "accept"}, headers=ADJUSTER).json()["status"]
@@ -393,6 +400,114 @@ def test_correction_retry_recovers_a_failed_database_write_without_rerunning_mod
     assert saved.json()["card"]["corrections"][0]["field"] == "witnesses"
     assert saved.json()["status"] == "awaiting_review"
     assert len(client.app.state.claimpilot.provider.calls) == calls
+    assert [e["kind"] for e in saved.json()["history"]] == [
+        "submitted",
+        "corrected",
+        "assessment_refreshed",
+    ]
+
+
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
+def test_claim_history_persists_ordered_actions_notes_and_changes(client):
+    conv = client.post("/api/conversations", json={"language": "en"}).json()
+    cid, claim_id = conv["id"], conv["claim_id"]
+    history_url = f"/api/claims/{claim_id}/history"
+    assert client.get(history_url).json() == []
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    submitted = client.post(f"/api/claims/{claim_id}/submit").json()
+    assert len(submitted["history"]) == 1
+    assert submitted["history"][0]["created_at"] == submitted["submitted_at"]
+    assert client.post(f"/api/claims/{claim_id}/submit").json()["history"] == submitted["history"]
+    review_url = f"/api/claims/{claim_id}/review"
+    assert (
+        client.post(
+            review_url, json={"decision": "accept", "actor": "Alice"}, headers=ADJUSTER
+        ).status_code
+        == 422
+    )
+    client.post(
+        review_url,
+        json={"decision": "request_info", "note": "Please provide the repair estimate."},
+        headers=ADJUSTER,
+    )
+    client.post(
+        f"/api/conversations/{cid}/messages",
+        data={"text": "The police are informed. The estimate is 1200 Euro."},
+    )
+    client.post(f"/api/claims/{claim_id}/submit")
+    correction = {
+        "decision": "edit",
+        "facts_patch": {"witnesses": True},
+        "note": "Witness details confirmed.",
+    }
+    corrected = client.post(review_url, json=correction, headers=ADJUSTER).json()
+    assert (
+        client.post(review_url, json=correction, headers=ADJUSTER).json()["history"]
+        == corrected["history"]
+    )
+    completed = client.post(
+        review_url,
+        json={"decision": "accept", "note": "Checked the updated claim."},
+        headers=ADJUSTER,
+    ).json()
+    events = completed["history"]
+    assert [e["kind"] for e in events] == [
+        "submitted",
+        "information_requested",
+        "submitted",
+        "corrected",
+        "assessment_refreshed",
+        "review_completed",
+    ]
+    assert [e["id"] for e in events] == sorted(e["id"] for e in events)
+    dates = [datetime.fromisoformat(e["created_at"]) for e in events]
+    assert all(d.tzinfo for d in dates) and dates == sorted(dates)
+    assert events[1]["note"] == "Please provide the repair estimate."
+    assert events[3]["changes"] == [{"field": "witnesses", "before": False, "after": True}]
+    assert events[3]["note"] == "Witness details confirmed."
+    assert events[-1]["actor"] == "adjuster" and events[-1]["decision"] == "accept"
+    assert events[-1]["note"] == "Checked the updated claim."
+    assert "operation_id" not in events[-1] and ADJUSTER_TOKEN not in json.dumps(events)
+    assert client.get(history_url).json() == events
+    assert client.get(f"/api/conversations/{cid}").json()["history"] == events
+    other = client.post("/api/conversations", json={}).json()
+    assert client.get(f"/api/claims/{other['claim_id']}/history").json() == []
+    assert client.post(history_url, json={"note": "Forged action"}).status_code == 405
+    assert client.get("/api/claims/00000000-0000-0000-0000-000000000000/history").status_code == 404
+
+
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
+def test_history_does_not_repeat_an_old_correction_when_the_value_is_unchanged(client):
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim_id = conv["id"], conv["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    client.post(f"/api/claims/{claim_id}/submit")
+    url = f"/api/claims/{claim_id}/review"
+    first = client.post(
+        url,
+        json={"decision": "edit", "facts_patch": {"witnesses": True}, "note": "Witness confirmed"},
+        headers=ADJUSTER,
+    ).json()
+    second = client.post(
+        url,
+        json={
+            "decision": "edit",
+            "facts_patch": {"witnesses": True},
+            "note": "Rechecked without changing facts",
+        },
+        headers=ADJUSTER,
+    ).json()
+    assert second["card"]["assessment_stale"] is False
+    assert [e["kind"] for e in second["history"]] == [
+        "submitted",
+        "corrected",
+        "assessment_refreshed",
+        "assessment_refreshed",
+    ]
+    assert second["history"][1] == first["history"][1]
+    assert second["history"][-1]["note"] == "Rechecked without changing facts"
 
 
 def test_reviewer_queue_is_protected_and_lists_pending_claims(client, tmp_path):
@@ -472,6 +587,7 @@ def test_bearer_token_required_when_configured(tmp_path: Path):
     with TestClient(create_app(lambda: make_state(tmp_path, token="s3cret"))) as c:
         assert c.get("/api/health").status_code == 200  # health stays open
         assert c.post("/api/conversations", json={}).status_code == 401
+        assert c.get("/api/claims/00000000-0000-0000-0000-000000000000/history").status_code == 401
         assert c.post("/api/claims/00000000-0000-0000-0000-000000000000/submit").status_code == 401
         assert (
             c.post(
