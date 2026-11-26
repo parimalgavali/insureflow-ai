@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { locale, setLocale, t } from "./i18n";
-import { createConversation, reviewClaim, sendMessage, type Language } from "./api/client";
+import { createConversation, reviewClaim, sendMessage, submitClaim, type Language } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
 import ClaimCard from "./components/ClaimCard.vue";
 import EvalPage from "./components/EvalPage.vue";
 import { applyReview, beginTurn, finishTurn, loadConversation, reduce, store } from "./store";
 
 const showEval = ref(location.hash === "#eval");
+const retrySubmission = ref(false);
 window.addEventListener("hashchange", () => (showEval.value = location.hash === "#eval"));
 
-const canSend = computed(() => store.conversationId !== null && store.status !== "reviewed");
+const canSend = computed(() => store.conversationId !== null && store.status === "collecting");
 
 async function start(language: Language) {
   try {
@@ -45,8 +46,25 @@ async function review(patch: Record<string, unknown>) {
   }
 }
 
+async function submit() {
+  if (!store.claimId || store.busy) return;
+  store.busy = true;
+  store.error = null;
+  try {
+    const result = await submitClaim(store.claimId);
+    applyReview(store, result.status, result.card);
+    retrySubmission.value = false;
+  } catch (e) {
+    store.error = (e as Error).message;
+    retrySubmission.value = true;
+  } finally {
+    store.busy = false;
+  }
+}
+
 function retry() {
   store.error = null;
+  if (retrySubmission.value) return submit();
   if (!store.conversationId) return start(store.language);
   const last = store.lastUserText;
   store.messages = store.messages.filter((m) => !(m.role === "user" && m.content === last && m === store.messages.at(-1)));
@@ -82,7 +100,7 @@ onMounted(() => start(locale.value));
     <EvalPage v-if="showEval" />
     <template v-else>
     <ChatColumn :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" @send="send" @retry="retry" />
-    <ClaimCard :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :card="store.card" :status="store.status" :busy="store.busy" @review="review" />
+    <ClaimCard :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :card="store.card" :status="store.status" :busy="store.busy" @submit="submit" @review="review" />
     </template>
   </div>
 </template>

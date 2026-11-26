@@ -10,7 +10,7 @@
   "chat.attached": "Attached: {name}",
   "chat.remove": "remove",
   "chat.placeholder": "Describe what happened to your car…",
-  "chat.placeholderReviewed": "This claim has been reviewed.",
+  "chat.placeholderReviewed": "Chat is paused. See the claim status and available actions.",
   "chat.yourMessage": "Your message",
   "chat.attachTitle": "Attach a photo or PDF",
   "chat.attachFile": "Attach file",
@@ -66,12 +66,15 @@
   "status.unclear": "Unclear",
   "status.no_evidence": "No clause found",
   "status.collecting": "Collecting facts",
-  "status.assessed": "Assessed",
+  "status.assessed": "Ready to submit",
   "status.awaiting_review": "Awaiting adjuster",
   "status.reviewed": "Reviewed",
   "band.low": "low",
   "band.medium": "medium",
   "band.high": "high",
   "app.evalLink": "retrieval eval",
-  "app.backToClaim": "back to claim"
+  "app.backToClaim": "back to claim",
+  "card.readyToSubmit": "Your claim summary is ready. Send it to an adjuster when you are ready.",
+  "card.submitted": "Your claim has been sent and is waiting for an adjuster to review it.",
+  "card.recordReview": "Record adjuster review"
 }

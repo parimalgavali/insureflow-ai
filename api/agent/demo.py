@@ -14,7 +14,14 @@ from pathlib import Path
 
 from langgraph.checkpoint.memory import MemorySaver
 
-from api.agent.graph import AgentDeps, build_graph, pending_interrupt, resume_review, run_turn
+from api.agent.graph import (
+    AgentDeps,
+    build_graph,
+    pending_interrupt,
+    resume_review,
+    run_turn,
+    submit_for_review,
+)
 from api.agent.schemas import PolicyContext, ReviewDecision
 from api.llm.provider import RecordedProvider, make_provider
 
@@ -76,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     card = result.get("card")
     if card:
         print("\nCLAIM CARD:", card.model_dump_json(indent=2, exclude={"coverage_summary"}))
+        submit_for_review(graph, thread)
         result = resume_review(graph, thread, ReviewDecision(decision="accept", note="looks fine"))
         print(f"\nREVIEW → status={result['status']}")
     return 0

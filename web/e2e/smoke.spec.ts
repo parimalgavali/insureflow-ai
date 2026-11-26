@@ -30,13 +30,20 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
 
   const card = page.getByLabel("Claim card");
   await expect(card.getByTestId("coverage")).toBeVisible({ timeout: 60_000 });
-  await expect(card.getByTestId("status")).toHaveText(/awaiting adjuster/i);
+  await expect(card.getByTestId("status")).toHaveText(/ready to submit/i);
   for (const clause of ["A.2.2.2.2", "E.1.1.3", "E.1.1.1", "A.2.5.8"]) {
     await expect(card.getByRole("button", { name: `Show clause ${clause}` }).first()).toBeVisible();
   }
   await card.getByRole("button", { name: "Show clause E.1.1.3" }).first().click();
   await expect(card.getByTestId("popover")).toContainText(/Aufklärungspflicht/);
   await expect(card.getByTestId("risk")).toHaveText(/low|medium|high/);
+
+  // Customer submission never prompts for adjuster credentials or completes a review.
+  await expect(card.getByTestId("review")).toHaveCount(0);
+  await card.getByTestId("submit").click();
+  await expect(card.getByTestId("status")).toHaveText(/awaiting adjuster/i);
+  await expect(card.getByTestId("submit")).toHaveCount(0);
+  await expect(composer).toBeDisabled();
 
   // the policyholder session has no adjuster token: the review is refused and the prompt is dismissed
   page.once("dialog", (d) => d.dismiss());

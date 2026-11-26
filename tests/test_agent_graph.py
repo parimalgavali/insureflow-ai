@@ -12,6 +12,7 @@ from api.agent.graph import (
     pending_interrupt,
     resume_review,
     run_turn,
+    submit_for_review,
     thread_config,
 )
 from api.agent.language import detect_language
@@ -76,7 +77,7 @@ def test_scripted_hit_and_run_conversation(graph_and_provider):
     )
     assert second["followups_asked"] == 1  # follow-up asked exactly once
     assert facts.photos_attached is True  # one attachment came with this turn
-    assert second["status"] == "awaiting_review"
+    assert second["status"] == "assessed"
 
     card = second["card"]
     cited = {c.clause_id for c in card.citations}
@@ -88,7 +89,16 @@ def test_scripted_hit_and_run_conversation(graph_and_provider):
     assert card.missing_documents and card.next_steps
 
     interrupt = pending_interrupt(second)
-    assert interrupt is not None and interrupt["card"]["status"] == "awaiting_review"
+    assert interrupt is not None and interrupt["card"]["status"] == "assessed"
+    assert graph.get_state(thread_config(thread)).next == ("submit",)
+    with pytest.raises(ValueError, match="submitted"):
+        resume_review(graph, thread, ReviewDecision(decision="accept"))
+    submitted = submit_for_review(graph, thread)
+    assert submitted["status"] == "awaiting_review"
+    assert submitted["card"].review is None
+    checkpoint = graph.get_state(thread_config(thread)).config
+    assert submit_for_review(graph, thread)["status"] == "awaiting_review"
+    assert graph.get_state(thread_config(thread)).config == checkpoint
     assert graph.get_state(thread_config(thread)).next == ("human_review",)
 
     final = resume_review(
@@ -156,7 +166,7 @@ def test_followup_budget_moves_on_after_three_rounds(tmp_path: Path):
         result = run_turn(graph, "t4", f"keine Ahnung {i}")
         assert result["status"] == "collecting" and result["followups_asked"] == i + 1
     result = run_turn(graph, "t4", "immer noch keine Ahnung")
-    assert result["status"] == "awaiting_review" and result["card"].coverage_status == "no_evidence"
+    assert result["status"] == "assessed" and result["card"].coverage_status == "no_evidence"
 
 
 def test_enforce_citations_strips_unknown_ids():

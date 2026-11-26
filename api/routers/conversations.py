@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import selectinload
 
 from api import sse
-from api.agent.graph import pending_interrupt, thread_config
+from api.agent.graph import thread_config
 from api.agent.schemas import ChatMessage, ClaimCard, Language, PolicyContext
 from api.security import get_state, require_token
 from db.models import Attachment, Claim, Conversation, Message
@@ -109,8 +109,8 @@ def post_message(
 ) -> StreamingResponse:
     with state.session() as session:
         conv = _load(session, conversation_id)
-        if conv.status == "reviewed":
-            raise HTTPException(409, "conversation already reviewed")
+        if conv.status != "collecting":
+            raise HTTPException(409, "claim assessment is complete; use the claim actions")
         if language and language != conv.language:
             conv.language = language  # UI toggle: the agent answers in the new language from now on
         attachment = _store_upload(state, conv.id, file) if file is not None else None
@@ -176,13 +176,6 @@ def _stream_turn(
             for node, data in update.items():
                 yield from _events_for(node, data, assistant_texts)
         final = state.graph.get_state(thread_config(thread)).values
-        interrupted = (
-            pending_interrupt(
-                {"__interrupt__": state.graph.get_state(thread_config(thread)).tasks[0].interrupts}
-            )
-            if state.graph.get_state(thread_config(thread)).tasks
-            else None
-        )
         with state.session() as session:
             conv = _load(session, conversation_id)
             for text in assistant_texts:
@@ -206,7 +199,7 @@ def _stream_turn(
             {
                 "status": final.get("status"),
                 "claim_id": claim_id,
-                "awaiting_review": interrupted is not None,
+                "awaiting_review": final.get("status") == "awaiting_review",
             },
         )
     except Exception as exc:  # noqa: BLE001
