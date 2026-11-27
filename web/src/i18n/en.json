@@ -128,5 +128,22 @@
   "history.decision.request_info": "Request information",
   "history.decision.reassess": "Retry assessment",
   "history.accessToken": "Access token (if required)",
-  "history.tokenMemory": "Use your demo or reviewer token. It stays only in memory until you leave this page."
+  "history.tokenMemory": "Use your demo or reviewer token. It stays only in memory until you leave this page.",
+  "customer.invalidCorrection": "The changes were not saved. Use a valid date (YYYY-MM-DD), time (HH:MM) and a nonnegative amount.",
+  "customer.invalidDate": "Enter a real date in YYYY-MM-DD format.",
+  "customer.invalidTime": "Enter a valid time in HH:MM format.",
+  "customer.invalidAmount": "Enter an amount of zero or more.",
+  "customer.needsRefresh": "Assessment needs refresh",
+  "customer.stillMissing": "Still needed",
+  "customer.notKnown": "Not known",
+  "customer.event.unknown": "Not known",
+  "customer.event.collision": "Car accident",
+  "customer.event.hit_and_run": "Hit-and-run",
+  "customer.event.theft": "Theft",
+  "customer.event.vandalism": "Vandalism",
+  "customer.event.glass": "Broken glass",
+  "customer.event.wild_animal": "Collision with a wild animal",
+  "customer.event.storm_hail": "Storm or hail",
+  "customer.event.fire": "Fire",
+  "customer.event.other": "Other"
 }

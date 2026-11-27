@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from api import sse
 from api.agent.graph import thread_config
+from api.agent.required_facts import missing_facts
 from api.agent.schemas import ChatMessage, ClaimCard, Language, PolicyContext
 from api.history import HistoryEntry, history_out
 from api.security import get_state, require_token
@@ -55,6 +56,7 @@ class ConversationOut(BaseModel):
     claim_id: uuid.UUID | None = None
     card: ClaimCard | None = None
     history: list[HistoryEntry]
+    missing: list[str]
 
 
 def _conversation_out(conv: Conversation) -> ConversationOut:
@@ -71,6 +73,7 @@ def _conversation_out(conv: Conversation) -> ConversationOut:
         claim_id=conv.claim.id if conv.claim else None,
         card=card,
         history=history_out(conv.claim) if conv.claim else [],
+        missing=missing_facts(card.facts) if card else [],
     )
 
 

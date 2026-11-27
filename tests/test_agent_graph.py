@@ -10,6 +10,7 @@ from api.agent.graph import (
     AgentDeps,
     _enforce_citations,
     build_graph,
+    correct_customer_facts,
     pending_interrupt,
     resume_review,
     run_turn,
@@ -392,6 +393,88 @@ def test_invalid_corrections_and_combined_completion_are_rejected():
     ):
         with pytest.raises(ValidationError):
             ReviewRequest(**body)
+
+
+def test_customer_can_complete_missing_facts_without_reextracting_old_chat():
+    provider = RecordedProvider(FIXTURE.with_name("hit_and_run_followup.json"))
+    graph = build_graph(
+        AgentDeps(provider=provider, retriever=make_retriever(), risk_scorer=FakeScorer()),
+        checkpointer=MemorySaver(),
+    )
+    run_turn(graph, "customer", "Mein geparktes Auto wurde angefahren.")
+    corrected = correct_customer_facts(
+        graph, "customer", {"incident_date": "2026-10-25", "location": "Berlin"}
+    )
+    assert corrected["status"] == "assessed" and corrected["missing"] == []
+    assert corrected["facts"].location == "Berlin" and corrected["card"].assessment_stale is False
+    assert [c["tag"] for c in provider.calls].count("extract") == 1
+    assert any("Bestätigte Korrekturen" in m.content for m in corrected["messages"])
+    assert graph.get_state(thread_config("customer")).next == ("submit",)
+    assert submit_for_review(graph, "customer")["status"] == "awaiting_review"
+    with pytest.raises(ValueError, match="before submission"):
+        correct_customer_facts(graph, "customer", {"location": "Hamburg"})
+
+
+def test_customer_missing_details_and_failed_refresh_block_submission(monkeypatch):
+    provider = RecordedProvider(FIXTURE.with_name("hit_and_run_followup.json"))
+    deps = AgentDeps(provider=provider, retriever=make_retriever(), risk_scorer=FakeScorer())
+    graph = build_graph(deps, checkpointer=MemorySaver())
+    run_turn(graph, "customer-failure", "Mein geparktes Auto wurde angefahren.")
+    run_turn(graph, "customer-failure", "Am 25.10.2026, keine Polizei.")
+    partial = correct_customer_facts(graph, "customer-failure", {"incident_date": None})
+    assert partial["status"] == "collecting" and partial["missing"] == ["incident_date"]
+    with pytest.raises(ValueError, match="not ready"):
+        submit_for_review(graph, "customer-failure")
+    correct_customer_facts(graph, "customer-failure", {"incident_date": "2026-10-25"})
+    with monkeypatch.context() as patch:
+        patch.setattr(deps, "retriever", None)
+        failed = correct_customer_facts(graph, "customer-failure", {"location": "Berlin"})
+    assert failed["status"] == "assessed" and failed["card"].assessment_stale is True
+    with pytest.raises(ValueError, match="refresh"):
+        submit_for_review(graph, "customer-failure")
+    retried = correct_customer_facts(graph, "customer-failure", {}, refresh=True)
+    assert retried["card"].assessment_stale is False
+    assert retried["facts"].location == "Berlin"
+    assert submit_for_review(graph, "customer-failure")["status"] == "awaiting_review"
+
+
+def test_customer_corrections_return_to_submission_but_reviewer_corrections_return_to_review():
+    provider = RecordedProvider(FIXTURE.with_name("hit_and_run_followup.json"))
+    deps = AgentDeps(provider=provider, retriever=make_retriever(), risk_scorer=FakeScorer())
+    graph = build_graph(deps, checkpointer=MemorySaver())
+    run_turn(graph, "boundaries", "Mein geparktes Auto wurde angefahren.")
+    run_turn(graph, "boundaries", "Am 25.10.2026, keine Polizei.")
+    corrected = correct_customer_facts(graph, "boundaries", {"estimated_amount_eur": 900})
+    assert corrected["status"] == "assessed"
+    submit_for_review(graph, "boundaries")
+    reviewed = resume_review(
+        graph, "boundaries", ReviewDecision(decision="edit", facts_patch={"witnesses": True})
+    )
+    assert reviewed["status"] == "awaiting_review"
+    assert graph.get_state(thread_config("boundaries")).next == ("human_review",)
+
+
+def test_customer_retry_resumes_an_assessment_interrupted_after_saving_corrections():
+    provider = RecordedProvider(FIXTURE.with_name("hit_and_run_followup.json"))
+    graph = build_graph(
+        AgentDeps(provider=provider, retriever=make_retriever(), risk_scorer=FakeScorer()),
+        checkpointer=MemorySaver(),
+    )
+    run_turn(graph, "interrupted-correction", "Mein geparktes Auto wurde angefahren.")
+    run_turn(graph, "interrupted-correction", "Am 25.10.2026, keine Polizei.")
+    config = thread_config("interrupted-correction")
+    patch = {"estimated_amount_eur": 900}
+    graph.invoke(
+        {"customer_patch": patch, "customer_action_id": "interrupted-action"},
+        config,
+        interrupt_before=["reassess"],
+    )
+    assert graph.get_state(config).next == ("reassess",)
+    recovered = correct_customer_facts(graph, "interrupted-correction", patch)
+    assert recovered["status"] == "assessed" and recovered["card"].assessment_stale is False
+    assert recovered["facts"].estimated_amount_eur == 900
+    assert recovered["customer_action_id"] == "interrupted-action"
+    assert graph.get_state(config).next == ("submit",)
 
 
 def test_enforce_citations_strips_unknown_ids():

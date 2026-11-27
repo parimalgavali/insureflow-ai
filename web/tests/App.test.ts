@@ -2,7 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App.vue";
 import HistoryPage from "../src/components/HistoryPage.vue";
-import { createConversation, reviewClaim, sendMessage, submitClaim } from "../src/api/client";
+import { createConversation, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation } from "../src/api/client";
 import { initialState, store } from "../src/store";
 
 vi.mock("../src/api/client", () => ({
@@ -12,6 +12,9 @@ vi.mock("../src/api/client", () => ({
   sendMessage: vi.fn(),
   fetchEval: vi.fn(),
   fetchClaimHistory: vi.fn(),
+  correctClaimFacts: vi.fn(),
+  refreshClaimAssessment: vi.fn(),
+  getConversation: vi.fn(),
 }));
 
 const card = {
@@ -20,7 +23,7 @@ const card = {
 
 function mountApp() {
   return mount(App, { global: { stubs: {
-    ClaimCard: { emits: ["submit", "review"], template: '<button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button>' },
+    ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
     ChatColumn: { emits: ["retry"], template: '<button data-testid="retry-action" @click="$emit(\'retry\')">Retry</button>' },
     EvalPage: true,
     ReviewerQueue: true,
@@ -39,6 +42,37 @@ beforeEach(() => {
 });
 
 describe("customer submission", () => {
+  it("saves customer corrections with ordinary access and reloads canonical messages", async () => {
+    const updated = { ...card, facts: { location: "Berlin" }, status: "assessed" };
+    vi.mocked(correctClaimFacts).mockResolvedValue({ status: "assessed", card: updated, missing: [], history: [] } as never);
+    vi.mocked(getConversation).mockResolvedValue({ id: "conversation-1", claim_id: "claim-1", language: "en", status: "assessed", card: updated, policy: {}, messages: [{ id: "edit", role: "user", content: "Confirmed corrections: Berlin" }], missing: [], history: [] } as never);
+    const w = mountApp();
+    await flushPromises();
+    await w.get('[data-testid="correct-facts"]').trigger("click");
+    await flushPromises();
+    expect(correctClaimFacts).toHaveBeenCalledWith("claim-1", { location: "Berlin" });
+    expect(reviewClaim).not.toHaveBeenCalled();
+    expect(store.facts?.location).toBe("Berlin");
+    expect(store.messages.at(-1)?.content).toContain("Confirmed corrections");
+    w.unmount();
+  });
+
+  it("retries a failed customer assessment action instead of sending the old chat text", async () => {
+    vi.mocked(refreshClaimAssessment).mockRejectedValueOnce(new Error("Connection lost"))
+      .mockResolvedValueOnce({ status: "assessed", card } as never);
+    vi.mocked(getConversation).mockResolvedValue({ id: "conversation-1", claim_id: "claim-1", language: "en", status: "assessed", card, policy: {}, messages: [] } as never);
+    const w = mountApp();
+    await flushPromises();
+    store.lastUserText = "Old chat message";
+    await w.get('[data-testid="refresh-facts"]').trigger("click");
+    await flushPromises();
+    await w.get('[data-testid="retry-action"]').trigger("click");
+    await flushPromises();
+    expect(refreshClaimAssessment).toHaveBeenCalledTimes(2);
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(store.error).toBeNull();
+    w.unmount();
+  });
   it("opens a saved history URL without creating a new conversation", async () => {
     window.history.replaceState(null, "", "/#history/claim-1");
     const w = mountApp();

@@ -55,7 +55,7 @@ def record_event(
     note: str | None = None,
     changes: list[dict] | None = None,
     created_at: datetime | None = None,
-) -> None:
+) -> bool:
     exists = session.scalar(
         select(ClaimEvent.id).where(
             ClaimEvent.claim_id == claim.id,
@@ -75,6 +75,8 @@ def record_event(
         if created_at is not None:
             event.created_at = created_at
         claim.events.append(event)
+        return True
+    return False
 
 
 def record_review_events(session, claim: Claim, decision, result, operation_id: str) -> None:

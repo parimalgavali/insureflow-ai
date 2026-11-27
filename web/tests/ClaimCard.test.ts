@@ -142,3 +142,36 @@ it("lets a reviewer attach an optional note to a completed review", async () => 
   expect(w.emitted("review")?.[0]).toEqual([{}, "Checked the updated details."]);
   expect(w.get('[data-testid="saved-history-link"]').attributes("href")).toBe("#history/claim-1");
 });
+
+it("lets customers correct collected facts with simple date and amount validation", async () => {
+  const w = mount(ClaimCard, { props: { facts, missing: ["incident_date"], citations: [], risk: null, card: null, status: "collecting", busy: false } });
+  expect(w.get('[data-testid="missing-summary"]').text()).toContain("Date");
+  await w.get('[data-testid="edit-customer-facts"]').trigger("click");
+  await w.get('input[aria-label="Date"]').setValue("2026-02-30");
+  expect(w.get('[role="alert"]').text()).toContain("real date");
+  expect((w.get('[data-testid="save-customer-facts"]').element as HTMLButtonElement).disabled).toBe(true);
+  await w.get('input[aria-label="Date"]').setValue("2026-10-25");
+  await w.get('input[aria-label="Estimated amount (EUR)"]').setValue("-1");
+  expect(w.get('[role="alert"]').text()).toContain("zero or more");
+  await w.get('input[aria-label="Estimated amount (EUR)"]').setValue("1200");
+  await w.get('[data-testid="save-customer-facts"]').trigger("click");
+  expect(w.emitted("customerCorrect")?.[0]).toEqual([{ incident_date: "2026-10-25", estimated_amount_eur: 1200 }]);
+  expect(w.emitted("review")).toBeUndefined();
+  await w.setProps({ facts: { ...card.facts, estimated_amount_eur: 1200 }, card: { ...card, status: "assessed" }, status: "assessed", missing: [] });
+  await w.get('[data-testid="edit-customer-facts"]').trigger("click");
+  await w.get('input[aria-label="Estimated amount (EUR)"]').setValue("2000");
+  expect((w.get('[data-testid="submit"]').element as HTMLButtonElement).disabled).toBe(true);
+  await w.get('[data-testid="edit-customer-facts"]').trigger("click");
+  expect(w.get('[data-testid="fact-estimated_amount_eur"]').text()).toBe("1200");
+});
+
+it("blocks customer submission on stale guidance and offers a refresh without reviewer access", async () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card: { ...card, status: "assessed", assessment_stale: true }, status: "assessed", busy: false } });
+  expect(w.get('[data-testid="status"]').text()).toBe("Assessment needs refresh");
+  expect((w.get('[data-testid="submit"]').element as HTMLButtonElement).disabled).toBe(true);
+  await w.get('[data-testid="customer-refresh"]').trigger("click");
+  expect(w.emitted("customerRefresh")).toHaveLength(1);
+  await w.setProps({ status: "awaiting_review" });
+  expect(w.find('[data-testid="edit-customer-facts"]').exists()).toBe(false);
+  expect(w.find('[data-testid="customer-refresh"]').exists()).toBe(false);
+});

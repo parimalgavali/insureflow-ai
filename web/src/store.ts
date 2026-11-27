@@ -59,10 +59,11 @@ export function loadConversation(state: State, conv: Conversation): void {
   state.citations = conv.card?.citations ?? [];
   state.risk = conv.card?.risk ?? null;
   state.history = conv.history ?? [];
+  state.missing = conv.missing ?? [];
 }
 
 export function beginTurn(state: State, text: string): void {
-  if (state.status === "information_needed") {
+  if (state.status === "information_needed" || state.card?.assessment_stale) {
     state.status = "collecting";
     state.card = null;
     state.citations = [];
@@ -132,13 +133,14 @@ export function finishTurn(state: State): void {
   state.busy = false;
 }
 
-export function applyReview(state: State, status: ClaimStatus, card: ClaimCard, history?: HistoryEntry[]): void {
+export function applyReview(state: State, status: ClaimStatus, card: ClaimCard, history?: HistoryEntry[], missing?: string[]): void {
   state.status = status;
   state.card = card;
   state.facts = card.facts;
   state.citations = card.citations;
   state.risk = card.risk;
   if (history) state.history = history;
+  if (missing) state.missing = missing;
 }
 
 export const store = reactive(initialState());

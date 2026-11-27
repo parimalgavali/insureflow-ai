@@ -69,7 +69,7 @@
       ]
     },
     {
-      "answer": "Die nachgereichten Angaben wurden ergänzt. Ein Sachbearbeiter prüft den aktualisierten Fall anhand der Unfallklausel [A.2.2.2.2].",
+      "answer": "Die aktualisierten Angaben wurden anhand der Unfallklausel geprüft [A.2.2.2.2]. Ein Sachbearbeiter prüft den Fall.",
       "coverage_status": "likely_covered",
       "cited_clause_ids": [
         "A.2.2.2.2"
@@ -82,7 +82,20 @@
       ]
     },
     {
-      "answer": "Die bestätigte Zeugenaussage wurde berücksichtigt. Die aktualisierte Einschätzung bezieht sich auf die Unfallklausel [A.2.2.2.2]. Ein Sachbearbeiter prüft den Fall.",
+      "answer": "Die aktualisierten Angaben wurden anhand der Unfallklausel geprüft [A.2.2.2.2]. Ein Sachbearbeiter prüft den Fall.",
+      "coverage_status": "likely_covered",
+      "cited_clause_ids": [
+        "A.2.2.2.2"
+      ],
+      "missing_documents": [
+        "Fotos der Stoßstange"
+      ],
+      "next_steps": [
+        "Aktualisierte Einschätzung prüfen und die Prüfung abschließen"
+      ]
+    },
+    {
+      "answer": "Die aktualisierten Angaben wurden anhand der Unfallklausel geprüft [A.2.2.2.2]. Ein Sachbearbeiter prüft den Fall.",
       "coverage_status": "likely_covered",
       "cited_clause_ids": [
         "A.2.2.2.2"
@@ -95,5 +108,5 @@
       ]
     }
   ],
-  "_fixture_note": "The original extraction and coverage replies are recorded. The follow-up extraction and two additional compositions are synthetic extensions for testing information requests and refreshed reviewer corrections."
+  "_fixture_note": "The original extraction and coverage replies are recorded. The follow-up extraction and additional generic compositions are synthetic extensions for customer corrections, information requests and reviewer corrections."
 }

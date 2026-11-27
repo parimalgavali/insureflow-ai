@@ -44,7 +44,9 @@ button { font: inherit; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; }
 .facts dd.missing { color: var(--warn); font-style: italic; }
-.facts input { font: inherit; width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; background: var(--bg); color: var(--text); }
+.facts input, .facts select { font: inherit; width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; background: var(--bg); color: var(--text); }
+.field-error { color: var(--bad); font-size: 12px; margin: 4px 0; }
+.missing-summary { color: var(--warn); font-size: 13px; margin: 0 0 10px; }
 .badge { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; color: #fff; background: var(--neutral); }
 .badge.likely_covered, .badge.low, .badge.reviewed { background: var(--ok); }
 .badge.unclear, .badge.medium, .badge.awaiting_review, .badge.information_needed { background: var(--warn); }
