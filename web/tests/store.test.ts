@@ -88,3 +88,14 @@ describe("reduce", () => {
     expect(s.messages.map((m) => m.role)).toEqual(["user"]);
   });
 });
+
+it("clears an old score as soon as streamed facts have insufficient risk inputs", () => {
+  const s = initialState();
+  applyReview(s, "assessed", card as any);
+  reduce(s, { type: "risk_availability", data: { status: "insufficient_information", missing: ["witnesses"] } });
+  expect(s.risk).toBeNull();
+  expect(s.riskStatus).toBe("insufficient_information");
+  expect(s.riskMissing).toEqual(["witnesses"]);
+  applyReview(s, "assessed", { ...card, risk: null, risk_status: "insufficient_information", risk_missing: ["witnesses"] } as any);
+  expect(s.riskStatus).toBe("insufficient_information");
+});

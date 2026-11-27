@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { adjusterToken } from "../playwright.config";
 
 // Scripted hit-and-run conversation replayed by the recorded LLM provider
@@ -6,6 +6,20 @@ import { adjusterToken } from "../playwright.config";
 const MSG1 =
   "Gestern Abend hat jemand mein geparktes Auto auf dem Supermarktparkplatz in Köln angefahren und ist einfach weggefahren. Die hintere Stoßstange ist eingedrückt.";
 const MSG2 = "Das war am 25.10.2026 gegen 19 Uhr. Die Polizei habe ich nicht gerufen, Zeugen gab es keine.";
+
+async function findQueuedClaim(page: Page, claimId: string) {
+  const row = page.getByTestId(`review-claim-${claimId}`);
+  const refresh = page.getByRole("button", { name: "Refresh list" });
+  await expect(refresh).toBeEnabled();
+  for (let pageNumber = 0; pageNumber < 100 && !(await row.count()); pageNumber++) {
+    const more = page.getByRole("button", { name: "Load more" });
+    if (!(await more.isVisible())) break;
+    await more.click();
+    await expect(refresh).toBeEnabled();
+  }
+  await expect(row).toBeVisible();
+  return row;
+}
 
 test("file a motor claim by conversation and send it to an adjuster", async ({ page }) => {
   await page.goto("/");
@@ -24,6 +38,9 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   // agent asks a follow-up and offers chips for the missing facts
   await expect(page.getByLabel("Suggested answers")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByLabel("Claim card")).toContainText(/Köln/);
+  await expect(page.getByTestId("risk-insufficient")).toHaveText("Not enough information");
+  await expect(page.getByTestId("risk-missing")).toContainText("Police informed");
+  await expect(page.getByTestId("risk")).toHaveCount(0);
 
   await composer.fill(MSG2);
   await composer.press("Enter");
@@ -68,7 +85,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByRole("alert")).toContainText(/403/);
   await page.getByLabel("Reviewer token").fill(adjusterToken);
   await page.getByRole("button", { name: "Open queue" }).click();
-  const row = page.getByTestId(`review-claim-${submitted.id}`);
+  const row = await findQueuedClaim(page, submitted.id);
   await expect(row).toContainText("Submitted:");
   await row.click();
   const reviewCard = page.getByLabel("Claim card");
@@ -91,7 +108,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await page.getByTestId("reviewer-link").click();
   await page.getByLabel("Reviewer token").fill(adjusterToken);
   await page.getByRole("button", { name: "Open queue" }).click();
-  await page.getByTestId(`review-claim-${submitted.id}`).click();
+  await (await findQueuedClaim(page, submitted.id)).click();
   await expect(page.getByTestId("fact-estimated_amount_eur")).toHaveText("1200");
   await page.getByRole("button", { name: "Edit facts", exact: true }).click();
   await page.getByLabel("Witnesses", { exact: true }).fill("maybe");

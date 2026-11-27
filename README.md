@@ -181,3 +181,5 @@ Outputs are decision support for a human reviewer. The fraud signal is a *risk s
 ## License
 
 MIT for the code. Data sources keep their own licenses (see docs/DATA.md).
+
+Risk signals require a known incident date/type, third-party involvement, police/witness answers, and valid policy settings. Collisions with another party also require whether that party is known. Missing answers show **Not enough information** with the needed details; they never produce a low-risk badge. This remains guidance for human review, with model assumptions documented in [the model card](ml/model_card.md).

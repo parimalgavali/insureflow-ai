@@ -145,5 +145,10 @@
   "customer.event.wild_animal": "Collision with a wild animal",
   "customer.event.storm_hail": "Storm or hail",
   "customer.event.fire": "Fire",
-  "customer.event.other": "Other"
+  "customer.event.other": "Other",
+  "risk.insufficient": "Not enough information",
+  "risk.needed": "To calculate a risk signal, provide:",
+  "risk.unavailable": "Risk signal temporarily unavailable. A human can still review this claim.",
+  "risk.policy_product": "Policy product",
+  "risk.policy_deductible": "Policy deductible"
 }

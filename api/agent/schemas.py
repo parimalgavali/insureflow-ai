@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from ml.risk_inputs import missing_risk_inputs
+
 Language = Literal["de", "en"]
 EventType = Literal[
     "collision",
@@ -24,6 +26,7 @@ EventType = Literal[
 CoverageStatus = Literal["likely_covered", "likely_not_covered", "unclear", "no_evidence"]
 ClaimStatus = Literal["collecting", "assessed", "awaiting_review", "information_needed", "reviewed"]
 RiskBand = Literal["low", "medium", "high"]
+RiskStatus = Literal["pending", "available", "insufficient_information", "unavailable"]
 
 
 class ClaimFacts(BaseModel):
@@ -187,6 +190,8 @@ class ClaimCard(BaseModel):
     coverage_summary: str = ""
     citations: list[Citation] = Field(default_factory=list)
     risk: RiskSignal | None = None
+    risk_status: RiskStatus = "pending"
+    risk_missing: list[str] = Field(default_factory=list)
     cost: CostContext | None = None
     missing_documents: list[str] = Field(default_factory=list)
     next_steps: list[str] = Field(default_factory=list)
@@ -195,6 +200,20 @@ class ClaimCard(BaseModel):
     assessment_stale: bool = False
     assessment_error: str | None = None
     corrections: list[FactChange] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _risk_availability(self):
+        missing = missing_risk_inputs(self.facts, self.policy)
+        if missing:
+            self.risk = None
+            self.risk_status = "insufficient_information"
+            self.risk_missing = missing
+        elif self.risk is not None:
+            self.risk_status = "available"
+            self.risk_missing = []
+        elif self.risk_status == "available":
+            self.risk_status = "unavailable"
+        return self
 
 
 class ComposeOutput(BaseModel):

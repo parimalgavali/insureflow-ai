@@ -223,6 +223,9 @@ def _events_for(node: str, data: Any, assistant_texts: list[str]):
         return
     if node == "extract" and data.get("facts") is not None:
         yield sse.encode("facts", {"facts": data["facts"], "language": data.get("language")})
+        yield sse.encode(
+            "risk_availability", {"status": data["risk_status"], "missing": data["risk_missing"]}
+        )
     elif node == "check_missing":
         yield sse.encode("missing", {"missing": data.get("missing", [])})
     elif node == "ask_followup":
@@ -235,6 +238,9 @@ def _events_for(node: str, data: Any, assistant_texts: list[str]):
         yield sse.encode("citations", {"citations": data.get("retrieved", [])})
     elif node == "score_risk":
         yield sse.encode("risk", {"risk": data.get("risk")})
+        yield sse.encode(
+            "risk_availability", {"status": data["risk_status"], "missing": data["risk_missing"]}
+        )
     elif node == "compose":
         text = data["messages"][-1].content
         assistant_texts.append(text)

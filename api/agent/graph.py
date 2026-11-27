@@ -41,8 +41,10 @@ from api.agent.schemas import (
     ReviewDecision,
     ReviewRequest,
     RiskSignal,
+    RiskStatus,
 )
 from api.llm.provider import Provider, ProviderError
+from ml.risk_inputs import missing_risk_inputs
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 MAX_FOLLOWUPS = 3
@@ -125,6 +127,8 @@ class AgentState(TypedDict, total=False):
     extract_failed: bool
     retrieved: list[Citation]
     risk: RiskSignal | None
+    risk_status: RiskStatus
+    risk_missing: list[str]
     cost: CostContext | None
     card: ClaimCard | None
     status: ClaimStatus
@@ -185,6 +189,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                 "corrections": changes or card.corrections,
             }
         )
+        card = ClaimCard.model_validate(card.model_dump())
         correction_message = None
         if changes:
             label = (
@@ -240,10 +245,15 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             facts = facts.merge(update)
         if state.get("attachments", 0) > 0 and not facts.photos_attached:
             facts = facts.model_copy(update={"photos_attached": True})
+        policy = state.get("policy") or PolicyContext()
+        risk_missing = missing_risk_inputs(facts, policy)
         return {
             "language": language,
             "facts": facts,
-            "policy": state.get("policy") or PolicyContext(),
+            "policy": policy,
+            "risk": None,
+            "risk_status": "insufficient_information" if risk_missing else "pending",
+            "risk_missing": risk_missing,
             "extract_failed": failed,
             "status": "collecting",
             "card": None,
@@ -325,10 +335,33 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         return {"retrieved": list(ordered.values())[:MAX_CITATIONS]}
 
     def score_risk(state: AgentState) -> dict:
-        cost = deps.cost_estimator.estimate(state["policy"]) if deps.cost_estimator else None
+        cost = None
+        if deps.cost_estimator:
+            try:
+                cost = deps.cost_estimator.estimate(state["policy"])
+            except Exception:  # noqa: BLE001
+                logging.getLogger("claimpilot.agent").warning("cost context unavailable")
+        missing = missing_risk_inputs(state["facts"], state["policy"])
+        if missing:
+            return {
+                "risk": None,
+                "cost": cost,
+                "risk_status": "insufficient_information",
+                "risk_missing": missing,
+            }
         if deps.risk_scorer is None:
-            return {"risk": None, "cost": cost}
-        return {"risk": deps.risk_scorer.score(state["facts"], state["policy"]), "cost": cost}
+            return {"risk": None, "cost": cost, "risk_status": "unavailable", "risk_missing": []}
+        try:
+            risk = deps.risk_scorer.score(state["facts"], state["policy"])
+        except Exception:  # noqa: BLE001
+            logging.getLogger("claimpilot.agent").warning("risk scoring unavailable")
+            risk = None
+        return {
+            "risk": risk,
+            "cost": cost,
+            "risk_status": "available" if risk else "unavailable",
+            "risk_missing": [],
+        }
 
     def compose(state: AgentState) -> dict:
         facts, policy, language = state["facts"], state["policy"], state["language"]
@@ -358,6 +391,8 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             coverage_summary=answer,
             citations=[c for c in retrieved if c.clause_id in cited] or retrieved[:3],
             risk=state.get("risk"),
+            risk_status=state.get("risk_status", "pending"),
+            risk_missing=state.get("risk_missing", []),
             cost=state.get("cost"),
             missing_documents=output.missing_documents,
             next_steps=output.next_steps,
@@ -403,6 +438,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                     "review": None,
                 }
             )
+            corrected = ClaimCard.model_validate(corrected.model_dump())
             return {
                 "facts": updated,
                 "card": corrected,
@@ -452,7 +488,10 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             if not refreshed.get("retrieved"):
                 raise ValueError("coverage evidence unavailable")
             refreshed.update(score_risk(refreshed))
-            if refreshed.get("risk") is None:
+            if (
+                refreshed.get("risk") is None
+                and refreshed.get("risk_status") != "insufficient_information"
+            ):
                 raise ValueError("risk assessment unavailable")
             composed = compose(refreshed)["card"]
             if composed.coverage_status == "no_evidence":
@@ -467,6 +506,8 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                 "card": fresh_card,
                 "retrieved": refreshed["retrieved"],
                 "risk": refreshed["risk"],
+                "risk_status": refreshed["risk_status"],
+                "risk_missing": refreshed["risk_missing"],
                 "cost": refreshed.get("cost"),
                 "status": target,
                 "reassessment_needed": False,

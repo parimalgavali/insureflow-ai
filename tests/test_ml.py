@@ -69,9 +69,25 @@ def test_training_smoke(tmp_path: Path):
     assert metrics["test"]["roc_auc"] > 0.6
     assert metrics["test"]["auprc"] > metrics["baselines"]["majority_class"]["auprc"]
     scorer = load_scorer(tmp_path / "fraud_model.joblib")
-    at_fault = scorer.score(ClaimFacts(event_type="collision"), PolicyContext(product="vollkasko"))
+    at_fault = scorer.score(
+        ClaimFacts(
+            event_type="collision",
+            incident_date="2026-10-25",
+            third_party_involved=False,
+            police_report_filed=False,
+            witnesses=False,
+        ),
+        PolicyContext(product="vollkasko"),
+    )
     not_at_fault = scorer.score(
-        ClaimFacts(event_type="hit_and_run"), PolicyContext(product="haftpflicht")
+        ClaimFacts(
+            event_type="hit_and_run",
+            incident_date="2026-10-25",
+            third_party_involved=True,
+            police_report_filed=False,
+            witnesses=False,
+        ),
+        PolicyContext(product="haftpflicht"),
     )
     assert at_fault.score > not_at_fault.score
     assert at_fault.band in ("low", "medium", "high")
@@ -126,7 +142,11 @@ def test_facts_mapping_covers_every_fact_field_and_defaults():
 def test_committed_artifact_is_deterministic():
     scorer = load_scorer()
     facts = ClaimFacts(
-        incident_date="2026-10-25", event_type="hit_and_run", third_party_involved=True
+        incident_date="2026-10-25",
+        event_type="hit_and_run",
+        third_party_involved=True,
+        police_report_filed=False,
+        witnesses=False,
     )
     a = scorer.score(facts, PolicyContext())
     b = scorer.score(facts, PolicyContext())

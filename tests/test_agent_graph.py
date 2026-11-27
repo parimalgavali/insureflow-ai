@@ -547,3 +547,96 @@ def test_review_facts_patch_only_accepts_known_typed_fields():
     for bad in ({"fraud_score": 0}, {"event_type": "act_of_god"}, {"injuries": "maybe"}):
         with pytest.raises(pydantic.ValidationError):
             ReviewRequest(decision="edit", facts_patch=bad)
+
+
+def test_unknown_risk_answers_do_not_block_coverage_or_human_review(
+    correction_context, monkeypatch
+):
+    graph, deps, _ = correction_context
+    original_score = deps.risk_scorer.score
+    calls = []
+
+    def score(facts, policy):
+        calls.append(facts)
+        return original_score(facts, policy)
+
+    monkeypatch.setattr(deps.risk_scorer, "score", score)
+    corrected = resume_review(
+        graph,
+        "corrections",
+        ReviewDecision(
+            decision="edit",
+            facts_patch={"police_report_filed": None, "witnesses": None},
+        ),
+    )
+    assert calls == []
+    card = corrected["card"]
+    assert card.risk is None
+    assert card.risk_status == "insufficient_information"
+    assert card.risk_missing == ["police_report_filed", "witnesses"]
+    assert card.assessment_stale is False
+    assert card.coverage_summary
+    restored = resume_review(
+        graph,
+        "corrections",
+        ReviewDecision(
+            decision="edit",
+            facts_patch={"police_report_filed": False, "witnesses": False},
+        ),
+    )
+    assert len(calls) == 1
+    assert restored["card"].risk_status == "available"
+    assert restored["card"].risk is not None
+    assert (
+        resume_review(graph, "corrections", ReviewDecision(decision="accept"))["status"]
+        == "reviewed"
+    )
+
+
+def test_initial_scoring_failure_is_distinct_from_missing_inputs(monkeypatch):
+    deps = AgentDeps(
+        provider=RecordedProvider(FIXTURE), retriever=make_retriever(), risk_scorer=FakeScorer()
+    )
+
+    def fail(*args):
+        raise RuntimeError("private scorer error")
+
+    monkeypatch.setattr(deps.risk_scorer, "score", fail)
+    graph = build_graph(deps, checkpointer=MemorySaver())
+    first = run_turn(graph, "unavailable", "Mein geparktes Auto wurde angefahren.")
+    assert first["risk_status"] == "insufficient_information"
+    ready = run_turn(graph, "unavailable", "Am 25.10.2026, keine Polizei.")
+    assert ready["card"].risk is None
+    assert ready["card"].risk_status == "unavailable"
+    assert ready["card"].risk_missing == []
+    assert ready["card"].coverage_summary
+    assert "private scorer error" not in ready["card"].model_dump_json()
+
+
+def test_initial_incomplete_risk_inputs_skip_custom_scorer_and_allow_submission(tmp_path):
+    fixture = json.loads(FIXTURE.read_text())
+    fixture["extract"][0]["incident_date"] = "2026-10-25"
+    path = tmp_path / "missing-risk.json"
+    path.write_text(json.dumps(fixture))
+
+    class MustNotScore:
+        def score(self, *args):
+            pytest.fail("Scorer must not receive incomplete facts")
+
+    graph = build_graph(
+        AgentDeps(
+            provider=RecordedProvider(path), retriever=make_retriever(), risk_scorer=MustNotScore()
+        ),
+        checkpointer=MemorySaver(),
+    )
+    ready = run_turn(graph, "missing-risk", "Mein geparktes Auto wurde angefahren.")
+    assert ready["status"] == "assessed"
+    assert ready["card"].risk is None
+    assert ready["card"].risk_status == "insufficient_information"
+    assert ready["card"].risk_missing == ["police_report_filed", "witnesses"]
+    assert ready["card"].coverage_status == "likely_covered"
+    assert submit_for_review(graph, "missing-risk")["status"] == "awaiting_review"
+    assert (
+        resume_review(graph, "missing-risk", ReviewDecision(decision="accept"))["status"]
+        == "reviewed"
+    )
