@@ -21,7 +21,7 @@ from api.agent.graph import thread_config
 from api.agent.required_facts import missing_facts
 from api.agent.schemas import ChatMessage, ClaimCard, Language, PolicyContext
 from api.history import HistoryEntry, history_out
-from api.policy_coverage import current_coverage_card
+from api.policy_coverage import coverage_source_changed, current_coverage_card
 from api.security import get_state, require_token
 from db.models import Attachment, Claim, Conversation, Message, MessageOperation
 
@@ -271,7 +271,7 @@ def _stream_operation(state, conversation_id: uuid.UUID, operation_id: uuid.UUID
                     response = None
                 policy = PolicyContext.model_validate(_load(session, conversation_id).policy or {})
             if response is not None:
-                yield from response
+                yield from _replay_operation(state, conversation_id, response)
                 return
             config = thread_config(str(conversation_id))
             snapshot = state.graph.get_state(config)
@@ -352,6 +352,28 @@ def _stream_operation(state, conversation_id: uuid.UUID, operation_id: uuid.UUID
         finally:
             connection.execute(sql_text("SELECT pg_advisory_unlock(:key)"), {"key": lock_key})
             connection.commit()
+
+
+def _replay_operation(state, conversation_id, response):
+    """Keep saved replies scoped and explicitly historical after a policy change."""
+    records = []
+    with state.session() as session:
+        conv = _load(session, conversation_id)
+        warning = None
+        for record in response:
+            kind, payload = record.split("\ndata: ", 1)
+            data = json.loads(payload)
+            if kind == "event: card":
+                card = ClaimCard.model_validate(data["card"])
+                if coverage_source_changed(session, card, conversation_id):
+                    card = current_coverage_card(session, card, conversation_id, conv.language)
+                    warning = card.assessment_error
+                    data["card"] = card.model_dump(mode="json")
+            records.append((kind.removeprefix("event: "), data))
+    for kind, data in records:
+        if warning and kind == "question":
+            data["text"] = f"{warning}\n\n{data['text']}"
+        yield sse.encode(kind, data)
 
 
 def _events_for(node: str, data: Any, assistant_texts: list[str]):

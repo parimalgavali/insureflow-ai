@@ -169,6 +169,13 @@ class PolicyDocument(Base):
     __tablename__ = "policy_documents"
     __table_args__ = (
         UniqueConstraint("id", "conversation_id", name="uq_policy_document_conversation"),
+        ForeignKeyConstraint(
+            ["replaces_document_id", "conversation_id"],
+            ["policy_documents.id", "policy_documents.conversation_id"],
+            name="fk_policy_replacement_scope",
+            deferrable=True,
+            initially="DEFERRED",
+        ),
         Index(
             "uq_policy_current_conversation",
             "conversation_id",
@@ -183,9 +190,7 @@ class PolicyDocument(Base):
     )
     is_current: Mapped[bool] = mapped_column(default=True, nullable=False)
     revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    replaces_document_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("policy_documents.id", ondelete="SET NULL")
-    )
+    replaces_document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     path: Mapped[str] = mapped_column(Text, nullable=False)

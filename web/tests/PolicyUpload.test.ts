@@ -121,3 +121,18 @@ it("keeps a submitted claim policy read-only", async () => {
   expect(w.find('input[type="file"]').exists()).toBe(false);
   w.unmount();
 });
+
+it("ignores late policy metadata from a previously displayed conversation", async () => {
+  let resolveFirst!: (value: typeof saved) => void;
+  const first = new Promise<typeof saved>((resolve) => { resolveFirst = resolve; });
+  vi.mocked(fetchPolicy).mockReturnValueOnce(first).mockResolvedValueOnce({ ...saved, document: { ...saved.document, id: "second-policy", filename: "second.pdf" } });
+  const w = mount(PolicyUpload, { props });
+  await w.setProps({ conversationId: "second-conversation" });
+  await flushPromises();
+  expect(w.get('[data-testid="policy-filename"]').text()).toBe("second.pdf");
+  resolveFirst(saved);
+  await flushPromises();
+  expect(w.get('[data-testid="policy-filename"]').text()).toBe("second.pdf");
+  expect(fetchPolicy).toHaveBeenLastCalledWith("second-conversation");
+  w.unmount();
+});
