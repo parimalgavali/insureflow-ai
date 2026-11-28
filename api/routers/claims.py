@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import uuid
 from datetime import UTC, datetime
 from typing import Literal
@@ -12,6 +13,12 @@ from sqlalchemy.orm import object_session
 from api.agent.graph import correct_customer_facts, resume_review, submit_for_review, thread_config
 from api.agent.required_facts import missing_facts
 from api.agent.schemas import ClaimCard, CustomerCorrection, ReviewDecision, ReviewRequest
+from api.checklist import (
+    DocumentChecklistItem,
+    add_reviewer_requests,
+    checklist_out,
+    sync_assessment_requests,
+)
 from api.evidence import AttachmentOut, attachments_out
 from api.evidence_decisions import require_no_pending_evidence
 from api.history import HistoryEntry, history_out, record_event, record_review_events
@@ -39,6 +46,7 @@ class ClaimOut(BaseModel):
     history: list[HistoryEntry]
     missing: list[str]
     attachments: list[AttachmentOut] = Field(default_factory=list)
+    document_checklist: list[DocumentChecklistItem] = Field(default_factory=list)
 
 
 def _out(claim: Claim) -> ClaimOut:
@@ -53,6 +61,7 @@ def _out(claim: Claim) -> ClaimOut:
         status=claim.status,
         card=card,
         attachments=attachments_out(object_session(claim), claim.conversation_id),
+        document_checklist=checklist_out(object_session(claim), claim),
         submitted_at=claim.submitted_at,
         history=history_out(claim),
         missing=missing_facts(ClaimCard.model_validate(claim.card).facts) if claim.card else [],
@@ -209,6 +218,7 @@ def _apply_customer_action(session, claim, patch, state, *, refresh=False, actio
     )
     card = current_coverage_card(session, card, claim.conversation_id, claim.conversation.language)
     claim.card = card.model_dump(mode="json")
+    sync_assessment_requests(claim)
     claim.status = card.status
     claim.conversation.status = card.status
     operation_id = result.get("customer_action_id")
@@ -314,6 +324,9 @@ def review_claim(
         operation_id = result.get("review_action_id") or (
             "legacy-" + str(snapshot.config["configurable"]["checkpoint_id"])
         )
+        sync_assessment_requests(claim)
+        if decision.decision == "request_info":
+            add_reviewer_requests(claim, decision, operation_id)
         record_review_events(session, claim, decision, result, operation_id)
         session.commit()
         return _out(claim)
@@ -440,5 +453,149 @@ def decide_evidence_suggestion(
         )
         suggestion.status = "accepted"
         _record_evidence_decision(session, claim, suggestion, "accept")
+        session.commit()
+        return _out(claim)
+
+
+class ChecklistConfirmation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    attachment_ids: list[uuid.UUID] = Field(max_length=100)
+    confirmed: bool = True
+
+
+def _saved_checklist_item(claim, item_id):
+    items = copy.deepcopy(claim.document_checklist or [])
+    item = next((item for item in items if item["id"] == str(item_id)), None)
+    if item is None:
+        raise HTTPException(404, "document request not found")
+    return items, item
+
+
+@router.put("/{claim_id}/documents/{item_id}/attachments/{attachment_id}", response_model=ClaimOut)
+def link_checklist_file(
+    claim_id: uuid.UUID, item_id: uuid.UUID, attachment_id: uuid.UUID, state=Depends(get_state)
+):
+    return _set_checklist_link(claim_id, item_id, attachment_id, True, state)
+
+
+@router.delete(
+    "/{claim_id}/documents/{item_id}/attachments/{attachment_id}", response_model=ClaimOut
+)
+def unlink_checklist_file(
+    claim_id: uuid.UUID, item_id: uuid.UUID, attachment_id: uuid.UUID, state=Depends(get_state)
+):
+    return _set_checklist_link(claim_id, item_id, attachment_id, False, state)
+
+
+def _set_checklist_link(claim_id, item_id, attachment_id, linked, state):
+    from api.checklist import effective_type
+
+    with state.session() as session:
+        claim = session.scalar(select(Claim).where(Claim.id == claim_id).with_for_update())
+        if claim is None:
+            raise HTTPException(404, "claim not found")
+        _require_finished_message(session, claim)
+        if claim.status not in ("collecting", "assessed", "information_needed"):
+            raise HTTPException(409, "link documents before submission")
+        items, item = _saved_checklist_item(claim, item_id)
+        attachment = session.scalar(
+            select(Attachment).where(
+                Attachment.id == attachment_id,
+                Attachment.conversation_id == claim.conversation_id,
+                Attachment.is_current.is_(True),
+            )
+        )
+        if attachment is None:
+            raise HTTPException(404, "current attachment not found")
+        kind = effective_type(item)
+        if (
+            attachment.media_type not in ("pdf", "image")
+            or (
+                kind
+                and attachment.document_type != kind
+                and not (kind != "damage_photo" and attachment.document_type == "other_document")
+            )
+            or (kind == "damage_photo" and attachment.media_type != "image")
+        ):
+            raise HTTPException(422, "choose a verified attachment of the requested type")
+        file_id = str(attachment_id)
+        family = {file_id}
+        parent = attachment
+        while parent.replaces_attachment_id:
+            family.add(str(parent.replaces_attachment_id))
+            parent = session.get(Attachment, parent.replaces_attachment_id)
+        if (
+            linked
+            and family.intersection(item["linked"])
+            and not family.intersection(item["excluded"])
+        ):
+            return _out(claim)
+        if (
+            not linked
+            and family.intersection(item["excluded"])
+            and not family.intersection(item["linked"])
+        ):
+            return _out(claim)
+        item["linked"] = sorted((set(item["linked"]) - family) | ({file_id} if linked else set()))
+        item["excluded"] = sorted(
+            (set(item["excluded"]) - family) | (set() if linked else {file_id})
+        )
+        item["confirmed"], item["confirmed_by"] = [], None
+        claim.document_checklist = items
+        record_event(
+            session,
+            claim,
+            operation_id=uuid.uuid4().hex,
+            kind="document_linked" if linked else "document_unlinked",
+            actor="customer",
+            note=f"{item['label']}: {attachment.filename}",
+        )
+        session.commit()
+        return _out(claim)
+
+
+@router.post("/{claim_id}/documents/{item_id}/confirmation", response_model=ClaimOut)
+def confirm_checklist_document(
+    claim_id: uuid.UUID,
+    item_id: uuid.UUID,
+    body: ChecklistConfirmation,
+    reviewer: str = Depends(require_adjuster),
+    state=Depends(get_state),
+):
+    with state.session() as session:
+        claim = session.scalar(select(Claim).where(Claim.id == claim_id).with_for_update())
+        if claim is None:
+            raise HTTPException(404, "claim not found")
+        _require_finished_message(session, claim)
+        if claim.status != "awaiting_review":
+            raise HTTPException(409, "check documents while the claim awaits review")
+        items, item = _saved_checklist_item(claim, item_id)
+        current = next(row for row in checklist_out(session, claim) if row.id == item_id)
+        files = sorted(str(file_id) for file_id in current.attachment_ids)
+        if files != sorted(set(str(file_id) for file_id in body.attachment_ids)):
+            raise HTTPException(409, "document copies changed; check the current files")
+        if body.confirmed and not files:
+            raise HTTPException(422, "link the requested document before confirming it")
+        expected = files if body.confirmed else []
+        if sorted(item["confirmed"]) == expected:
+            return _out(claim)
+        item["confirmed"], item["confirmed_by"] = expected, reviewer if body.confirmed else None
+        claim.document_checklist = items
+        copies = list(
+            session.scalars(
+                select(Attachment)
+                .where(Attachment.id.in_([uuid.UUID(file_id) for file_id in files]))
+                .order_by(Attachment.created_at, Attachment.id)
+            )
+        )
+        copy_names = "; ".join(f"{row.filename} (version {row.revision})" for row in copies)
+        record_event(
+            session,
+            claim,
+            operation_id=uuid.uuid4().hex,
+            kind="documents_confirmed" if body.confirmed else "documents_confirmation_cleared",
+            actor=reviewer,
+            note=f"{item['label']}: {copy_names}",
+        )
         session.commit()
         return _out(claim)

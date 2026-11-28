@@ -1,6 +1,6 @@
 /** One reactive store; every SSE event is reduced here so components stay dumb. */
 import { reactive } from "vue";
-import type { AgentEvent, Citation, ClaimCard, ClaimFacts, ClaimStatus, Conversation, Language, RiskSignal, RiskStatus, HistoryEntry, EvidenceAttachment } from "./api/client";
+import type { AgentEvent, Citation, ClaimCard, ClaimFacts, ClaimStatus, Conversation, Language, RiskSignal, RiskStatus, HistoryEntry, EvidenceAttachment, DocumentChecklistItem } from "./api/client";
 
 export interface ChatItem {
   id: string;
@@ -28,6 +28,7 @@ export interface State {
   lastUserText: string | null;
   history: HistoryEntry[];
   attachments: EvidenceAttachment[];
+  documentChecklist: DocumentChecklistItem[];
 }
 
 export function initialState(): State {
@@ -50,6 +51,7 @@ export function initialState(): State {
     lastUserText: null,
     history: [],
     attachments: [],
+    documentChecklist: [],
   };
 }
 
@@ -71,6 +73,7 @@ export function loadConversation(state: State, conv: Conversation): void {
   state.riskMissing = conv.card?.risk_missing ?? [];
   state.history = conv.history ?? [];
   state.attachments = conv.attachments ?? [];
+  state.documentChecklist = conv.document_checklist ?? [];
   state.missing = conv.missing ?? [];
 }
 
@@ -155,7 +158,7 @@ export function finishTurn(state: State): void {
   state.busy = false;
 }
 
-export function applyReview(state: State, status: ClaimStatus, card: ClaimCard, history?: HistoryEntry[], missing?: string[], attachments?: EvidenceAttachment[]): void {
+export function applyReview(state: State, status: ClaimStatus, card: ClaimCard, history?: HistoryEntry[], missing?: string[], attachments?: EvidenceAttachment[], checklist?: DocumentChecklistItem[]): void {
   state.status = status;
   state.card = card;
   state.facts = card.facts;
@@ -165,6 +168,7 @@ export function applyReview(state: State, status: ClaimStatus, card: ClaimCard, 
   state.riskMissing = card.risk_missing ?? [];
   if (history) state.history = history;
   if (attachments) state.attachments = attachments;
+  if (checklist) state.documentChecklist = checklist;
   if (missing) state.missing = missing;
 }
 

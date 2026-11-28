@@ -90,6 +90,7 @@ class Claim(Base):
     )
     status: Mapped[str] = mapped_column(String(32), default="collecting", nullable=False)
     card: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    document_checklist: Mapped[list[dict]] = mapped_column(JSONB, default=list, nullable=False)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, nullable=False

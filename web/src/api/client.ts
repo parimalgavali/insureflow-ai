@@ -56,9 +56,21 @@ export interface RiskSignal {
   model_version: string;
 }
 
+export interface RequestedDocument { label: string; document_type: DocumentType | null }
+export interface DocumentChecklistItem {
+  id: string;
+  label: string;
+  document_type: DocumentType | null;
+  origin: "assessment" | "reviewer";
+  status: "missing" | "uploaded" | "confirmed";
+  attachment_ids: string[];
+  confirmed_by: string | null;
+}
+
 export interface ReviewDecision {
   decision: "accept" | "edit" | "request_info" | "reassess";
   facts_patch?: Record<string, unknown>;
+  requested_documents?: RequestedDocument[];
   note?: string | null;
   reviewer?: string;
 }
@@ -132,13 +144,14 @@ export interface Conversation {
   claim_id: string | null;
   card: ClaimCard | null;
   attachments?: EvidenceAttachment[];
+  document_checklist?: DocumentChecklistItem[];
   history?: HistoryEntry[];
   missing?: string[];
 }
 
 export interface HistoryEntry {
   id: number;
-  kind: "submitted" | "information_requested" | "corrected" | "assessment_refreshed" | "assessment_refresh_failed" | "review_completed" | "evidence_accepted" | "evidence_rejected" | "evidence_replaced";
+  kind: "submitted" | "information_requested" | "corrected" | "assessment_refreshed" | "assessment_refresh_failed" | "review_completed" | "evidence_accepted" | "evidence_rejected" | "evidence_replaced" | "document_linked" | "document_unlinked" | "documents_confirmed" | "documents_confirmation_cleared";
   actor: string;
   decision: string | null;
   note: string | null;
@@ -150,6 +163,7 @@ export interface ClaimActionResult {
   status: ClaimStatus;
   card: ClaimCard;
   attachments?: EvidenceAttachment[];
+  document_checklist?: DocumentChecklistItem[];
   history?: HistoryEntry[];
   missing?: string[];
 }
@@ -175,6 +189,7 @@ export interface ReviewerClaim {
   card: ClaimCard | null;
   submitted_at: string | null;
   attachments?: EvidenceAttachment[];
+  document_checklist?: DocumentChecklistItem[];
   history?: HistoryEntry[];
   missing?: string[];
 }
@@ -413,4 +428,12 @@ export async function replaceEvidencePdf(conversationId: string, attachmentId: s
   const body = new FormData();
   body.append("file", file);
   return (await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(conversationId)}/attachments/${encodeURIComponent(attachmentId)}`, { method: "PUT", headers: headers(false), body }))).json();
+}
+
+
+export async function linkChecklistFile(claimId: string, itemId: string, attachmentId: string, linked: boolean): Promise<ClaimActionResult> {
+  return (await expectOk(await fetch(`${BASE}/api/claims/${encodeURIComponent(claimId)}/documents/${encodeURIComponent(itemId)}/attachments/${encodeURIComponent(attachmentId)}`, { method: linked ? "PUT" : "DELETE", headers: headers(false) }))).json();
+}
+export async function confirmChecklistDocument(claimId: string, itemId: string, attachmentIds: string[], confirmed: boolean, token: string): Promise<ClaimActionResult> {
+  return (await expectOk(await fetch(`${BASE}/api/claims/${encodeURIComponent(claimId)}/documents/${encodeURIComponent(itemId)}/confirmation`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ attachment_ids: attachmentIds, confirmed }) }))).json();
 }

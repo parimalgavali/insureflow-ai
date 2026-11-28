@@ -2,11 +2,11 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ReviewerQueue from "../src/components/ReviewerQueue.vue";
 import ClaimCard from "../src/components/ClaimCard.vue";
-import { fetchReviewQueue, fetchReviewerClaim, reviewClaim, type ReviewerClaim } from "../src/api/client";
+import { fetchReviewQueue, fetchReviewerClaim, confirmChecklistDocument, reviewClaim, type ReviewerClaim } from "../src/api/client";
 import { setLocale } from "../src/i18n";
 
 vi.mock("../src/api/client", () => ({
-  fetchReviewQueue: vi.fn(), fetchReviewerClaim: vi.fn(), reviewClaim: vi.fn(),
+  fetchReviewQueue: vi.fn(), fetchReviewerClaim: vi.fn(), confirmChecklistDocument: vi.fn(), reviewClaim: vi.fn(),
 }));
 
 const item = { id: "claim-1", submitted_at: "2026-11-26T12:30:00Z", event_type: "theft", location: "Berlin" };
@@ -158,4 +158,20 @@ describe("reviewer queue", () => {
     expect(w.getComponent(ClaimCard).props("status")).toBe("awaiting_review");
     w.unmount();
   });
+});
+
+
+it("confirms document copies using the reviewer credential and keeps the claim pending", async () => {
+  const w = mountQueue();
+  await unlock(w);
+  await w.get('[data-testid="review-claim-claim-1"]').trigger("click");
+  await flushPromises();
+  vi.mocked(confirmChecklistDocument).mockResolvedValue({ status: "awaiting_review", card: detail.card, document_checklist: [{ id: "request", label: "Estimate", document_type: "repair_estimate", origin: "assessment", status: "confirmed", attachment_ids: ["file"], confirmed_by: "adjuster" }] } as never);
+  w.getComponent(ClaimCard).vm.$emit("confirmDocument", "request", ["file"], true);
+  await flushPromises();
+  expect(confirmChecklistDocument).toHaveBeenCalledWith("claim-1", "request", ["file"], true, "reviewer-secret");
+  expect(w.getComponent(ClaimCard).props("status")).toBe("awaiting_review");
+  expect(w.getComponent(ClaimCard).props("checklist")?.[0].status).toBe("confirmed");
+  expect(reviewClaim).not.toHaveBeenCalled();
+  w.unmount();
 });
