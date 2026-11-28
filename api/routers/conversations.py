@@ -20,6 +20,7 @@ from api import sse
 from api.agent.graph import thread_config
 from api.agent.required_facts import missing_facts
 from api.agent.schemas import ChatMessage, ClaimCard, Language, PolicyContext
+from api.checklist import DocumentChecklistItem, checklist_out, sync_assessment_requests
 from api.evidence import AttachmentOut, attachments_out
 from api.evidence_decisions import require_no_pending_evidence
 from api.evidence_files import DocumentType, EvidenceFileError, safe_upload_name, validate_upload
@@ -67,6 +68,7 @@ class ConversationOut(BaseModel):
     missing: list[str]
     pending_operation_id: uuid.UUID | None = None
     attachments: list[AttachmentOut] = Field(default_factory=list)
+    document_checklist: list[DocumentChecklistItem] = Field(default_factory=list)
 
 
 def _conversation_out(conv: Conversation) -> ConversationOut:
@@ -84,6 +86,7 @@ def _conversation_out(conv: Conversation) -> ConversationOut:
     return ConversationOut(
         pending_operation_id=pending,
         attachments=attachments_out(object_session(conv), conv.id),
+        document_checklist=checklist_out(object_session(conv), conv.claim) if conv.claim else [],
         id=conv.id,
         language=conv.language,
         status=conv.status,
@@ -355,6 +358,7 @@ def _stream_operation(state, conversation_id: uuid.UUID, operation_id: uuid.UUID
                 )
                 card = current_coverage_card(session, card, conv.id, conv.language)
                 conv.claim.card = card.model_dump(mode="json")
+                sync_assessment_requests(conv.claim)
                 conv.claim.status = conv.status
                 response = [
                     sse.encode("facts", {"facts": final["facts"], "language": operation.language}),

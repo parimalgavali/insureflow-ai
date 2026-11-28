@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { locale, setLocale, t } from "./i18n";
-import { createConversation, decideEvidenceSuggestion, extractEvidence, replaceEvidencePdf, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type EvidenceDecision, type DocumentType, type Language, type ReviewerClaim } from "./api/client";
+import { createConversation, decideEvidenceSuggestion, extractEvidence, replaceEvidencePdf, linkChecklistFile, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type EvidenceDecision, type DocumentType, type Language, type ReviewerClaim } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
 import PolicyUpload from "./components/PolicyUpload.vue";
 import ClaimCard from "./components/ClaimCard.vue";
@@ -17,6 +17,7 @@ const showReviewer = ref(location.hash === "#review");
 const historyId = ref(location.hash.startsWith("#history/") ? location.hash.slice(9) : null);
 const retrySubmission = ref(false);
 const retryExtraction = ref<string | null>(null);
+const retryChecklist = ref<{ itemId: string; attachmentId: string; linked: boolean } | null>(null);
 const retryReplacement = ref<{ id: string; file: File } | null>(null);
 const retryDecision = ref<{ id: string; decision: EvidenceDecision } | null>(null);
 const pendingEvidence = computed(() => store.attachments.flatMap((attachment) => attachment.suggestions || []).find((suggestion) => suggestion.status === "applying"));
@@ -40,7 +41,7 @@ function navigate() {
 window.addEventListener("hashchange", navigate);
 onUnmounted(() => { window.removeEventListener("hashchange", navigate); openVersion++; accessDraft.value = ""; setAccessToken(""); });
 
-const canSend = computed(() => store.conversationId !== null && !opening.value && !openError.value && !policyBusy.value && !messageNeedsRetry.value && !hasPendingEvidence.value && !retryReplacement.value && ["collecting", "information_needed"].includes(store.status));
+const canSend = computed(() => store.conversationId !== null && !opening.value && !openError.value && !policyBusy.value && !messageNeedsRetry.value && !hasPendingEvidence.value && !retryReplacement.value && !retryChecklist.value && ["collecting", "information_needed"].includes(store.status));
 
 async function start(language: Language, forceNew = false) {
   if (opening.value || store.busy || policyBusy.value) return;
@@ -58,6 +59,7 @@ async function start(language: Language, forceNew = false) {
     retryExtraction.value = null;
     retryDecision.value = null;
     retryReplacement.value = null;
+    retryChecklist.value = null;
     restoredDraft.value = null;
     validationError.value = false;
     retryCorrection.value = null;
@@ -128,7 +130,11 @@ async function send(text: string, file: File | null, documentType: DocumentType 
   } finally {
     if (store.error && !validationError.value) {
       // A saved upload remains visible even when assessment or streaming failed.
-      try { store.attachments = (await getConversation(store.conversationId)).attachments ?? []; } catch { /* Retry keeps the original operation. */ }
+      try {
+        const saved = await getConversation(store.conversationId);
+        store.attachments = saved.attachments ?? [];
+        store.documentChecklist = saved.document_checklist ?? [];
+      } catch { /* Retry keeps the original operation. */ }
     }
     messageNeedsRetry.value = !!store.error && !validationError.value;
     finishTurn(store);
@@ -136,7 +142,7 @@ async function send(text: string, file: File | null, documentType: DocumentType 
 }
 
 async function readEvidence(attachmentId: string) {
-  if (!store.conversationId || store.busy || messageNeedsRetry.value || policyBusy.value || hasPendingEvidence.value || retryReplacement.value) return;
+  if (!store.conversationId || store.busy || messageNeedsRetry.value || policyBusy.value || hasPendingEvidence.value || retryReplacement.value || retryChecklist.value) return;
   store.busy = true;
   store.error = null;
   validationError.value = false;
@@ -154,8 +160,26 @@ async function readEvidence(attachmentId: string) {
   }
 }
 
+async function linkDocument(itemId: string, attachmentId: string, linked: boolean) {
+  if (!store.claimId || store.busy || policyBusy.value || messageNeedsRetry.value || hasPendingEvidence.value || retryReplacement.value) return;
+  if (retryCorrection.value || retrySubmission.value || retryExtraction.value) {
+    store.error = t("evidence.finishPrevious"); validationError.value = false; return;
+  }
+  store.busy = true; store.error = null; validationError.value = false;
+  retryChecklist.value = { itemId, attachmentId, linked };
+  try {
+    const result = await linkChecklistFile(store.claimId, itemId, attachmentId, linked);
+    applyReview(store, result.status, result.card, result.history, result.missing, result.attachments, result.document_checklist);
+    retryChecklist.value = null;
+  } catch (error) {
+    try { if (store.conversationId) loadConversation(store, await getConversation(store.conversationId)); } catch { /* Retry the same link. */ }
+    if (error instanceof Error && /^(409|422|404) /.test(error.message)) { retryChecklist.value = null; validationError.value = true; }
+    store.error = t("checklist.linkFailed");
+  } finally { store.busy = false; }
+}
+
 async function replaceEvidence(attachmentId: string, file: File) {
-  if (!store.conversationId || store.busy || policyBusy.value || messageNeedsRetry.value || hasPendingEvidence.value) return;
+  if (!store.conversationId || store.busy || policyBusy.value || messageNeedsRetry.value || hasPendingEvidence.value || retryChecklist.value) return;
   if (retryCorrection.value || retrySubmission.value || retryExtraction.value) {
     store.error = t("evidence.finishPrevious"); validationError.value = false; return;
   }
@@ -180,7 +204,7 @@ async function replaceEvidence(attachmentId: string, file: File) {
 }
 
 async function decideEvidence(suggestionId: string, decision: EvidenceDecision) {
-  if (!store.claimId || store.busy || messageNeedsRetry.value || policyBusy.value || retryReplacement.value) return;
+  if (!store.claimId || store.busy || messageNeedsRetry.value || policyBusy.value || retryReplacement.value || retryChecklist.value) return;
   if (retryCorrection.value || retrySubmission.value || retryExtraction.value) {
     store.error = t("evidence.finishPrevious");
     validationError.value = false;
@@ -195,7 +219,7 @@ async function decideEvidence(suggestionId: string, decision: EvidenceDecision) 
   retryDecision.value = { id: suggestionId, decision };
   try {
     const result = await decideEvidenceSuggestion(store.claimId, suggestionId, decision);
-    applyReview(store, result.status, result.card, result.history, result.missing, result.attachments);
+    applyReview(store, result.status, result.card, result.history, result.missing, result.attachments, result.document_checklist);
     if (store.conversationId) loadConversation(store, await getConversation(store.conversationId));
     retryDecision.value = null;
   } catch (error) {
@@ -225,7 +249,7 @@ async function submit() {
   validationError.value = false;
   try {
     const result = await submitClaim(store.claimId);
-    applyReview(store, result.status, result.card, result.history, result.missing, result.attachments);
+    applyReview(store, result.status, result.card, result.history, result.missing, result.attachments, result.document_checklist);
     retrySubmission.value = false;
   } catch (e) {
     store.error = (e as Error).message;
@@ -236,7 +260,7 @@ async function submit() {
 }
 
 function onReviewed(claim: ReviewerClaim) {
-  if (claim.id === store.claimId && claim.card) applyReview(store, claim.status, claim.card, claim.history, claim.missing, claim.attachments);
+  if (claim.id === store.claimId && claim.card) applyReview(store, claim.status, claim.card, claim.history, claim.missing, claim.attachments, claim.document_checklist);
 }
 
 async function correct(patch: Record<string, unknown> = {}, refresh = false) {
@@ -249,7 +273,7 @@ async function correct(patch: Record<string, unknown> = {}, refresh = false) {
   retryCorrection.value = { patch, refresh };
   try {
     const result = refresh ? await refreshClaimAssessment(store.claimId) : await correctClaimFacts(store.claimId, patch);
-    applyReview(store, result.status, result.card, result.history, result.missing, result.attachments);
+    applyReview(store, result.status, result.card, result.history, result.missing, result.attachments, result.document_checklist);
     if (store.conversationId) loadConversation(store, await getConversation(store.conversationId));
     retryCorrection.value = null;
   } catch (e) {
@@ -279,6 +303,7 @@ async function resumeSavedMessage() {
 }
 
 function retry() {
+  if (retryChecklist.value) return linkDocument(retryChecklist.value.itemId, retryChecklist.value.attachmentId, retryChecklist.value.linked);
   if (retryReplacement.value) return replaceEvidence(retryReplacement.value.id, retryReplacement.value.file);
   store.error = null;
   validationError.value = false;
@@ -345,9 +370,9 @@ onMounted(() => {
       <p>{{ t("evidence.pendingDecision") }}</p>
       <button class="btn" :disabled="store.busy" @click="finishEvidenceDecision">{{ t("evidence.finishDecision") }}</button>
     </section>
-    <PolicyUpload v-if="store.conversationId && !openError && !opening" :key="store.conversationId" :conversation-id="store.conversationId" :busy="store.busy || messageNeedsRetry || hasPendingEvidence || !!retryReplacement" :can-upload="['collecting', 'assessed', 'information_needed'].includes(store.status)" @busy="policyBusy = $event" @changed="onPolicyChanged" />
+    <PolicyUpload v-if="store.conversationId && !openError && !opening" :key="store.conversationId" :conversation-id="store.conversationId" :busy="store.busy || messageNeedsRetry || hasPendingEvidence || !!retryReplacement || !!retryChecklist" :can-upload="['collecting', 'assessed', 'information_needed'].includes(store.status)" @busy="policyBusy = $event" @changed="onPolicyChanged" />
     <ChatColumn v-if="!openError && !opening" :key="store.conversationId || 'new'" :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" :restored-draft="restoredDraft" :retryable="!validationError" @send="send" @retry="retry" />
-    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry || policyBusy || hasPendingEvidence || !!retryReplacement" :claim-id="store.claimId" :history="store.history" :attachments="store.attachments" @replace-evidence="replaceEvidence" @decide-evidence="decideEvidence" @extract-evidence="readEvidence" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
+    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry || policyBusy || hasPendingEvidence || !!retryReplacement || !!retryChecklist" :claim-id="store.claimId" :history="store.history" :attachments="store.attachments" :checklist="store.documentChecklist" @link-document="linkDocument" @replace-evidence="replaceEvidence" @decide-evidence="decideEvidence" @extract-evidence="readEvidence" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
     </template>
   </div>
 </template>

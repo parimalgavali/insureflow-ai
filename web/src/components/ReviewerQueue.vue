@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onUnmounted, ref } from "vue";
-import { fetchReviewQueue, fetchReviewerClaim, reviewClaim, type QueueItem, type ReviewerClaim, type ReviewDecision } from "../api/client";
+import { fetchReviewQueue, fetchReviewerClaim, confirmChecklistDocument, reviewClaim, type QueueItem, type ReviewerClaim, type ReviewDecision, type RequestedDocument } from "../api/client";
 import { locale, t } from "../i18n";
 import ClaimCard from "./ClaimCard.vue";
 
@@ -97,8 +97,27 @@ function review(patch: Record<string, unknown>, note?: string) {
   return saveDecision({ decision: Object.keys(patch).length ? "edit" : "accept", facts_patch: patch, ...(note ? { note } : {}) });
 }
 
-function requestInfo(note: string) {
-  return saveDecision({ decision: "request_info", note });
+function requestInfo(note: string, documents: RequestedDocument[] = []) {
+  return saveDecision({ decision: "request_info", note, ...(documents.length ? { requested_documents: documents } : {}) });
+}
+
+async function confirmDocument(itemId: string, attachmentIds: string[], confirmed: boolean) {
+  if (!selected.value || busy.value) return;
+  const current = epoch;
+  const claim = selected.value;
+  busy.value = true; error.value = "";
+  try {
+    const result = await confirmChecklistDocument(claim.id, itemId, attachmentIds, confirmed, credential.value);
+    if (current !== epoch) return;
+    selected.value = { ...claim, ...result };
+    emit("reviewed", selected.value);
+  } catch (e) {
+    if (current === epoch) {
+      if (e instanceof Error && e.message.startsWith("409 ")) {
+        try { selected.value = await fetchReviewerClaim(claim.id, credential.value); error.value = t("checklist.changed"); } catch (failed) { failure(failed); }
+      } else failure(e);
+    }
+  } finally { if (current === epoch) busy.value = false; }
 }
 
 function reassess() {
@@ -142,7 +161,7 @@ onUnmounted(lock);
         <button v-if="hasMore" class="btn" :disabled="busy" @click="load(true)">{{ t("queue.more") }}</button>
       </template>
     </div>
-    <ClaimCard v-if="selected?.card" :key="selected.id" :facts="selected.card.facts" :missing="selected.missing || []" :citations="selected.card.citations" :risk="selected.card.risk" :card="selected.card" :status="selected.status" :busy="busy" :claim-id="selected.id" :history="selected.history || []" :attachments="selected.attachments || []" reviewer @review="review" @request-info="requestInfo" @reassess="reassess" />
+    <ClaimCard v-if="selected?.card" :key="selected.id" :facts="selected.card.facts" :missing="selected.missing || []" :citations="selected.card.citations" :risk="selected.card.risk" :card="selected.card" :status="selected.status" :busy="busy" :claim-id="selected.id" :history="selected.history || []" :attachments="selected.attachments || []" :checklist="selected.document_checklist || []" reviewer @confirm-document="confirmDocument" @review="review" @request-info="requestInfo" @reassess="reassess" />
     <p v-else-if="credential && !busy" class="panel queue-list">{{ t("queue.choose") }}</p>
   </section>
 </template>

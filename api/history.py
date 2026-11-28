@@ -19,6 +19,10 @@ EventKind = Literal[
     "evidence_accepted",
     "evidence_rejected",
     "evidence_replaced",
+    "document_linked",
+    "document_unlinked",
+    "documents_confirmed",
+    "documents_confirmation_cleared",
 ]
 
 

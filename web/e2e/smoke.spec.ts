@@ -129,6 +129,8 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(card.getByTestId("evidence-list")).toContainText("Not yet analysed for claim details");
   expect(canonical.attachments).toHaveLength(3);
   const evidenceId = canonical.attachments.find((a: { filename: string }) => a.filename === "claim.pdf").id;
+  const estimateRequestId = canonical.document_checklist.find((item: { document_type: string; origin: string }) => item.document_type === "repair_estimate" && item.origin === "assessment").id;
+  await expect(card.getByTestId(`document-state-${estimateRequestId}`)).toHaveText("Uploaded — awaiting reviewer check");
   // Lose the extraction response after it is committed; retry reuses saved suggestions.
   await page.route("**/api/conversations/*/attachments/*/extract", async (route) => {
     const response = await route.fetch();
@@ -240,15 +242,28 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(reviewCard.getByTestId("evidence-suggestion")).toHaveCount(2);
   await expect(reviewCard.getByTestId("risk")).toHaveText(/low|medium|high/);
   await expect(reviewCard.getByTestId("summary")).toContainText(/P\.1/);
+  const estimateRequest = reviewCard.getByTestId(`document-item-${estimateRequestId}`);
+  await estimateRequest.getByRole("button", { name: "Confirm after checking documents" }).click();
+  await expect(reviewCard.getByTestId(`document-state-${estimateRequestId}`)).toHaveText("Confirmed by reviewer");
   // Ask for more information rather than completing the review.
   await reviewCard.getByLabel("What information does the customer need to provide?").fill("Please provide the police report and repair estimate.");
+  await reviewCard.getByRole("checkbox", { name: "Repair estimate", exact: true }).check();
+  await reviewCard.getByRole("checkbox", { name: "Police report", exact: true }).check();
   await reviewCard.getByTestId("request-info").click();
   await expect(reviewCard.getByTestId("status")).toHaveText("Information needed");
   await expect(row).toHaveCount(0);
   await page.getByRole("button", { name: "Lock queue" }).click();
   await page.getByTestId("reviewer-link").click();
   await expect(page.getByTestId("information-request")).toContainText("police report and repair estimate");
+  const requestedAgain = await (await page.request.get(savedConversationUrl)).json();
+  const newEstimateRequestId = requestedAgain.document_checklist.find((item: { document_type: string; origin: string }) => item.document_type === "repair_estimate" && item.origin === "reviewer").id;
+  const newEstimateRequest = page.getByTestId(`document-item-${newEstimateRequestId}`);
+  await expect(page.getByTestId(`document-state-${newEstimateRequestId}`)).toHaveText("Missing");
+  await newEstimateRequest.getByLabel("Link an uploaded file").selectOption(evidenceId);
+  await newEstimateRequest.getByRole("button", { name: "Link file", exact: true }).click();
+  await expect(page.getByTestId(`document-state-${newEstimateRequestId}`)).toHaveText("Uploaded — awaiting reviewer check");
   await page.reload();
+  await expect(page.getByTestId(`document-state-${newEstimateRequestId}`)).toHaveText("Uploaded — awaiting reviewer check");
   await expect(page.getByTestId("information-request")).toContainText("police report and repair estimate");
   await expect(composer).toBeEnabled();
   await composer.fill("The police have now been informed. The repair estimate is 1200 Euro.");
@@ -261,6 +276,8 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await page.getByRole("button", { name: "Open queue" }).click();
   await (await findQueuedClaim(page, submitted.id)).click();
   await expect(page.getByTestId("fact-estimated_amount_eur")).toHaveText("1200");
+  await page.getByTestId(`document-item-${newEstimateRequestId}`).getByRole("button", { name: "Confirm after checking documents" }).click();
+  await expect(page.getByTestId(`document-state-${newEstimateRequestId}`)).toHaveText("Confirmed by reviewer");
   await page.getByRole("button", { name: "Edit facts", exact: true }).click();
   await page.getByLabel("Witnesses", { exact: true }).fill("maybe");
   await page.getByRole("button", { name: "Save corrections and refresh" }).click();
@@ -280,12 +297,12 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByLabel("Claim card")).toHaveCount(0);
   await page.getByTestId("reviewer-link").click();
   await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
-  await expect(page.getByTestId("history-event")).toHaveCount(14);
+  await expect(page.getByTestId("history-event")).toHaveCount(17);
   await page.getByTestId("saved-history-link").click();
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
   await expect(page.getByTestId("claim-history")).toContainText("Reviewer (shared demo access)");
   await page.reload();
-  await expect(page.getByTestId("history-event")).toHaveCount(14);
+  await expect(page.getByTestId("history-event")).toHaveCount(17);
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
   await page.goto("/");
   await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
@@ -294,6 +311,6 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   expect(await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"))).not.toBe(savedId);
   const oldClaim = await (await page.request.get(savedConversationUrl)).json();
   expect(oldClaim.status).toBe("reviewed");
-  expect(oldClaim.history).toHaveLength(14);
+  expect(oldClaim.history).toHaveLength(17);
 
 });

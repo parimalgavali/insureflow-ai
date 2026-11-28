@@ -146,6 +146,21 @@ class CustomerCorrection(BaseModel):
         return FactsPatch.model_validate(value).model_dump(exclude_unset=True)
 
 
+class RequestedDocument(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    label: str = Field(min_length=1, max_length=500)
+    document_type: (
+        Literal["damage_photo", "repair_estimate", "police_report", "other_document"] | None
+    ) = None
+
+    @field_validator("label")
+    @classmethod
+    def nonempty_label(cls, value):
+        if not value.strip():
+            raise ValueError("provide a document label")
+        return value.strip()
+
+
 class ReviewRequest(BaseModel):
     """Body of POST /api/claims/{id}/review; the reviewer comes from the credential."""
 
@@ -153,6 +168,7 @@ class ReviewRequest(BaseModel):
 
     decision: Literal["accept", "edit", "request_info", "reassess"]
     facts_patch: dict = Field(default_factory=dict)
+    requested_documents: list[RequestedDocument] = Field(default_factory=list, max_length=10)
     note: str | None = Field(None, max_length=2000)
 
     @field_validator("facts_patch")
@@ -162,6 +178,8 @@ class ReviewRequest(BaseModel):
 
     @model_validator(mode="after")
     def _information_request(self):
+        if self.decision != "request_info" and self.requested_documents:
+            raise ValueError("request documents with request_info")
         if self.decision == "edit" and not self.facts_patch:
             raise ValueError("provide the facts to correct")
         if self.decision in ("accept", "reassess") and self.facts_patch:
@@ -180,6 +198,7 @@ class ReviewDecision(BaseModel):
 
     decision: Literal["accept", "edit", "request_info", "reassess"]
     facts_patch: dict = Field(default_factory=dict)
+    requested_documents: list[RequestedDocument] = Field(default_factory=list)
     note: str | None = None
     reviewer: str = "adjuster"
 

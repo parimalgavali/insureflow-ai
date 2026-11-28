@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, watch } from "vue";
-import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal, RiskStatus, HistoryEntry, EvidenceAttachment, EvidenceDecision } from "../api/client";
+import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal, RiskStatus, HistoryEntry, EvidenceAttachment, EvidenceDecision, DocumentChecklistItem, RequestedDocument } from "../api/client";
 import CitationPill from "./CitationPill.vue";
+import DocumentChecklist from "./DocumentChecklist.vue";
 import AttachmentList from "./AttachmentList.vue";
 import ClaimHistory from "./ClaimHistory.vue";
 import { t } from "../i18n";
@@ -19,10 +20,19 @@ const props = defineProps<{
   reviewer?: boolean;
   history?: HistoryEntry[];
   attachments?: EvidenceAttachment[];
+  checklist?: DocumentChecklistItem[];
   claimId?: string | null;
 }>();
-const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: []; customerCorrect: [patch: Record<string, unknown>]; customerRefresh: []; extractEvidence: [attachmentId: string]; decideEvidence: [suggestionId: string, decision: EvidenceDecision]; replaceEvidence: [attachmentId: string, file: File] }>();
+const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string, requestedDocuments?: RequestedDocument[]]; reassess: []; customerCorrect: [patch: Record<string, unknown>]; customerRefresh: []; extractEvidence: [attachmentId: string]; decideEvidence: [suggestionId: string, decision: EvidenceDecision]; replaceEvidence: [attachmentId: string, file: File]; linkDocument: [itemId: string, attachmentId: string, linked: boolean]; confirmDocument: [itemId: string, attachmentIds: string[], confirmed: boolean] }>();
 const requestNote = ref("");
+const requestedTypes = ref<string[]>([]);
+const customDocument = ref("");
+function requestInformation() {
+  const documents: RequestedDocument[] = requestedTypes.value.map((kind) => ({ label: t(`evidence.type.${kind}`), document_type: kind as RequestedDocument["document_type"] }));
+  if (customDocument.value.trim()) documents.push({ label: customDocument.value.trim(), document_type: null });
+  if (documents.length) emit("requestInfo", requestNote.value.trim(), documents);
+  else emit("requestInfo", requestNote.value.trim());
+}
 const reviewNote = ref("");
 
 const FACT_KEYS = [
@@ -272,12 +282,7 @@ function submitReview() {
 
     <AttachmentList :can-manual="!reviewer && canEdit" :can-replace="!reviewer && !editing && ['collecting', 'assessed', 'information_needed'].includes(status)" @manual-entry="enterManually" @replace-file="(id, file) => emit('replaceEvidence', id, file)" :facts="facts" :can-confirm="!reviewer && !editing && ['collecting', 'assessed', 'information_needed'].includes(status)" @decide="(id, decision) => emit('decideEvidence', id, decision)" :attachments="attachments || []" :busy="busy" :can-extract="!reviewer && ['collecting', 'assessed', 'information_needed'].includes(status)" @extract="emit('extractEvidence', $event)" />
 
-    <section v-if="card?.missing_documents.length">
-      <h3>{{ t("card.provide") }}</h3>
-      <ul class="docs">
-        <li v-for="d in card.missing_documents" :key="d"><label><input type="checkbox" /> {{ d }}</label></li>
-      </ul>
-    </section>
+    <DocumentChecklist :items="checklist || []" :attachments="attachments || []" :busy="busy" :editable="!reviewer && !editing && ['collecting', 'assessed', 'information_needed'].includes(status)" :reviewer="!!reviewer" :can-confirm="!!reviewer && status === 'awaiting_review'" @link="(itemId, attachmentId, linked) => emit('linkDocument', itemId, attachmentId, linked)" @confirm="(itemId, attachmentIds, confirmed) => emit('confirmDocument', itemId, attachmentIds, confirmed)" />
 
     <section v-if="card?.next_steps.length">
       <h3>{{ t("card.nextSteps") }}</h3>
@@ -323,9 +328,13 @@ function submitReview() {
         <button class="btn" :disabled="busy" data-testid="edit-customer-facts" @click="toggleEditing">{{ editing ? t("card.cancelEdits") : t("card.editFacts") }}</button>
       </template>
     </section>
-    <form v-if="reviewer && !editing && status === 'awaiting_review'" class="request-info" @submit.prevent="emit('requestInfo', requestNote.trim())">
+    <form v-if="reviewer && !editing && status === 'awaiting_review'" class="request-info" @submit.prevent="requestInformation">
       <label for="information-request-note">{{ t("card.requestDetails") }}</label>
       <textarea id="information-request-note" v-model="requestNote" maxlength="2000" :disabled="busy" required />
+      <fieldset :disabled="busy"><legend>{{ t("checklist.requestDocuments") }}</legend>
+        <label v-for="kind in ['damage_photo', 'repair_estimate', 'police_report']" :key="kind"><input v-model="requestedTypes" type="checkbox" :value="kind" /> {{ t(`evidence.type.${kind}`) }}</label>
+        <label for="custom-document">{{ t("checklist.customRequest") }}</label><input id="custom-document" v-model="customDocument" maxlength="500" />
+      </fieldset>
       <button class="btn" data-testid="request-info" :disabled="busy || !requestNote.trim()">{{ t("card.requestInfo") }}</button>
     </form>
     <template v-if="claimId">

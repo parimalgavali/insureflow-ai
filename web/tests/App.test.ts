@@ -5,13 +5,14 @@ import PolicyUpload from "../src/components/PolicyUpload.vue";
 import ClaimCard from "../src/components/ClaimCard.vue";
 import ChatColumn from "../src/components/ChatColumn.vue";
 import HistoryPage from "../src/components/HistoryPage.vue";
-import { createConversation, decideEvidenceSuggestion, extractEvidence, replaceEvidencePdf, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
+import { createConversation, decideEvidenceSuggestion, extractEvidence, replaceEvidencePdf, linkChecklistFile, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
 import { initialState, store } from "../src/store";
 
 vi.mock("../src/api/client", () => ({
   createConversation: vi.fn(),
   extractEvidence: vi.fn(),
   replaceEvidencePdf: vi.fn(),
+  linkChecklistFile: vi.fn(),
   decideEvidenceSuggestion: vi.fn(),
   setAccessToken: vi.fn(),
   retrySavedMessage: vi.fn(),
@@ -31,7 +32,7 @@ const card = {
 
 function mountApp() {
   return mount(App, { global: { stubs: {
-    ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh", "extractEvidence", "decideEvidence", "replaceEvidence"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
+    ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh", "extractEvidence", "decideEvidence", "replaceEvidence", "linkDocument"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
     ChatColumn: { props: ["canSend"], emits: ["retry", "send"], template: '<button data-testid="retry-action" @click="$emit(\'retry\')">Retry</button>' },
     PolicyUpload: true,
     EvalPage: true,
@@ -356,6 +357,27 @@ it("retries the same replacement file and reloads the claim without a new chat t
   await flushPromises();
   expect(replaceEvidencePdf).toHaveBeenNthCalledWith(1, "conversation-1", "old", copy);
   expect(replaceEvidencePdf).toHaveBeenNthCalledWith(2, "conversation-1", "old", copy);
+  expect(sendMessage).not.toHaveBeenCalled();
+  expect(store.error).toBeNull();
+  w.unmount();
+});
+
+
+it("retries a checklist link without sending another message or marking it confirmed", async () => {
+  const w = mountApp();
+  await flushPromises();
+  store.status = "collecting";
+  vi.mocked(linkChecklistFile).mockRejectedValueOnce(new Error("lost response"))
+    .mockResolvedValueOnce({ status: "collecting", card, document_checklist: [{ id: "request", label: "Estimate", document_type: "repair_estimate", origin: "reviewer", status: "uploaded", attachment_ids: ["file"], confirmed_by: null }] } as never);
+  vi.mocked(getConversation).mockResolvedValueOnce({ id: "conversation-1", claim_id: "claim-1", language: "en", status: "collecting", card, policy: {}, messages: [], document_checklist: [] } as never);
+  w.findComponent(ClaimCard).vm.$emit("linkDocument", "request", "file", true);
+  await flushPromises();
+  expect(w.findComponent(ChatColumn).props("canSend")).toBe(false);
+  await w.get('[data-testid="retry-action"]').trigger("click");
+  await flushPromises();
+  expect(linkChecklistFile).toHaveBeenNthCalledWith(1, "claim-1", "request", "file", true);
+  expect(linkChecklistFile).toHaveBeenNthCalledWith(2, "claim-1", "request", "file", true);
+  expect(store.documentChecklist[0].status).toBe("uploaded");
   expect(sendMessage).not.toHaveBeenCalled();
   expect(store.error).toBeNull();
   w.unmount();
