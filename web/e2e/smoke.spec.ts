@@ -142,6 +142,32 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(card.getByTestId("fact-estimated_amount_eur")).toHaveText("900");
   await expect(card.getByTestId("status")).toHaveText("Ready to submit");
 
+  // Compare document suggestions with confirmed facts and decide each separately.
+  const amountSuggestion = card.getByTestId("evidence-suggestion").filter({ hasText: "Estimated amount (EUR)" });
+  const dateSuggestion = card.getByTestId("evidence-suggestion").filter({ hasText: "Date" });
+  await expect(amountSuggestion).toContainText("Saved value: 900");
+  await expect(amountSuggestion).toContainText("Document suggestion: 1200");
+  await expect(amountSuggestion.getByRole("button", { name: "Accept suggestion" })).toBeDisabled();
+  await dateSuggestion.getByRole("button", { name: "Reject suggestion" }).click();
+  await expect(dateSuggestion).toContainText("Rejected.");
+  await expect(card.getByTestId("fact-incident_date")).toHaveText("2026-10-25");
+  await amountSuggestion.getByLabel("Replace the saved value with this suggestion.").check();
+  // The decision is saved even when its response is lost; finish replays it once.
+  await page.route("**/api/claims/*/evidence-suggestions/*/decision", async (route) => {
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    await route.fulfill({ response, body: "{" });
+  }, { times: 1 });
+  await amountSuggestion.getByRole("button", { name: "Accept suggestion" }).click();
+  await expect(page.getByRole("alert")).toContainText("document decision could not be completed");
+  await page.getByRole("button", { name: "Finish document decision", exact: true }).click();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(amountSuggestion).toContainText("Accepted earlier");
+  await expect(card.getByTestId("fact-estimated_amount_eur")).toHaveText("1200");
+  await expect(card.getByTestId("assessment-stale")).toHaveCount(0);
+  await expect(page.locator('[data-history-kind="evidence_accepted"]')).toHaveCount(1);
+  await expect(page.locator('[data-history-kind="evidence_rejected"]')).toHaveCount(1);
+
   // Confirm a replacement, prepare it, and refresh before submission.
   await page.getByTestId("replace-policy").click();
   await page.locator('#policy-file').setInputFiles('../tests/fixtures/replacement_policy.pdf');
@@ -226,12 +252,12 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByLabel("Claim card")).toHaveCount(0);
   await page.getByTestId("reviewer-link").click();
   await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
-  await expect(page.getByTestId("history-event")).toHaveCount(9);
+  await expect(page.getByTestId("history-event")).toHaveCount(13);
   await page.getByTestId("saved-history-link").click();
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
   await expect(page.getByTestId("claim-history")).toContainText("Reviewer (shared demo access)");
   await page.reload();
-  await expect(page.getByTestId("history-event")).toHaveCount(9);
+  await expect(page.getByTestId("history-event")).toHaveCount(13);
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
   await page.goto("/");
   await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
@@ -240,6 +266,6 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   expect(await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"))).not.toBe(savedId);
   const oldClaim = await (await page.request.get(savedConversationUrl)).json();
   expect(oldClaim.status).toBe("reviewed");
-  expect(oldClaim.history).toHaveLength(9);
+  expect(oldClaim.history).toHaveLength(13);
 
 });

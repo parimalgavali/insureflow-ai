@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { locale, setLocale, t } from "./i18n";
-import { createConversation, extractEvidence, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type DocumentType, type Language, type ReviewerClaim } from "./api/client";
+import { createConversation, decideEvidenceSuggestion, extractEvidence, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type EvidenceDecision, type DocumentType, type Language, type ReviewerClaim } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
 import PolicyUpload from "./components/PolicyUpload.vue";
 import ClaimCard from "./components/ClaimCard.vue";
@@ -16,6 +16,9 @@ const showReviewer = ref(location.hash === "#review");
 const historyId = ref(location.hash.startsWith("#history/") ? location.hash.slice(9) : null);
 const retrySubmission = ref(false);
 const retryExtraction = ref<string | null>(null);
+const retryDecision = ref<{ id: string; decision: EvidenceDecision } | null>(null);
+const pendingEvidence = computed(() => store.attachments.flatMap((attachment) => attachment.suggestions || []).find((suggestion) => suggestion.status === "applying"));
+const hasPendingEvidence = computed(() => !!pendingEvidence.value || !!retryDecision.value);
 const opening = ref(false);
 const policyBusy = ref(false);
 const openError = ref(false);
@@ -35,7 +38,7 @@ function navigate() {
 window.addEventListener("hashchange", navigate);
 onUnmounted(() => { window.removeEventListener("hashchange", navigate); openVersion++; accessDraft.value = ""; setAccessToken(""); });
 
-const canSend = computed(() => store.conversationId !== null && !opening.value && !openError.value && !policyBusy.value && !messageNeedsRetry.value && ["collecting", "information_needed"].includes(store.status));
+const canSend = computed(() => store.conversationId !== null && !opening.value && !openError.value && !policyBusy.value && !messageNeedsRetry.value && !hasPendingEvidence.value && ["collecting", "information_needed"].includes(store.status));
 
 async function start(language: Language, forceNew = false) {
   if (opening.value || store.busy || policyBusy.value) return;
@@ -51,6 +54,7 @@ async function start(language: Language, forceNew = false) {
     rememberClaim(conversation.id);
     pendingMessage = null;
     retryExtraction.value = null;
+    retryDecision.value = null;
     restoredDraft.value = null;
     validationError.value = false;
     retryCorrection.value = null;
@@ -128,7 +132,7 @@ async function send(text: string, file: File | null, documentType: DocumentType 
 }
 
 async function readEvidence(attachmentId: string) {
-  if (!store.conversationId || store.busy || messageNeedsRetry.value || policyBusy.value) return;
+  if (!store.conversationId || store.busy || messageNeedsRetry.value || policyBusy.value || hasPendingEvidence.value) return;
   store.busy = true;
   store.error = null;
   validationError.value = false;
@@ -144,6 +148,43 @@ async function readEvidence(attachmentId: string) {
   } finally {
     store.busy = false;
   }
+}
+
+async function decideEvidence(suggestionId: string, decision: EvidenceDecision) {
+  if (!store.claimId || store.busy || messageNeedsRetry.value || policyBusy.value) return;
+  if (retryCorrection.value || retrySubmission.value || retryExtraction.value) {
+    store.error = t("evidence.finishPrevious");
+    validationError.value = false;
+    return;
+  }
+  store.busy = true;
+  store.error = null;
+  validationError.value = false;
+  retryExtraction.value = null;
+  retryCorrection.value = null;
+  retrySubmission.value = false;
+  retryDecision.value = { id: suggestionId, decision };
+  try {
+    const result = await decideEvidenceSuggestion(store.claimId, suggestionId, decision);
+    applyReview(store, result.status, result.card, result.history, result.missing, result.attachments);
+    if (store.conversationId) loadConversation(store, await getConversation(store.conversationId));
+    retryDecision.value = null;
+  } catch (error) {
+    try { if (store.conversationId) loadConversation(store, await getConversation(store.conversationId)); } catch { /* Keep this exact decision for retry. */ }
+    if (error instanceof Error && error.message.startsWith("409 ")) {
+      retryDecision.value = null;
+      validationError.value = true;
+      store.error = t("evidence.changed");
+    } else store.error = t("evidence.decisionFailed");
+  } finally {
+    store.busy = false;
+  }
+}
+
+function finishEvidenceDecision() {
+  if (retryDecision.value) return decideEvidence(retryDecision.value.id, retryDecision.value.decision);
+  const suggestion = pendingEvidence.value;
+  if (suggestion) return decideEvidence(suggestion.id, { decision: "accept", expected_current: suggestion.expected_value ?? null, replace_existing: true });
 }
 
 async function submit() {
@@ -211,6 +252,7 @@ async function resumeSavedMessage() {
 function retry() {
   store.error = null;
   validationError.value = false;
+  if (retryDecision.value) return decideEvidence(retryDecision.value.id, retryDecision.value.decision);
   if (retryExtraction.value) return readEvidence(retryExtraction.value);
   if (retrySubmission.value) return submit();
   if (retryCorrection.value) return correct(retryCorrection.value.patch, retryCorrection.value.refresh);
@@ -269,9 +311,13 @@ onMounted(() => {
       <button class="btn" data-testid="new-claim" :disabled="opening || store.busy || policyBusy" @click="start(locale, true)">{{ t("session.new") }}</button>
       <p>{{ t("session.newNote") }}</p>
     </section>
-    <PolicyUpload v-if="store.conversationId && !openError && !opening" :key="store.conversationId" :conversation-id="store.conversationId" :busy="store.busy || messageNeedsRetry" :can-upload="['collecting', 'assessed', 'information_needed'].includes(store.status)" @busy="policyBusy = $event" @changed="onPolicyChanged" />
+    <section v-if="hasPendingEvidence && !openError && !opening" class="panel" role="status" data-testid="pending-evidence-decision">
+      <p>{{ t("evidence.pendingDecision") }}</p>
+      <button class="btn" :disabled="store.busy" @click="finishEvidenceDecision">{{ t("evidence.finishDecision") }}</button>
+    </section>
+    <PolicyUpload v-if="store.conversationId && !openError && !opening" :key="store.conversationId" :conversation-id="store.conversationId" :busy="store.busy || messageNeedsRetry || hasPendingEvidence" :can-upload="['collecting', 'assessed', 'information_needed'].includes(store.status)" @busy="policyBusy = $event" @changed="onPolicyChanged" />
     <ChatColumn v-if="!openError && !opening" :key="store.conversationId || 'new'" :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" :restored-draft="restoredDraft" :retryable="!validationError" @send="send" @retry="retry" />
-    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry || policyBusy" :claim-id="store.claimId" :history="store.history" :attachments="store.attachments" @extract-evidence="readEvidence" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
+    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry || policyBusy || hasPendingEvidence" :claim-id="store.claimId" :history="store.history" :attachments="store.attachments" @decide-evidence="decideEvidence" @extract-evidence="readEvidence" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
     </template>
   </div>
 </template>

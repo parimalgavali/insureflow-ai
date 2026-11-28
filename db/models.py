@@ -168,6 +168,7 @@ class EvidenceSuggestion(Base):
     value: Mapped[str | float | bool] = mapped_column(JSONB, nullable=False)
     page: Mapped[int] = mapped_column(Integer, nullable=False)
     quote: Mapped[str] = mapped_column(Text, nullable=False)
+    expected_value: Mapped[str | float | bool | None] = mapped_column(JSONB)
     status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)
 
 

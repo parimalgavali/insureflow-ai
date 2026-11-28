@@ -102,6 +102,7 @@ export interface EvidenceSuggestion {
   page: number;
   quote: string;
   status: string;
+  expected_value?: string | number | boolean | null;
   source_document_id: string;
   source_name: string;
 }
@@ -134,7 +135,7 @@ export interface Conversation {
 
 export interface HistoryEntry {
   id: number;
-  kind: "submitted" | "information_requested" | "corrected" | "assessment_refreshed" | "assessment_refresh_failed" | "review_completed";
+  kind: "submitted" | "information_requested" | "corrected" | "assessment_refreshed" | "assessment_refresh_failed" | "review_completed" | "evidence_accepted" | "evidence_rejected";
   actor: string;
   decision: string | null;
   note: string | null;
@@ -392,4 +393,14 @@ export async function replacePolicy(conversationId: string, replacesDocumentId: 
 
 export async function extractEvidence(conversationId: string, attachmentId: string): Promise<EvidenceAttachment> {
   return (await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(conversationId)}/attachments/${encodeURIComponent(attachmentId)}/extract`, { method: "POST", headers: headers(false) }))).json();
+}
+
+
+export interface EvidenceDecision {
+  decision: "accept" | "reject";
+  expected_current: string | number | boolean | null;
+  replace_existing?: boolean;
+}
+export async function decideEvidenceSuggestion(claimId: string, suggestionId: string, decision: EvidenceDecision): Promise<ClaimActionResult> {
+  return (await expectOk(await fetch(`${BASE}/api/claims/${encodeURIComponent(claimId)}/evidence-suggestions/${encodeURIComponent(suggestionId)}/decision`, { method: "POST", headers: headers(), body: JSON.stringify(decision) }))).json();
 }

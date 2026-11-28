@@ -49,10 +49,29 @@ it("shows source-linked suggestions separately and offers explicit PDF reading",
   await w.get("button").trigger("click");
   expect(w.emitted("extract")?.[0]).toEqual(["pdf"]);
   await w.setProps({ attachments: [{ ...attachment, processing_state: "ready", suggestions: [{ id: "s", field: "estimated_amount_eur", value: 1200, page: 2, quote: "<script>EUR 1200</script>", status: "pending", source_document_id: "pdf", source_name: "estimate.pdf" }] }] });
-  expect(w.text()).toContain("have not changed your claim facts");
+  expect(w.text()).toContain("only change claim facts after you accept");
   expect(w.get('[data-testid="evidence-suggestion"]').text()).toContain("1200");
   expect(w.text()).toContain("estimate.pdf · page 2");
   expect(w.find("script").exists()).toBe(false);
   expect(w.find("button").exists()).toBe(false);
+  w.unmount();
+});
+
+
+it("requires a separate replacement confirmation and resets it when saved facts change", async () => {
+  setLocale("en");
+  const suggestion = { id: "s", field: "estimated_amount_eur" as const, value: 1200, page: 1, quote: "EUR 1200", status: "pending", source_document_id: "pdf", source_name: "estimate.pdf" };
+  const w = mount(AttachmentList, { props: { facts: { estimated_amount_eur: 900 } as never, canConfirm: true, attachments: [{ id: "pdf", filename: "estimate.pdf", content_type: "application/pdf", media_type: "pdf", document_type: "repair_estimate", processing_state: "ready", size_bytes: 100, error: null, suggestions: [suggestion] }] } });
+  const accept = w.findAll("button").find((button) => button.text() === "Accept suggestion")!;
+  expect(w.text()).toContain("Saved value: 900");
+  expect(w.text()).toContain("Document suggestion: 1200");
+  expect(accept.attributes("disabled")).toBeDefined();
+  await w.get('input[type="checkbox"]').setValue(true);
+  await accept.trigger("click");
+  expect(w.emitted("decide")?.[0]).toEqual(["s", { decision: "accept", expected_current: 900, replace_existing: true }]);
+  await w.setProps({ facts: { estimated_amount_eur: 1000 } as never });
+  expect(accept.attributes("disabled")).toBeDefined();
+  await w.findAll("button").find((button) => button.text() === "Reject suggestion")!.trigger("click");
+  expect(w.emitted("decide")?.[1]).toEqual(["s", { decision: "reject", expected_current: 1000, replace_existing: false }]);
   w.unmount();
 });

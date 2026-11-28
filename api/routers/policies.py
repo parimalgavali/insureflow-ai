@@ -12,6 +12,7 @@ from pypdf import PdfReader
 from sqlalchemy import delete, select
 from sqlalchemy import text as sql_text
 
+from api.evidence_decisions import require_no_pending_evidence
 from api.policy_text import PolicyTextError, prepare_pdf
 from api.security import get_state, require_token
 from db.models import Conversation, MessageOperation, PolicyDocument, PolicyPassage
@@ -148,6 +149,7 @@ def _save_policy(conversation_id, file, state, replaces_document_id=None):
                 .limit(1)
             ):
                 raise HTTPException(409, "message_unfinished")
+            require_no_pending_evidence(session, conversation_id)
             if existing is not None and existing.status == "processing":
                 raise HTTPException(409, "policy_processing")
             if existing is not None:
@@ -221,6 +223,7 @@ def prepare_policy(conversation_id: uuid.UUID, state=Depends(get_state)):
                     .limit(1)
                 ):
                     raise HTTPException(409, "message_unfinished")
+                require_no_pending_evidence(session, conversation_id)
                 document.status, document.error = "processing", None
                 session.commit()
             try:

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import object_session
 
@@ -12,10 +13,19 @@ from api.agent.graph import correct_customer_facts, resume_review, submit_for_re
 from api.agent.required_facts import missing_facts
 from api.agent.schemas import ClaimCard, CustomerCorrection, ReviewDecision, ReviewRequest
 from api.evidence import AttachmentOut, attachments_out
+from api.evidence_decisions import require_no_pending_evidence
 from api.history import HistoryEntry, history_out, record_event, record_review_events
 from api.policy_coverage import coverage_source_changed, current_coverage_card
 from api.security import get_state, require_adjuster, require_token
-from db.models import Claim, Conversation, Message, MessageOperation, PolicyDocument
+from db.models import (
+    Attachment,
+    Claim,
+    Conversation,
+    EvidenceSuggestion,
+    Message,
+    MessageOperation,
+    PolicyDocument,
+)
 
 router = APIRouter(prefix="/api/claims", tags=["claims"], dependencies=[Depends(require_token)])
 
@@ -110,7 +120,7 @@ def get_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
         return _out(claim)
 
 
-def _require_finished_message(session, claim):
+def _require_finished_message(session, claim, allowed_suggestion_id=None):
     # Same conversation row lock as message creation: no edit can slip between
     # checking for an unfinished message and reserving its operation.
     session.scalar(
@@ -126,6 +136,7 @@ def _require_finished_message(session, claim):
     )
     if pending:
         raise HTTPException(409, "retry the unfinished message before changing this claim")
+    require_no_pending_evidence(session, claim.conversation_id, allowed_suggestion_id)
     policy = session.scalar(
         select(PolicyDocument)
         .where(
@@ -181,52 +192,54 @@ def _customer_action(claim_id: uuid.UUID, patch: dict, state, *, refresh: bool =
         _require_finished_message(session, claim)
         if claim.status not in ("collecting", "assessed", "information_needed"):
             raise HTTPException(409, "customer corrections are only available before submission")
-        try:
-            result = correct_customer_facts(
-                state.graph, str(claim.conversation_id), patch, refresh=refresh
-            )
-        except ValueError as exc:
-            raise HTTPException(409, str(exc)) from exc
-        card = result.get("card") or ClaimCard(
-            facts=result["facts"], policy=result["policy"], status=result["status"]
+        _apply_customer_action(session, claim, patch, state, refresh=refresh)
+        session.commit()
+        return _out(claim)
+
+
+def _apply_customer_action(session, claim, patch, state, *, refresh=False, action_id=None):
+    try:
+        result = correct_customer_facts(
+            state.graph, str(claim.conversation_id), patch, refresh=refresh, action_id=action_id
         )
-        card = current_coverage_card(
-            session, card, claim.conversation_id, claim.conversation.language
-        )
-        claim.card = card.model_dump(mode="json")
-        claim.status = card.status
-        claim.conversation.status = card.status
-        operation_id = result.get("customer_action_id")
-        if operation_id:
-            changes = result.get("customer_changes", [])
-            if changes and record_event(
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    card = result.get("card") or ClaimCard(
+        facts=result["facts"], policy=result["policy"], status=result["status"]
+    )
+    card = current_coverage_card(session, card, claim.conversation_id, claim.conversation.language)
+    claim.card = card.model_dump(mode="json")
+    claim.status = card.status
+    claim.conversation.status = card.status
+    operation_id = result.get("customer_action_id")
+    if operation_id:
+        changes = result.get("customer_changes", [])
+        if changes and record_event(
+            session,
+            claim,
+            operation_id=operation_id,
+            kind="corrected",
+            actor="customer",
+            decision="edit",
+            changes=[c.model_dump(mode="json") for c in changes],
+        ):
+            note = result.get("customer_correction_message")
+            if note:
+                claim.conversation.messages.append(Message(role="user", content=note))
+        if result["status"] == "assessed" and not result.get("reassessment_needed"):
+            failed = card.assessment_stale
+            if record_event(
                 session,
                 claim,
                 operation_id=operation_id,
-                kind="corrected",
+                kind="assessment_refresh_failed" if failed else "assessment_refreshed",
                 actor="customer",
-                decision="edit",
-                changes=[c.model_dump(mode="json") for c in changes],
+                decision="reassess" if refresh else "edit",
+                note=card.assessment_error if failed else None,
             ):
-                note = result.get("customer_correction_message")
+                note = result.get("customer_assessment_message")
                 if note:
-                    claim.conversation.messages.append(Message(role="user", content=note))
-            if result["status"] == "assessed" and not result.get("reassessment_needed"):
-                failed = card.assessment_stale
-                if record_event(
-                    session,
-                    claim,
-                    operation_id=operation_id,
-                    kind="assessment_refresh_failed" if failed else "assessment_refreshed",
-                    actor="customer",
-                    decision="reassess" if refresh else "edit",
-                    note=card.assessment_error if failed else None,
-                ):
-                    note = result.get("customer_assessment_message")
-                    if note:
-                        claim.conversation.messages.append(Message(role="assistant", content=note))
-        session.commit()
-        return _out(claim)
+                    claim.conversation.messages.append(Message(role="assistant", content=note))
 
 
 @router.patch("/{claim_id}/facts", response_model=ClaimOut)
@@ -313,3 +326,118 @@ def get_history(claim_id: uuid.UUID, state=Depends(get_state)) -> list[HistoryEn
         if claim is None:
             raise HTTPException(404, "claim not found")
         return history_out(claim)
+
+
+class EvidenceDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    decision: Literal["accept", "reject"]
+    expected_current: str | float | bool | None
+    replace_existing: bool = False
+
+
+def _same_value(first, second):
+    if isinstance(first, bool) or isinstance(second, bool):
+        return type(first) is type(second) and first == second
+    return first == second
+
+
+def _load_suggestion(session, claim, suggestion_id):
+    suggestion = session.scalar(
+        select(EvidenceSuggestion)
+        .join(Attachment)
+        .where(
+            EvidenceSuggestion.id == suggestion_id,
+            Attachment.conversation_id == claim.conversation_id,
+            Attachment.processing_state == "ready",
+        )
+        .with_for_update(of=EvidenceSuggestion)
+    )
+    if suggestion is None:
+        raise HTTPException(404, "suggestion not found")
+    return suggestion
+
+
+def _record_evidence_decision(session, claim, suggestion, decision):
+    attachment = session.get(Attachment, suggestion.attachment_id)
+    record_event(
+        session,
+        claim,
+        operation_id="evidence-" + suggestion.id.hex,
+        kind="evidence_accepted" if decision == "accept" else "evidence_rejected",
+        actor="customer",
+        decision=decision,
+        note=f"{attachment.filename}, page {suggestion.page}",
+    )
+
+
+@router.post("/{claim_id}/evidence-suggestions/{suggestion_id}/decision", response_model=ClaimOut)
+def decide_evidence_suggestion(
+    claim_id: uuid.UUID, suggestion_id: uuid.UUID, body: EvidenceDecision, state=Depends(get_state)
+) -> ClaimOut:
+    # Reserve the decision durably before changing graph checkpoints. A stopped
+    # request can finish this exact confirmation without allowing an intervening edit.
+    with state.session() as session:
+        claim = session.scalar(select(Claim).where(Claim.id == claim_id).with_for_update())
+        if claim is None:
+            raise HTTPException(404, "claim not found")
+        suggestion = _load_suggestion(session, claim, suggestion_id)
+        final_status = "accepted" if body.decision == "accept" else "rejected"
+        if suggestion.status in ("accepted", "rejected"):
+            if suggestion.status != final_status:
+                raise HTTPException(409, "suggestion already decided")
+            return _out(claim)  # Replays never reapply an old fact after a later edit.
+        _require_finished_message(session, claim, suggestion_id)
+        if claim.status not in ("collecting", "assessed", "information_needed"):
+            raise HTTPException(409, "document confirmation is only available before submission")
+        if suggestion.status == "applying":
+            if body.decision != "accept" or not _same_value(
+                body.expected_current, suggestion.expected_value
+            ):
+                raise HTTPException(409, "finish the original document confirmation")
+        elif suggestion.status == "pending":
+            if body.decision == "reject":
+                suggestion.status = "rejected"
+                _record_evidence_decision(session, claim, suggestion, "reject")
+                session.commit()
+                return _out(claim)
+            if not claim.card:
+                raise HTTPException(409, "describe the incident before confirming document facts")
+            facts = ClaimCard.model_validate(claim.card).facts
+            current = getattr(facts, suggestion.field)
+            if not _same_value(current, body.expected_current):
+                raise HTTPException(409, {"code": "claim_fact_changed", "field": suggestion.field})
+            if (
+                current not in (None, "unknown")
+                and not _same_value(current, suggestion.value)
+                and not body.replace_existing
+            ):
+                raise HTTPException(409, "confirm replacing the existing claim value")
+            snapshot = state.graph.get_state(thread_config(str(claim.conversation_id)))
+            if snapshot.values.get("facts") != facts:
+                raise HTTPException(
+                    409, "finish the pending claim update before confirming a document"
+                )
+            suggestion.expected_value = current
+            suggestion.status = "applying"
+            session.commit()
+        else:
+            raise HTTPException(409, "suggestion cannot be confirmed")
+    with state.session() as session:
+        claim = session.scalar(select(Claim).where(Claim.id == claim_id).with_for_update())
+        if claim is None:
+            raise HTTPException(404, "claim not found")
+        suggestion = _load_suggestion(session, claim, suggestion_id)
+        if suggestion.status == "accepted":
+            return _out(claim)
+        _require_finished_message(session, claim, suggestion_id)
+        _apply_customer_action(
+            session,
+            claim,
+            {suggestion.field: suggestion.value},
+            state,
+            action_id="evidence-" + suggestion.id.hex,
+        )
+        suggestion.status = "accepted"
+        _record_evidence_decision(session, claim, suggestion, "accept")
+        session.commit()
+        return _out(claim)
