@@ -1640,3 +1640,159 @@ def test_policy_cannot_be_replaced_while_its_preparation_is_running(client, monk
             release.set()
         assert job.result(timeout=15).json()["document"]["id"] == old["id"]
     assert client.get(url).json()["document"]["id"] == old["id"]
+
+
+def test_two_claims_with_identical_policy_filenames_and_operation_ids_stay_separate(
+    client, monkeypatch
+):
+    from dataclasses import replace
+
+    from api.agent.schemas import ClaimFacts, ComposeOutput
+    from api.llm.provider import Completion
+
+    state = client.app.state.claimpilot
+    state.settings = replace(
+        state.settings, demo_api_token="sample-shared-access", allow_open_api=False
+    )
+    access = {"Authorization": "Bearer sample-shared-access"}
+    first = client.post("/api/conversations", json={"language": "en"}, headers=access).json()
+    second = client.post("/api/conversations", json={"language": "en"}, headers=access).json()
+    first_doc = _select_test_policy(
+        state, first["id"], text="Collision cover AlphaSentinel applies only to the first policy."
+    )
+    second_doc = _select_test_policy(
+        state, second["id"], text="Collision cover BetaSentinel applies only to the second policy."
+    )
+    prompts = []
+
+    def complete(messages, **kwargs):
+        if kwargs["tag"] == "extract":
+            facts = ClaimFacts(
+                incident_date="2026-10-25",
+                event_type="collision",
+                third_party_involved=False,
+                police_report_filed=False,
+                witnesses=False,
+                damage_description="bumper dent",
+            )
+            return Completion(text=facts.model_dump_json(), parsed=facts)
+        content = messages[-1].content
+        prompts.append(content)
+        assert ("AlphaSentinel" in content) != ("BetaSentinel" in content)
+        marker = "AlphaSentinel" if "AlphaSentinel" in content else "BetaSentinel"
+        output = ComposeOutput(
+            answer=f"selected.pdf, page 3: {marker} collision cover [P.1]. A claims handler reviews the claim.",
+            coverage_status="likely_covered",
+            cited_clause_ids=["P.1"],
+        )
+        return Completion(text=output.model_dump_json(), parsed=output)
+
+    monkeypatch.setattr(state.provider, "complete", complete)
+    operation = str(uuid.uuid4())
+    for conv, document, marker, foreign in [
+        (first, first_doc, "AlphaSentinel", "BetaSentinel"),
+        (second, second_doc, "BetaSentinel", "AlphaSentinel"),
+    ]:
+        url = f"/api/conversations/{conv['id']}/messages"
+        payload = {"text": "The same collision description.", "operation_id": operation}
+        result = client.post(url, data=payload, headers=access)
+        card = dict(parse_sse(result.text))["card"]["card"]
+        assert card["coverage_policy_id"] == document
+        assert all(c["document_id"] == document for c in card["citations"])
+        assert marker in json.dumps(card) and foreign not in json.dumps(card)
+        assert client.get(f"/api/claims/{conv['claim_id']}").status_code == 401
+        assert client.get(f"/api/conversations/{conv['id']}/policy").status_code == 401
+        canonical = client.get(f"/api/claims/{conv['claim_id']}", headers=access).json()
+        assert marker in json.dumps(canonical) and foreign not in json.dumps(canonical)
+    assert len(prompts) == 2
+    for conv, marker, foreign in [
+        (second, "BetaSentinel", "AlphaSentinel"),
+        (first, "AlphaSentinel", "BetaSentinel"),
+    ]:
+        cached = client.post(
+            f"/api/conversations/{conv['id']}/messages",
+            data={"text": "The same collision description.", "operation_id": operation},
+            headers=access,
+        )
+        assert marker in cached.text and foreign not in cached.text
+        messages = client.get(f"/api/conversations/{conv['id']}", headers=access).json()["messages"]
+        assert len(messages) == 3
+    assert len(prompts) == 2
+    # One shared demo credential can read both claims; this is not private account ownership.
+    assert client.get(f"/api/claims/{second['claim_id']}", headers=access).status_code == 200
+
+
+def test_database_rejects_policy_revision_links_across_conversations(client):
+    from sqlalchemy import delete
+    from sqlalchemy.exc import IntegrityError
+
+    from db.models import Conversation, PolicyDocument
+
+    state = client.app.state.claimpilot
+    first = client.post("/api/conversations", json={}).json()["id"]
+    second = client.post("/api/conversations", json={}).json()["id"]
+    first_doc = _select_test_policy(state, first)
+    second_doc = _select_test_policy(state, second)
+    with state.session() as session:
+        invalid = PolicyDocument(
+            conversation_id=uuid.UUID(first),
+            filename="cross-link.pdf",
+            content_hash="b" * 64,
+            path="unused.pdf",
+            size_bytes=1,
+            status="uploaded",
+            is_current=False,
+            revision=2,
+            replaces_document_id=uuid.UUID(second_doc),
+        )
+        session.add(invalid)
+        with pytest.raises(IntegrityError):
+            session.commit()
+        session.rollback()
+        original = session.get(PolicyDocument, uuid.UUID(first_doc))
+        original.is_current = False
+        session.flush()
+        session.add(
+            PolicyDocument(
+                conversation_id=uuid.UUID(first),
+                filename="valid-revision.pdf",
+                content_hash="c" * 64,
+                path="unused.pdf",
+                size_bytes=1,
+                status="uploaded",
+                is_current=True,
+                revision=2,
+                replaces_document_id=uuid.UUID(first_doc),
+            )
+        )
+        session.commit()
+        # A whole conversation can still be removed with its retained revisions.
+        session.execute(delete(Conversation).where(Conversation.id == uuid.UUID(first)))
+        session.commit()
+    assert client.get(f"/api/conversations/{first}/policy").status_code == 404
+    assert client.get(f"/api/conversations/{second}/policy").json()["document"]["id"] == second_doc
+
+
+def test_cached_reply_after_policy_replacement_is_explicitly_out_of_date(client, monkeypatch):
+    state = client.app.state.claimpilot
+    conv = client.post("/api/conversations", json={"language": "en"}).json()
+    cid = conv["id"]
+    old = _select_test_policy(state, cid)
+    _policy_answer_provider(state, monkeypatch)
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    payload = {"text": MSG2, "operation_id": str(uuid.uuid4())}
+    client.post(f"/api/conversations/{cid}/messages", data=payload)
+    data = (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes()
+    client.put(
+        f"/api/conversations/{cid}/policy",
+        data={"replaces_document_id": old},
+        files={"file": ("new.pdf", data, "application/pdf")},
+    )
+    calls = len(state.provider.calls)
+    replay = dict(parse_sse(client.post(f"/api/conversations/{cid}/messages", data=payload).text))
+    assert replay["card"]["card"]["assessment_stale"]
+    assert replay["card"]["card"]["coverage_policy_id"] == old  # Explicit historical provenance.
+    assert replay["question"]["text"].startswith("The selected policy has changed.")
+    again = dict(parse_sse(client.post(f"/api/conversations/{cid}/messages", data=payload).text))
+    assert again["question"] == replay["question"]
+    assert len(state.provider.calls) == calls

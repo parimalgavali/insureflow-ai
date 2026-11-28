@@ -137,6 +137,7 @@ def search_passages(session, conversation_id, document_id, query: str, limit: in
             .join(PolicyDocument, PolicyDocument.id == PolicyPassage.document_id)
             .where(
                 PolicyPassage.conversation_id == conversation_id,
+                PolicyDocument.conversation_id == conversation_id,
                 PolicyPassage.document_id == document_id,
                 PolicyDocument.status == "ready",
                 PolicyDocument.is_current.is_(True),
