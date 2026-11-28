@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal, RiskStatus, HistoryEntry } from "../api/client";
+import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal, RiskStatus, HistoryEntry, EvidenceAttachment } from "../api/client";
 import CitationPill from "./CitationPill.vue";
+import AttachmentList from "./AttachmentList.vue";
 import ClaimHistory from "./ClaimHistory.vue";
 import { t } from "../i18n";
 
@@ -17,6 +18,7 @@ const props = defineProps<{
   busy: boolean;
   reviewer?: boolean;
   history?: HistoryEntry[];
+  attachments?: EvidenceAttachment[];
   claimId?: string | null;
 }>();
 const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: []; customerCorrect: [patch: Record<string, unknown>]; customerRefresh: [] }>();
@@ -261,6 +263,8 @@ function submitReview() {
         <small>· {{ card.cost.basis }} – {{ t("card.costNote") }}</small>
       </p>
     </section>
+
+    <AttachmentList :attachments="attachments || []" />
 
     <section v-if="card?.missing_documents.length">
       <h3>{{ t("card.provide") }}</h3>

@@ -4,13 +4,14 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import object_session
 
 from api.agent.graph import correct_customer_facts, resume_review, submit_for_review, thread_config
 from api.agent.required_facts import missing_facts
 from api.agent.schemas import ClaimCard, CustomerCorrection, ReviewDecision, ReviewRequest
+from api.evidence import AttachmentOut, attachments_out
 from api.history import HistoryEntry, history_out, record_event, record_review_events
 from api.policy_coverage import coverage_source_changed, current_coverage_card
 from api.security import get_state, require_adjuster, require_token
@@ -27,6 +28,7 @@ class ClaimOut(BaseModel):
     submitted_at: datetime | None
     history: list[HistoryEntry]
     missing: list[str]
+    attachments: list[AttachmentOut] = Field(default_factory=list)
 
 
 def _out(claim: Claim) -> ClaimOut:
@@ -40,6 +42,7 @@ def _out(claim: Claim) -> ClaimOut:
         conversation_id=claim.conversation_id,
         status=claim.status,
         card=card,
+        attachments=attachments_out(object_session(claim), claim.conversation_id),
         submitted_at=claim.submitted_at,
         history=history_out(claim),
         missing=missing_facts(ClaimCard.model_validate(claim.card).facts) if claim.card else [],

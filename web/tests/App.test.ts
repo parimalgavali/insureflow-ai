@@ -128,7 +128,7 @@ it("retries the original file and operation without duplicating the optimistic m
   store.status = "collecting";
   const file = new File(["sample"], "claim.pdf", { type: "application/pdf" });
   vi.mocked(sendMessage).mockRejectedValueOnce(new Error("Network lost"));
-  w.findComponent(ChatColumn).vm.$emit("send", "Original text", file);
+  w.findComponent(ChatColumn).vm.$emit("send", "Original text", file, "repair_estimate");
   await flushPromises();
   expect(store.busy).toBe(false);
   expect(store.error).toContain("Retry");
@@ -142,6 +142,7 @@ it("retries the original file and operation without duplicating the optimistic m
   expect(second[1]).toBe(first[1]);
   expect(second[2]).toBe(file);
   expect(second[5]).toBe(first[5]);
+  expect(second[6]).toBe("repair_estimate");
   expect(first[5]).toBeTruthy();
   expect(store.messages.filter((m) => m.role === "user")).toHaveLength(1);
   expect(store.busy).toBe(false);
@@ -227,5 +228,32 @@ it("reloads the canonical assessment after a policy selection change", async () 
   expect(getConversation).toHaveBeenCalledWith("conversation-1");
   expect(store.card?.assessment_stale).toBe(true);
   expect(store.busy).toBe(false);
+  w.unmount();
+});
+
+
+it.each([413, 415, 422])("returns rejected %s uploads to an editable draft with no stuck retry", async (status) => {
+  const w = mountApp();
+  await flushPromises();
+  store.status = "information_needed";
+  const previousCard = store.card;
+  const file = new File(["bad"], "broken.pdf", { type: "application/pdf" });
+  vi.mocked(sendMessage).mockRejectedValueOnce(new Error(`${status} Invalid upload`));
+  w.findComponent(ChatColumn).vm.$emit("send", "Keep this message", file, "repair_estimate");
+  await flushPromises();
+  expect(store.status).toBe("information_needed");
+  expect(store.card).toBe(previousCard);
+  expect(store.messages).toHaveLength(0);
+  expect(w.findComponent(ChatColumn).props("canSend")).toBe(true);
+  expect(w.findComponent(ChatColumn).attributes("retryable")).toBe("false");
+  expect(store.error).toContain("draft");
+  expect(store.busy).toBe(false);
+  // The corrected upload starts a new operation; the rejected one was never saved.
+  vi.mocked(sendMessage).mockResolvedValueOnce(undefined);
+  vi.mocked(getConversation).mockResolvedValueOnce({ id: "conversation-1", claim_id: "claim-1", language: "en", status: "collecting", card: null, policy: {}, messages: [], attachments: [] } as never);
+  w.findComponent(ChatColumn).vm.$emit("send", "Keep this message", null, "other_document");
+  await flushPromises();
+  expect(vi.mocked(sendMessage).mock.calls[1][5]).not.toBe(vi.mocked(sendMessage).mock.calls[0][5]);
+  expect(store.error).toBeNull();
   w.unmount();
 });

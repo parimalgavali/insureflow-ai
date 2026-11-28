@@ -133,6 +133,7 @@ class AgentState(TypedDict, total=False):
     policy: PolicyContext
     missing: list[str]
     attachments: Annotated[int, operator.add]
+    photo_attached_this_turn: bool
     followups_asked: int
     message_operation_id: str
     extract_failed: bool
@@ -260,8 +261,9 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             # Keep the operation at this node so retry reuses its saved input.
             raise ProviderError("Claim extraction is temporarily unavailable")
         if isinstance(update, ClaimFacts):
+            update = update.model_copy(update={"photos_attached": facts.photos_attached})
             facts = facts.merge(update)
-        if state.get("attachments", 0) > 0 and not facts.photos_attached:
+        if state.get("photo_attached_this_turn", False) and not facts.photos_attached:
             facts = facts.model_copy(update={"photos_attached": True})
         policy = state.get("policy") or PolicyContext()
         risk_missing = missing_risk_inputs(facts, policy)
@@ -273,6 +275,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             "risk_status": "insufficient_information" if risk_missing else "pending",
             "risk_missing": risk_missing,
             "extract_failed": failed,
+            "photo_attached_this_turn": False,
             "status": "collecting",
             "card": None,
             "review": None,

@@ -19,11 +19,12 @@ describe("message stream", () => {
   it("sends the stable operation identity, original text and file", async () => {
     const fetch = respond('event: done\ndata: {"status":"collecting","claim_id":"claim"}\n\n');
     const file = new File(["sample"], "sample.pdf", { type: "application/pdf" });
-    await sendMessage("conversation", "Original text", file, vi.fn(), "en", "operation");
+    await sendMessage("conversation", "Original text", file, vi.fn(), "en", "operation", "police_report");
     const form = fetch.mock.calls[0][1].body as FormData;
     expect(form.get("operation_id")).toBe("operation");
     expect(form.get("text")).toBe("Original text");
     expect(form.get("file")).toBe(file);
+    expect(form.get("document_type")).toBe("police_report");
   });
 
   it("accepts a terminal error so the reducer can display a retry action", async () => {

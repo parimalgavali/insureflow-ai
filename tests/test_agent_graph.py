@@ -66,6 +66,7 @@ def test_scripted_hit_and_run_conversation(graph_and_provider):
                 )
             ],
             "attachments": 1,
+            "photo_attached_this_turn": True,
         },
         thread_config(thread),
     )
@@ -756,3 +757,25 @@ def test_selected_policy_without_supporting_wording_never_assumes_demo_coverage(
     assert "Musterbedingungen" not in card.coverage_summary
     assert "Sachbearbeiter" in card.coverage_summary
     assert [c["tag"] for c in provider.calls] == ["extract"]
+
+
+def test_legacy_attachment_count_does_not_prove_photos_and_photo_flag_is_consumed():
+    graph = build_graph(AgentDeps(provider=RecordedProvider(FIXTURE)), checkpointer=MemorySaver())
+    first = graph.invoke(
+        {
+            "messages": [ChatMessage(role="user", content="Mein Auto wurde angefahren.")],
+            "attachments": 1,
+        },
+        thread_config("legacy-attachment"),
+    )
+    assert first["facts"].photos_attached is False
+    assert first["photo_attached_this_turn"] is False
+    second = graph.invoke(
+        {
+            "messages": [ChatMessage(role="user", content="Am 25.10.2026.")],
+            "photo_attached_this_turn": True,
+        },
+        thread_config("legacy-attachment"),
+    )
+    assert second["facts"].photos_attached is True
+    assert second["photo_attached_this_turn"] is False

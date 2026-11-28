@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { adjusterToken } from "../playwright.config";
 
@@ -43,8 +44,20 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByTestId("policy-counts")).toContainText("3 pages");
   await expect(page.getByTestId("policy-source")).toContainText("Selected policy: sample_policy.pdf");
 
+  // A rejected file returns the message to the draft; replace it with a real disk PDF.
+  await page.locator('.chat input[type="file"]').setInputFiles({ name: "broken.png", mimeType: "image/png", buffer: Buffer.from("not an image") });
   await composer.fill(MSG1);
   await composer.press("Enter");
+  await expect(page.getByRole("alert")).toContainText("back in the draft");
+  await expect(composer).toBeEnabled();
+  await expect(composer).toHaveValue(MSG1);
+  await expect(page.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
+  await page.locator('.chat input[type="file"]').setInputFiles('../tests/fixtures/sample_policy.pdf');
+  await page.getByLabel("What is this attachment?").selectOption("police_report");
+  await composer.press("Enter");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByTestId("evidence-list")).toContainText("Police report");
+  await expect(page.getByTestId("fact-photos_attached")).toHaveText("no");
   // agent asks a follow-up and offers chips for the missing facts
   await expect(page.getByLabel("Suggested answers")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByLabel("Claim card")).toContainText(/Köln/);
@@ -58,6 +71,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByRole("log")).toContainText(MSG1);
   await expect(page.getByTestId("policy-status")).toHaveText("Text prepared for searching");
   await expect(page.getByTestId("policy-filename")).toHaveText("sample_policy.pdf");
+  await expect(page.getByTestId("evidence-list")).toContainText("Police report");
   expect(await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"))).toBe(savedId);
 
   // Lose the terminal response after a message with a file has been saved.
@@ -66,18 +80,26 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
     savedConversationUrl = route.request().url().replace(/\/messages$/, "");
     const response = await route.fetch();
     const body = await response.text();
+    expect(response.status(), body).toBe(200);
     await route.fulfill({ response, body: body.slice(0, body.lastIndexOf("event: done")) });
   }, { times: 1 });
-  await page.locator('.chat input[type="file"]').setInputFiles({ name: "claim.pdf", mimeType: "application/pdf", buffer: Buffer.from("Sample claim document") });
+  // Use in-memory bytes because intercepted native file paths are omitted by CDP post data.
+  await page.locator('.chat input[type="file"]').setInputFiles({ name: "claim.pdf", mimeType: "application/pdf", buffer: readFileSync('../tests/fixtures/sample_policy.pdf') });
+  await page.getByLabel("What is this attachment?").selectOption("repair_estimate");
   await composer.fill(MSG2);
   await composer.press("Enter");
   await expect(page.getByRole("alert")).toContainText("same text and attachment", { timeout: 60_000 });
+  await expect(page.getByTestId("evidence-list")).toContainText("claim.pdf");
+  await expect(page.getByTestId("evidence-list")).toContainText("Repair estimate");
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
   const canonical = await (await page.request.get(savedConversationUrl)).json();
   expect(canonical.messages.filter((m: { content: string }) => m.content.startsWith(MSG2))).toHaveLength(1);
 
   const card = page.getByLabel("Claim card");
+  await expect(card.getByTestId("fact-photos_attached")).toHaveText("no");
+  await expect(card.getByTestId("evidence-list")).toContainText("Not yet analysed for claim details");
+  expect(canonical.attachments).toHaveLength(2);
   await expect(card.getByTestId("coverage")).toBeVisible({ timeout: 60_000 });
   await expect(card.getByTestId("status")).toHaveText(/ready to submit/i);
   await expect(card.getByTestId("coverage-source")).toContainText("sample_policy.pdf");
@@ -141,6 +163,8 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(row).toContainText("Submitted:");
   await row.click();
   const reviewCard = page.getByLabel("Claim card");
+  await expect(reviewCard.getByTestId("evidence-list")).toContainText("Repair estimate");
+  await expect(reviewCard.getByTestId("evidence-list")).toContainText("claim.pdf");
   await expect(reviewCard.getByTestId("risk")).toHaveText(/low|medium|high/);
   await expect(reviewCard.getByTestId("summary")).toContainText(/P\.1/);
   // Ask for more information rather than completing the review.

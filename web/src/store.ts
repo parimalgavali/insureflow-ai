@@ -1,6 +1,6 @@
 /** One reactive store; every SSE event is reduced here so components stay dumb. */
 import { reactive } from "vue";
-import type { AgentEvent, Citation, ClaimCard, ClaimFacts, ClaimStatus, Conversation, Language, RiskSignal, RiskStatus, HistoryEntry } from "./api/client";
+import type { AgentEvent, Citation, ClaimCard, ClaimFacts, ClaimStatus, Conversation, Language, RiskSignal, RiskStatus, HistoryEntry, EvidenceAttachment } from "./api/client";
 
 export interface ChatItem {
   id: string;
@@ -27,6 +27,7 @@ export interface State {
   error: string | null;
   lastUserText: string | null;
   history: HistoryEntry[];
+  attachments: EvidenceAttachment[];
 }
 
 export function initialState(): State {
@@ -48,6 +49,7 @@ export function initialState(): State {
     error: null,
     lastUserText: null,
     history: [],
+    attachments: [],
   };
 }
 
@@ -68,6 +70,7 @@ export function loadConversation(state: State, conv: Conversation): void {
   state.riskStatus = conv.card?.risk_status ?? (state.risk ? "available" : "pending");
   state.riskMissing = conv.card?.risk_missing ?? [];
   state.history = conv.history ?? [];
+  state.attachments = conv.attachments ?? [];
   state.missing = conv.missing ?? [];
 }
 
@@ -152,7 +155,7 @@ export function finishTurn(state: State): void {
   state.busy = false;
 }
 
-export function applyReview(state: State, status: ClaimStatus, card: ClaimCard, history?: HistoryEntry[], missing?: string[]): void {
+export function applyReview(state: State, status: ClaimStatus, card: ClaimCard, history?: HistoryEntry[], missing?: string[], attachments?: EvidenceAttachment[]): void {
   state.status = status;
   state.card = card;
   state.facts = card.facts;
@@ -161,6 +164,7 @@ export function applyReview(state: State, status: ClaimStatus, card: ClaimCard, 
   state.riskStatus = card.risk_status ?? (state.risk ? "available" : "pending");
   state.riskMissing = card.risk_missing ?? [];
   if (history) state.history = history;
+  if (attachments) state.attachments = attachments;
   if (missing) state.missing = missing;
 }
 

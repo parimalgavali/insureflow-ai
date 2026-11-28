@@ -138,6 +138,10 @@ class Attachment(Base):
         ForeignKey("messages.id", ondelete="SET NULL")
     )
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(16), default="unknown", nullable=False)
+    document_type: Mapped[str] = mapped_column(String(32), default="unknown", nullable=False)
+    processing_state: Mapped[str] = mapped_column(String(32), default="unknown", nullable=False)
+    error: Mapped[str | None] = mapped_column(Text)
     content_type: Mapped[str] = mapped_column(String(128), nullable=False)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     path: Mapped[str] = mapped_column(Text, nullable=False)
@@ -161,6 +165,7 @@ class MessageOperation(Base):
     user_text: Mapped[str] = mapped_column(Text, nullable=False)
     language: Mapped[str] = mapped_column(String(2), nullable=False)
     has_attachment: Mapped[bool] = mapped_column(nullable=False)
+    has_photo: Mapped[bool] = mapped_column(default=False, nullable=False)
     base_message_count: Mapped[int] = mapped_column(Integer, nullable=False)
     response: Mapped[list[str] | None] = mapped_column(JSONB)
 
