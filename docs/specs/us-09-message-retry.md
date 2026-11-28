@@ -22,4 +22,4 @@ The stream client must require a terminal event and clear loading on every failu
 - One saved user message, one attachment/file, and one assistant answer after recovery.
 - Original file/text retained, partial stream diagnosed, loading cleared, and subsequent progress enabled in the frontend.
 
-Frontend implementation has started: stable operation IDs, retained files/text, interrupted-stream detection, and canonical conversation reload. Server duplicate protection and checkpoint recovery remain pending; no story-09 PR has been published.
+Frontend implementation retains operation IDs and files, detects interrupted streams, and reloads canonical state. The server now persists operation identities and responses, rejects changed retry payloads, serializes graph execution with a session advisory lock, and resumes checkpoints. Completed retries and failed response-save recovery pass API tests. Concurrent retries, interruptions during graph execution, and conflicts with other claim actions still need verification before publishing a story-09 PR.

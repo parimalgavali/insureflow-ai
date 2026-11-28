@@ -792,3 +792,57 @@ def test_eval_page_requires_token_and_caches_every_k(
 
 def test_eval_page_disabled_by_default(client: TestClient):
     assert client.get("/api/eval").status_code == 404
+
+
+def test_message_retry_replays_saved_result_without_duplicate_upload_or_model_call(client):
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    path = f"/api/conversations/{cid}/messages"
+    operation = str(uuid.uuid4())
+    payload = {"text": MSG1, "operation_id": operation}
+    upload = {"file": ("sample.pdf", b"sample", "application/pdf")}
+    first = client.post(path, data=payload, files=upload)
+    assert parse_sse(first.text)[-1][0] == "done"
+    state = client.app.state.claimpilot
+    calls = len(state.provider.calls)
+    before = client.get(f"/api/conversations/{cid}").json()["messages"]
+    second = client.post(path, data=payload, files=upload)
+    assert parse_sse(second.text)[-1][0] == "done"
+    assert client.get(f"/api/conversations/{cid}").json()["messages"] == before
+    assert len(state.provider.calls) == calls
+    assert len(list(state.settings.upload_dir.rglob("*_sample.pdf"))) == 1
+    assert client.post(path, data={**payload, "text": "different"}, files=upload).status_code == 409
+    assert (
+        client.post(
+            path, data=payload, files={"file": ("sample.pdf", b"changed", "application/pdf")}
+        ).status_code
+        == 409
+    )
+
+
+def test_message_retry_recovers_after_graph_completion_before_response_save(client, monkeypatch):
+    from sqlalchemy.orm import Session
+
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    state = client.app.state.claimpilot
+    original_commit = Session.commit
+    count = 0
+
+    def fail_response_save(session):
+        nonlocal count
+        count += 1
+        if count == 2:
+            raise RuntimeError("simulated commit failure")
+        return original_commit(session)
+
+    payload = {"text": MSG1, "operation_id": str(uuid.uuid4())}
+    path = f"/api/conversations/{cid}/messages"
+    with monkeypatch.context() as patch:
+        patch.setattr(Session, "commit", fail_response_save)
+        failed = client.post(path, data=payload)
+    assert parse_sse(failed.text)[-1][0] == "error"
+    calls = len(state.provider.calls)
+    recovered = client.post(path, data=payload)
+    assert parse_sse(recovered.text)[-1][0] == "done"
+    assert len(state.provider.calls) == calls
+    messages = client.get(f"/api/conversations/{cid}").json()["messages"]
+    assert [m["role"] for m in messages] == ["assistant", "user", "assistant"]
