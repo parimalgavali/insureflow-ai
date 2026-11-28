@@ -95,6 +95,16 @@ export interface Message {
 }
 
 export type DocumentType = "damage_photo" | "repair_estimate" | "police_report" | "other_document";
+export interface EvidenceSuggestion {
+  id: string;
+  field: keyof ClaimFacts;
+  value: string | number | boolean;
+  page: number;
+  quote: string;
+  status: string;
+  source_document_id: string;
+  source_name: string;
+}
 export interface EvidenceAttachment {
   id: string;
   filename: string;
@@ -102,6 +112,8 @@ export interface EvidenceAttachment {
   media_type: string;
   document_type: DocumentType | "unknown";
   processing_state: string;
+  page_count?: number | null;
+  suggestions?: EvidenceSuggestion[];
   size_bytes: number;
   error: string | null;
 }
@@ -375,4 +387,9 @@ export async function replacePolicy(conversationId: string, replacesDocumentId: 
   body.append("file", file);
   body.append("replaces_document_id", replacesDocumentId);
   return (await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(conversationId)}/policy`, { method: "PUT", headers: headers(false), body }))).json();
+}
+
+
+export async function extractEvidence(conversationId: string, attachmentId: string): Promise<EvidenceAttachment> {
+  return (await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(conversationId)}/attachments/${encodeURIComponent(attachmentId)}/extract`, { method: "POST", headers: headers(false) }))).json();
 }

@@ -84,7 +84,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
     await route.fulfill({ response, body: body.slice(0, body.lastIndexOf("event: done")) });
   }, { times: 1 });
   // Use in-memory bytes because intercepted native file paths are omitted by CDP post data.
-  await page.locator('.chat input[type="file"]').setInputFiles({ name: "claim.pdf", mimeType: "application/pdf", buffer: readFileSync('../tests/fixtures/sample_policy.pdf') });
+  await page.locator('.chat input[type="file"]').setInputFiles({ name: "claim.pdf", mimeType: "application/pdf", buffer: readFileSync('../tests/fixtures/claim_evidence.pdf') });
   await page.getByLabel("What is this attachment?").selectOption("repair_estimate");
   await composer.fill(MSG2);
   await composer.press("Enter");
@@ -100,6 +100,21 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(card.getByTestId("fact-photos_attached")).toHaveText("no");
   await expect(card.getByTestId("evidence-list")).toContainText("Not yet analysed for claim details");
   expect(canonical.attachments).toHaveLength(2);
+  const evidenceId = canonical.attachments.find((a: { filename: string }) => a.filename === "claim.pdf").id;
+  // Lose the extraction response after it is committed; retry reuses saved suggestions.
+  await page.route("**/api/conversations/*/attachments/*/extract", async (route) => {
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    await route.fulfill({ response, body: "{" });
+  }, { times: 1 });
+  await card.getByTestId(`extract-evidence-${evidenceId}`).click();
+  await expect(page.getByRole("alert")).toContainText("finish reading this PDF");
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(card.getByTestId("evidence-suggestion")).toHaveCount(2);
+  await expect(card.getByTestId("evidence-list")).toContainText("claim.pdf · page 1");
+  await expect(card.getByTestId("evidence-list")).toContainText("Repair estimate: EUR 1200.00");
+  await expect(card.getByTestId("fact-estimated_amount_eur")).toHaveText("—");
   await expect(card.getByTestId("coverage")).toBeVisible({ timeout: 60_000 });
   await expect(card.getByTestId("status")).toHaveText(/ready to submit/i);
   await expect(card.getByTestId("coverage-source")).toContainText("sample_policy.pdf");
@@ -111,6 +126,9 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(card.getByTestId("popover")).toContainText("page 3");
   await expect(card.getByTestId("risk")).toHaveText(/low|medium|high/);
 
+  await page.reload();
+  await expect(page.getByTestId("evidence-suggestion")).toHaveCount(2);
+  await expect(card.getByTestId("fact-estimated_amount_eur")).toHaveText("—");
   // The customer can correct facts before submitting and sees simple validation.
   await card.getByTestId("edit-customer-facts").click();
   await page.getByLabel("Date", { exact: true }).fill("2026-02-30");
@@ -165,6 +183,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   const reviewCard = page.getByLabel("Claim card");
   await expect(reviewCard.getByTestId("evidence-list")).toContainText("Repair estimate");
   await expect(reviewCard.getByTestId("evidence-list")).toContainText("claim.pdf");
+  await expect(reviewCard.getByTestId("evidence-suggestion")).toHaveCount(2);
   await expect(reviewCard.getByTestId("risk")).toHaveText(/low|medium|high/);
   await expect(reviewCard.getByTestId("summary")).toContainText(/P\.1/);
   // Ask for more information rather than completing the review.

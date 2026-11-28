@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from api.config import Settings
-from api.routers import claims, conversations, health, policies
+from api.routers import claims, conversations, evidence, health, policies
 from api.routers import eval as eval_router
 from api.state import AppState, build_state
 
@@ -48,6 +48,7 @@ def create_app(state_factory: Callable[[], AppState] | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(conversations.router)
     app.include_router(policies.router)
+    app.include_router(evidence.router)
     app.include_router(claims.router)
     app.include_router(eval_router.router)
     static_dir = os.environ.get("STATIC_DIR")

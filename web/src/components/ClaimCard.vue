@@ -21,7 +21,7 @@ const props = defineProps<{
   attachments?: EvidenceAttachment[];
   claimId?: string | null;
 }>();
-const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: []; customerCorrect: [patch: Record<string, unknown>]; customerRefresh: [] }>();
+const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: []; customerCorrect: [patch: Record<string, unknown>]; customerRefresh: []; extractEvidence: [attachmentId: string] }>();
 const requestNote = ref("");
 const reviewNote = ref("");
 
@@ -264,7 +264,7 @@ function submitReview() {
       </p>
     </section>
 
-    <AttachmentList :attachments="attachments || []" />
+    <AttachmentList :attachments="attachments || []" :busy="busy" :can-extract="!reviewer && ['collecting', 'assessed', 'information_needed'].includes(status)" @extract="emit('extractEvidence', $event)" />
 
     <section v-if="card?.missing_documents.length">
       <h3>{{ t("card.provide") }}</h3>

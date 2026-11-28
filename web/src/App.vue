@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { locale, setLocale, t } from "./i18n";
-import { createConversation, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type DocumentType, type Language, type ReviewerClaim } from "./api/client";
+import { createConversation, extractEvidence, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type DocumentType, type Language, type ReviewerClaim } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
 import PolicyUpload from "./components/PolicyUpload.vue";
 import ClaimCard from "./components/ClaimCard.vue";
@@ -15,6 +15,7 @@ const showEval = ref(location.hash === "#eval");
 const showReviewer = ref(location.hash === "#review");
 const historyId = ref(location.hash.startsWith("#history/") ? location.hash.slice(9) : null);
 const retrySubmission = ref(false);
+const retryExtraction = ref<string | null>(null);
 const opening = ref(false);
 const policyBusy = ref(false);
 const openError = ref(false);
@@ -49,6 +50,7 @@ async function start(language: Language, forceNew = false) {
     loadConversation(store, conversation);
     rememberClaim(conversation.id);
     pendingMessage = null;
+    retryExtraction.value = null;
     restoredDraft.value = null;
     validationError.value = false;
     retryCorrection.value = null;
@@ -86,6 +88,7 @@ async function send(text: string, file: File | null, documentType: DocumentType 
   validationError.value = false;
   restoredDraft.value = null;
   retryCorrection.value = null;
+  retryExtraction.value = null;
   retrySubmission.value = false;
   if (!retrying || !pendingMessage) {
     pendingMessage = { text, file, documentType, language: store.language, id: crypto.randomUUID(), before: store.messages.map((m) => ({ ...m })), beforeView: { status: store.status, card: store.card, citations: store.citations, risk: store.risk, riskStatus: store.riskStatus, riskMissing: store.riskMissing, lastUserText: store.lastUserText } };
@@ -124,10 +127,30 @@ async function send(text: string, file: File | null, documentType: DocumentType 
   }
 }
 
+async function readEvidence(attachmentId: string) {
+  if (!store.conversationId || store.busy || messageNeedsRetry.value || policyBusy.value) return;
+  store.busy = true;
+  store.error = null;
+  validationError.value = false;
+  retryCorrection.value = null;
+  retrySubmission.value = false;
+  retryExtraction.value = attachmentId;
+  try {
+    const result = await extractEvidence(store.conversationId, attachmentId);
+    store.attachments = store.attachments.map((attachment) => attachment.id === result.id ? result : attachment);
+    retryExtraction.value = null;
+  } catch {
+    store.error = t("evidence.readFailed");
+  } finally {
+    store.busy = false;
+  }
+}
+
 async function submit() {
   if (!store.claimId || store.busy) return;
   store.busy = true;
   retryCorrection.value = null;
+  retryExtraction.value = null;
   store.error = null;
   validationError.value = false;
   try {
@@ -152,6 +175,7 @@ async function correct(patch: Record<string, unknown> = {}, refresh = false) {
   store.error = null;
   validationError.value = false;
   retrySubmission.value = false;
+  retryExtraction.value = null;
   retryCorrection.value = { patch, refresh };
   try {
     const result = refresh ? await refreshClaimAssessment(store.claimId) : await correctClaimFacts(store.claimId, patch);
@@ -187,6 +211,7 @@ async function resumeSavedMessage() {
 function retry() {
   store.error = null;
   validationError.value = false;
+  if (retryExtraction.value) return readEvidence(retryExtraction.value);
   if (retrySubmission.value) return submit();
   if (retryCorrection.value) return correct(retryCorrection.value.patch, retryCorrection.value.refresh);
   if (!store.conversationId) return start(store.language);
@@ -246,7 +271,7 @@ onMounted(() => {
     </section>
     <PolicyUpload v-if="store.conversationId && !openError && !opening" :key="store.conversationId" :conversation-id="store.conversationId" :busy="store.busy || messageNeedsRetry" :can-upload="['collecting', 'assessed', 'information_needed'].includes(store.status)" @busy="policyBusy = $event" @changed="onPolicyChanged" />
     <ChatColumn v-if="!openError && !opening" :key="store.conversationId || 'new'" :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" :restored-draft="restoredDraft" :retryable="!validationError" @send="send" @retry="retry" />
-    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry || policyBusy" :claim-id="store.claimId" :history="store.history" :attachments="store.attachments" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
+    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry || policyBusy" :claim-id="store.claimId" :history="store.history" :attachments="store.attachments" @extract-evidence="readEvidence" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
     </template>
   </div>
 </template>

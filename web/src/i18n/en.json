@@ -225,5 +225,16 @@
   "evidence.state.stored": "Uploaded. Not yet analysed for claim details.",
   "evidence.uploadInvalid": "This attachment could not be accepted. Choose a readable PDF, JPEG, PNG or WebP file with the matching file extension. PDFs cannot be labelled as damage photos. Your message is back in the draft.",
   "evidence.uploadTooLarge": "This file is too large. Choose a file of 10 MB or less. Your message is back in the draft.",
-  "evidence.uploadUnsupported": "This file type is not supported. Choose a PDF, JPEG, PNG or WebP file. Your message is back in the draft."
+  "evidence.uploadUnsupported": "This file type is not supported. Choose a PDF, JPEG, PNG or WebP file. Your message is back in the draft.",
+  "evidence.read": "Read claim PDF",
+  "evidence.retryRead": "Retry reading PDF",
+  "evidence.state.processing": "Reading PDF. Claim facts are unchanged.",
+  "evidence.state.ready": "PDF read. Suggestions are not confirmed.",
+  "evidence.state.failed": "PDF reading did not complete.",
+  "evidence.suggestions": "Suggested claim details",
+  "evidence.notConfirmed": "These suggestions have not changed your claim facts. Check each detail against the source document.",
+  "evidence.noSuggestions": "No supported claim details were found in this document.",
+  "evidence.readUnreadable": "We could not read all the document text. Use a readable, unencrypted PDF with selectable text. Scanned images need a text version.",
+  "evidence.readTooLong": "This document has too much text to read in one request. Use a shorter PDF (up to 40,000 characters).",
+  "evidence.readFailed": "We could not finish reading this PDF. Your claim facts are unchanged. Please retry reading it."
 }

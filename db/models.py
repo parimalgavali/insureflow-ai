@@ -142,6 +142,7 @@ class Attachment(Base):
     document_type: Mapped[str] = mapped_column(String(32), default="unknown", nullable=False)
     processing_state: Mapped[str] = mapped_column(String(32), default="unknown", nullable=False)
     error: Mapped[str | None] = mapped_column(Text)
+    page_count: Mapped[int | None] = mapped_column(Integer)
     content_type: Mapped[str] = mapped_column(String(128), nullable=False)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     path: Mapped[str] = mapped_column(Text, nullable=False)
@@ -150,6 +151,24 @@ class Attachment(Base):
     )
 
     message: Mapped[Message | None] = relationship(back_populates="attachments")
+
+
+class EvidenceSuggestion(Base):
+    __tablename__ = "evidence_suggestions"
+    __table_args__ = (
+        UniqueConstraint("attachment_id", "position", name="uq_evidence_suggestion_position"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    attachment_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("attachments.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    field: Mapped[str] = mapped_column(String(40), nullable=False)
+    value: Mapped[str | float | bool] = mapped_column(JSONB, nullable=False)
+    page: Mapped[int] = mapped_column(Integer, nullable=False)
+    quote: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)
 
 
 class MessageOperation(Base):

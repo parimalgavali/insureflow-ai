@@ -225,5 +225,16 @@
   "evidence.state.stored": "Hochgeladen. Noch nicht auf Schadendetails ausgewertet.",
   "evidence.uploadInvalid": "Dieser Anhang konnte nicht angenommen werden. Wählen Sie eine lesbare PDF-, JPEG-, PNG- oder WebP-Datei mit passender Dateiendung. PDFs können nicht als Schadenfotos markiert werden. Ihre Nachricht steht wieder im Entwurf.",
   "evidence.uploadTooLarge": "Die Datei ist zu groß. Wählen Sie eine Datei mit höchstens 10 MB. Ihre Nachricht steht wieder im Entwurf.",
-  "evidence.uploadUnsupported": "Dieser Dateityp wird nicht unterstützt. Wählen Sie PDF, JPEG, PNG oder WebP. Ihre Nachricht steht wieder im Entwurf."
+  "evidence.uploadUnsupported": "Dieser Dateityp wird nicht unterstützt. Wählen Sie PDF, JPEG, PNG oder WebP. Ihre Nachricht steht wieder im Entwurf.",
+  "evidence.read": "Schaden-PDF lesen",
+  "evidence.retryRead": "PDF erneut lesen",
+  "evidence.state.processing": "PDF wird gelesen. Die Schadendaten bleiben unverändert.",
+  "evidence.state.ready": "PDF gelesen. Vorschläge sind noch nicht bestätigt.",
+  "evidence.state.failed": "PDF konnte nicht vollständig gelesen werden.",
+  "evidence.suggestions": "Vorgeschlagene Schadendetails",
+  "evidence.notConfirmed": "Diese Vorschläge haben Ihre Schadendaten nicht geändert. Prüfen Sie jedes Detail anhand des Quelldokuments.",
+  "evidence.noSuggestions": "In diesem Dokument wurden keine unterstützten Schadendetails gefunden.",
+  "evidence.readUnreadable": "Der Dokumenttext konnte nicht vollständig gelesen werden. Verwenden Sie ein lesbares, unverschlüsseltes PDF mit auswählbarem Text. Scans benötigen eine Textversion.",
+  "evidence.readTooLong": "Dieses Dokument enthält zu viel Text für eine Anfrage. Verwenden Sie ein kürzeres PDF (höchstens 40.000 Zeichen).",
+  "evidence.readFailed": "Dieses PDF konnte nicht vollständig gelesen werden. Ihre Schadendaten bleiben unverändert. Bitte versuchen Sie es erneut."
 }

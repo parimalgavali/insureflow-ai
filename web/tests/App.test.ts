@@ -2,13 +2,15 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App.vue";
 import PolicyUpload from "../src/components/PolicyUpload.vue";
+import ClaimCard from "../src/components/ClaimCard.vue";
 import ChatColumn from "../src/components/ChatColumn.vue";
 import HistoryPage from "../src/components/HistoryPage.vue";
-import { createConversation, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
+import { createConversation, extractEvidence, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
 import { initialState, store } from "../src/store";
 
 vi.mock("../src/api/client", () => ({
   createConversation: vi.fn(),
+  extractEvidence: vi.fn(),
   setAccessToken: vi.fn(),
   retrySavedMessage: vi.fn(),
   submitClaim: vi.fn(),
@@ -27,7 +29,7 @@ const card = {
 
 function mountApp() {
   return mount(App, { global: { stubs: {
-    ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
+    ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh", "extractEvidence"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
     ChatColumn: { props: ["canSend"], emits: ["retry", "send"], template: '<button data-testid="retry-action" @click="$emit(\'retry\')">Retry</button>' },
     PolicyUpload: true,
     EvalPage: true,
@@ -254,6 +256,28 @@ it.each([413, 415, 422])("returns rejected %s uploads to an editable draft with 
   w.findComponent(ChatColumn).vm.$emit("send", "Keep this message", null, "other_document");
   await flushPromises();
   expect(vi.mocked(sendMessage).mock.calls[1][5]).not.toBe(vi.mocked(sendMessage).mock.calls[0][5]);
+  expect(store.error).toBeNull();
+  w.unmount();
+});
+
+
+it("retries reading the same PDF without resending chat or changing confirmed facts", async () => {
+  const w = mountApp();
+  await flushPromises();
+  const factsBefore = store.facts;
+  store.attachments = [{ id: "pdf", filename: "estimate.pdf", content_type: "application/pdf", media_type: "pdf", document_type: "repair_estimate", processing_state: "stored", size_bytes: 100, error: null }];
+  vi.mocked(extractEvidence).mockRejectedValueOnce(new Error("lost response"))
+    .mockResolvedValueOnce({ ...store.attachments[0], processing_state: "ready", suggestions: [{ id: "s", field: "estimated_amount_eur", value: 1200, page: 1, quote: "EUR 1200", status: "pending", source_document_id: "pdf", source_name: "estimate.pdf" }] });
+  w.findComponent(ClaimCard).vm.$emit("extractEvidence", "pdf");
+  await flushPromises();
+  expect(store.error).toContain("claim facts are unchanged");
+  await w.get('[data-testid="retry-action"]').trigger("click");
+  await flushPromises();
+  expect(extractEvidence).toHaveBeenNthCalledWith(1, "conversation-1", "pdf");
+  expect(extractEvidence).toHaveBeenNthCalledWith(2, "conversation-1", "pdf");
+  expect(sendMessage).not.toHaveBeenCalled();
+  expect(store.attachments[0].suggestions?.[0].value).toBe(1200);
+  expect(store.facts).toBe(factsBefore);
   expect(store.error).toBeNull();
   w.unmount();
 });

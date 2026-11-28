@@ -135,5 +135,23 @@
       "coverage_uncertainty": null
     }
   ],
-  "_fixture_note": "Extraction/follow-up replies originate from hit_and_run_followup.json. All compositions are synthetic offline replies tied to sample_policy.pdf (EUR 300) and replacement_policy.pdf (EUR 500), not a live model evaluation."
+  "_fixture_note": "Extraction/follow-up replies originate from hit_and_run_followup.json. All compositions are synthetic offline replies tied to sample_policy.pdf (EUR 300) and replacement_policy.pdf (EUR 500), not a live model evaluation.",
+  "evidence_extract": [
+    {
+      "suggestions": [
+        {
+          "field": "estimated_amount_eur",
+          "value": 1200,
+          "page": 1,
+          "quote": "Repair estimate: EUR 1200.00"
+        },
+        {
+          "field": "incident_date",
+          "value": "2026-10-25",
+          "page": 2,
+          "quote": "Incident date: 2026-10-25"
+        }
+      ]
+    }
+  ]
 }
