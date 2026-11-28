@@ -792,3 +792,167 @@ def test_eval_page_requires_token_and_caches_every_k(
 
 def test_eval_page_disabled_by_default(client: TestClient):
     assert client.get("/api/eval").status_code == 404
+
+
+def test_message_retry_replays_saved_result_without_duplicate_upload_or_model_call(client):
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    path = f"/api/conversations/{cid}/messages"
+    operation = str(uuid.uuid4())
+    payload = {"text": MSG1, "operation_id": operation}
+    upload = {"file": ("sample.pdf", b"sample", "application/pdf")}
+    first = client.post(path, data=payload, files=upload)
+    assert parse_sse(first.text)[-1][0] == "done"
+    state = client.app.state.claimpilot
+    calls = len(state.provider.calls)
+    before = client.get(f"/api/conversations/{cid}").json()["messages"]
+    second = client.post(path, data=payload, files=upload)
+    assert parse_sse(second.text)[-1][0] == "done"
+    assert client.get(f"/api/conversations/{cid}").json()["messages"] == before
+    assert len(state.provider.calls) == calls
+    assert len(list(state.settings.upload_dir.rglob("*_sample.pdf"))) == 1
+    assert client.post(path, data={**payload, "text": "different"}, files=upload).status_code == 409
+    assert (
+        client.post(
+            path, data=payload, files={"file": ("sample.pdf", b"changed", "application/pdf")}
+        ).status_code
+        == 409
+    )
+
+
+def test_message_retry_recovers_after_graph_completion_before_response_save(client, monkeypatch):
+    from sqlalchemy.orm import Session
+
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    state = client.app.state.claimpilot
+    original_commit = Session.commit
+    count = 0
+
+    def fail_response_save(session):
+        nonlocal count
+        count += 1
+        if count == 2:
+            raise RuntimeError("simulated commit failure")
+        return original_commit(session)
+
+    payload = {"text": MSG1, "operation_id": str(uuid.uuid4())}
+    path = f"/api/conversations/{cid}/messages"
+    with monkeypatch.context() as patch:
+        patch.setattr(Session, "commit", fail_response_save)
+        failed = client.post(path, data=payload)
+    assert parse_sse(failed.text)[-1][0] == "error"
+    calls = len(state.provider.calls)
+    recovered = client.post(path, data=payload)
+    assert parse_sse(recovered.text)[-1][0] == "done"
+    assert len(state.provider.calls) == calls
+    messages = client.get(f"/api/conversations/{cid}").json()["messages"]
+    assert [m["role"] for m in messages] == ["assistant", "user", "assistant"]
+
+
+def test_interrupted_graph_resumes_without_reextracting_or_duplicating_input(client, monkeypatch):
+    state = client.app.state.claimpilot
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    original = state.graph.stream
+
+    def interrupt(*args, **kwargs):
+        stream = original(*args, **kwargs)
+        for update in stream:
+            yield update
+            if "extract" in update:
+                raise RuntimeError("connection lost after extraction")
+
+    data = {"text": MSG1, "operation_id": str(uuid.uuid4())}
+    url = f"/api/conversations/{cid}/messages"
+    with monkeypatch.context() as patch:
+        patch.setattr(state.graph, "stream", interrupt)
+        assert parse_sse(client.post(url, data=data).text)[-1][0] == "error"
+    assert client.post(url, data={"text": "new message"}).status_code == 409
+    claim = client.get(f"/api/conversations/{cid}").json()["claim_id"]
+    assert (
+        client.patch(
+            f"/api/claims/{claim}/facts", json={"facts_patch": {"location": "Berlin"}}
+        ).status_code
+        == 409
+    )
+    recovered = client.post(url, data=data)
+    assert parse_sse(recovered.text)[-1][0] == "done"
+    assert [c["tag"] for c in state.provider.calls] == ["extract", "followup"]
+    messages = client.get(f"/api/conversations/{cid}").json()["messages"]
+    assert [m["role"] for m in messages] == ["assistant", "user", "assistant"]
+
+
+def test_concurrent_message_retry_does_not_run_the_same_graph_twice(client, monkeypatch):
+    from threading import Event
+
+    state = client.app.state.claimpilot
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    original = state.graph.stream
+    entered, release = Event(), Event()
+
+    def pause(*args, **kwargs):
+        entered.set()
+        assert release.wait(10)
+        yield from original(*args, **kwargs)
+
+    data = {"text": MSG1, "operation_id": str(uuid.uuid4())}
+    url = f"/api/conversations/{cid}/messages"
+    with monkeypatch.context() as patch, ThreadPoolExecutor(max_workers=2) as pool:
+        patch.setattr(state.graph, "stream", pause)
+        first = pool.submit(client.post, url, data=data)
+        try:
+            assert entered.wait(10)
+            duplicate = client.post(url, data=data)
+            assert parse_sse(duplicate.text)[-1][0] == "error"
+        finally:
+            release.set()
+        assert parse_sse(first.result(timeout=15).text)[-1][0] == "done"
+    assert parse_sse(client.post(url, data=data).text)[-1][0] == "done"
+    assert [c["tag"] for c in state.provider.calls] == ["extract", "followup"]
+    messages = client.get(f"/api/conversations/{cid}").json()["messages"]
+    assert [m["role"] for m in messages] == ["assistant", "user", "assistant"]
+
+
+def test_extraction_service_recovers_using_the_saved_original_message(client, monkeypatch):
+    from api.llm.provider import ProviderError
+
+    state = client.app.state.claimpilot
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    original = state.provider.complete
+
+    def unavailable(*args, **kwargs):
+        raise ProviderError("service unavailable")
+
+    data = {"text": MSG1, "operation_id": str(uuid.uuid4())}
+    url = f"/api/conversations/{cid}/messages"
+    with monkeypatch.context() as patch:
+        patch.setattr(state.provider, "complete", unavailable)
+        assert parse_sse(client.post(url, data=data).text)[-1][0] == "error"
+    assert parse_sse(client.post(url, data=data).text)[-1][0] == "done"
+    assert state.provider.complete == original
+    messages = client.get(f"/api/conversations/{cid}").json()["messages"]
+    assert [m["role"] for m in messages] == ["assistant", "user", "assistant"]
+    assert sum(m["content"] == MSG1 for m in messages) == 1
+
+
+def test_disconnected_stream_releases_execution_lock_and_can_resume(client, monkeypatch):
+    from api.routers.conversations import _stream_operation
+
+    state = client.app.state.claimpilot
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    operation_id = str(uuid.uuid4())
+    data = {"text": MSG1, "operation_id": operation_id}
+    url = f"/api/conversations/{cid}/messages"
+
+    def before_execution(*args, **kwargs):
+        raise RuntimeError("initial transport interruption")
+        yield
+
+    with monkeypatch.context() as patch:
+        patch.setattr(state.graph, "stream", before_execution)
+        assert parse_sse(client.post(url, data=data).text)[-1][0] == "error"
+    stream = _stream_operation(state, uuid.UUID(cid), uuid.UUID(operation_id))
+    assert next(stream).startswith("event: facts")
+    stream.close()
+    assert parse_sse(client.post(url, data=data).text)[-1][0] == "done"
+    assert [c["tag"] for c in state.provider.calls] == ["extract", "followup"]
+    messages = client.get(f"/api/conversations/{cid}").json()["messages"]
+    assert [m["role"] for m in messages] == ["assistant", "user", "assistant"]

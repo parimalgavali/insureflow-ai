@@ -12,7 +12,7 @@ from api.agent.required_facts import missing_facts
 from api.agent.schemas import ClaimCard, CustomerCorrection, ReviewDecision, ReviewRequest
 from api.history import HistoryEntry, history_out, record_event, record_review_events
 from api.security import get_state, require_adjuster, require_token
-from db.models import Claim, Message
+from db.models import Claim, Conversation, Message, MessageOperation
 
 router = APIRouter(prefix="/api/claims", tags=["claims"], dependencies=[Depends(require_token)])
 
@@ -100,6 +100,24 @@ def get_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
         return _out(claim)
 
 
+def _require_finished_message(session, claim):
+    # Same conversation row lock as message creation: no edit can slip between
+    # checking for an unfinished message and reserving its operation.
+    session.scalar(
+        select(Conversation.id).where(Conversation.id == claim.conversation_id).with_for_update()
+    )
+    pending = session.scalar(
+        select(MessageOperation.id)
+        .where(
+            MessageOperation.conversation_id == claim.conversation_id,
+            MessageOperation.response.is_(None),
+        )
+        .limit(1)
+    )
+    if pending:
+        raise HTTPException(409, "retry the unfinished message before changing this claim")
+
+
 @router.post("/{claim_id}/submit", response_model=ClaimOut)
 def submit_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
     """Submit once; a retry returns the saved claim without recording a review."""
@@ -108,6 +126,7 @@ def submit_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
         claim = session.scalar(select(Claim).where(Claim.id == claim_id).with_for_update())
         if claim is None:
             raise HTTPException(404, "claim not found")
+        _require_finished_message(session, claim)
         if claim.status in ("awaiting_review", "reviewed"):
             return _out(claim)
         if claim.status != "assessed":
@@ -139,6 +158,7 @@ def _customer_action(claim_id: uuid.UUID, patch: dict, state, *, refresh: bool =
         claim = session.scalar(select(Claim).where(Claim.id == claim_id).with_for_update())
         if claim is None:
             raise HTTPException(404, "claim not found")
+        _require_finished_message(session, claim)
         if claim.status not in ("collecting", "assessed", "information_needed"):
             raise HTTPException(409, "customer corrections are only available before submission")
         try:
@@ -211,6 +231,7 @@ def review_claim(
         claim = session.scalar(select(Claim).where(Claim.id == claim_id).with_for_update())
         if claim is None:
             raise HTTPException(404, "claim not found")
+        _require_finished_message(session, claim)
         if claim.status != "awaiting_review":
             raise HTTPException(409, f"claim is {claim.status}, not awaiting_review")
         thread = str(claim.conversation_id)

@@ -159,5 +159,6 @@
   "uncertainty.next.missing_policy_wording": "Provide the relevant wording from your actual policy for a claims handler to check.",
   "uncertainty.next.conflicting_evidence": "Ask a claims handler to compare the conflicting information before deciding.",
   "uncertainty.next.human_review": "Send the claim for review or respond to the reviewer’s request for details.",
-  "uncertainty.preliminary": "This is preliminary guidance using model terms. A cited clause is a reference, not proof of cover or a payment decision."
+  "uncertainty.preliminary": "This is preliminary guidance using model terms. A cited clause is a reference, not proof of cover or a payment decision.",
+  "chat.sendFailed": "Your message could not be completed. Retry to continue with the same text and attachment."
 }

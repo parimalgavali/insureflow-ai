@@ -146,3 +146,20 @@ class Attachment(Base):
     )
 
     message: Mapped[Message | None] = relationship(back_populates="attachments")
+
+
+class MessageOperation(Base):
+    """Durable identity and response for one customer message, including its upload."""
+
+    __tablename__ = "message_operations"
+
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), primary_key=True
+    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_text: Mapped[str] = mapped_column(Text, nullable=False)
+    language: Mapped[str] = mapped_column(String(2), nullable=False)
+    has_attachment: Mapped[bool] = mapped_column(nullable=False)
+    base_message_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    response: Mapped[list[str] | None] = mapped_column(JSONB)

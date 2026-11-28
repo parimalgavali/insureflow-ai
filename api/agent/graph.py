@@ -124,6 +124,7 @@ class AgentState(TypedDict, total=False):
     missing: list[str]
     attachments: Annotated[int, operator.add]
     followups_asked: int
+    message_operation_id: str
     extract_failed: bool
     retrieved: list[Citation]
     risk: RiskSignal | None
@@ -241,6 +242,9 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                             "Return valid ClaimFacts.",
                         ),
                     ]
+        if failed and state.get("message_operation_id"):
+            # Keep the operation at this node so retry reuses its saved input.
+            raise ProviderError("Claim extraction is temporarily unavailable")
         if isinstance(update, ClaimFacts):
             facts = facts.merge(update)
         if state.get("attachments", 0) > 0 and not facts.photos_attached:
