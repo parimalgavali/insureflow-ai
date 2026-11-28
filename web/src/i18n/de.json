@@ -128,5 +128,22 @@
   "history.decision.request_info": "Angaben anfordern",
   "history.decision.reassess": "Bewertung wiederholen",
   "history.accessToken": "Zugangstoken (falls erforderlich)",
-  "history.tokenMemory": "Verwenden Sie Ihren Demo- oder Sachbearbeiter-Token. Er bleibt nur bis zum Verlassen dieser Seite im Arbeitsspeicher."
+  "history.tokenMemory": "Verwenden Sie Ihren Demo- oder Sachbearbeiter-Token. Er bleibt nur bis zum Verlassen dieser Seite im Arbeitsspeicher.",
+  "customer.invalidCorrection": "Die Änderungen wurden nicht gespeichert. Verwenden Sie ein gültiges Datum (JJJJ-MM-TT), eine Uhrzeit (HH:MM) und einen nicht negativen Betrag.",
+  "customer.invalidDate": "Geben Sie ein echtes Datum im Format JJJJ-MM-TT ein.",
+  "customer.invalidTime": "Geben Sie eine gültige Uhrzeit im Format HH:MM ein.",
+  "customer.invalidAmount": "Geben Sie einen Betrag von null oder mehr ein.",
+  "customer.needsRefresh": "Bewertung muss aktualisiert werden",
+  "customer.stillMissing": "Noch benötigt",
+  "customer.notKnown": "Nicht bekannt",
+  "customer.event.unknown": "Nicht bekannt",
+  "customer.event.collision": "Autounfall",
+  "customer.event.hit_and_run": "Unfallflucht",
+  "customer.event.theft": "Diebstahl",
+  "customer.event.vandalism": "Vandalismus",
+  "customer.event.glass": "Glasbruch",
+  "customer.event.wild_animal": "Wildunfall",
+  "customer.event.storm_hail": "Sturm oder Hagel",
+  "customer.event.fire": "Brand",
+  "customer.event.other": "Sonstiges"
 }

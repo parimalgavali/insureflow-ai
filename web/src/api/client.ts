@@ -89,6 +89,7 @@ export interface Conversation {
   claim_id: string | null;
   card: ClaimCard | null;
   history?: HistoryEntry[];
+  missing?: string[];
 }
 
 export interface HistoryEntry {
@@ -105,6 +106,7 @@ export interface ClaimActionResult {
   status: ClaimStatus;
   card: ClaimCard;
   history?: HistoryEntry[];
+  missing?: string[];
 }
 
 export type AgentEvent =
@@ -127,6 +129,7 @@ export interface ReviewerClaim {
   card: ClaimCard | null;
   submitted_at: string | null;
   history?: HistoryEntry[];
+  missing?: string[];
 }
 
 export interface QueueItem {
@@ -191,6 +194,16 @@ export async function fetchClaimHistory(claimId: string, token?: string): Promis
 /** Submit using customer access; this never records an adjuster decision. */
 export async function submitClaim(claimId: string): Promise<ClaimActionResult> {
   const res = await fetch(`${BASE}/api/claims/${claimId}/submit`, { method: "POST", headers: headers() });
+  return (await expectOk(res)).json();
+}
+
+export async function correctClaimFacts(claimId: string, factsPatch: Record<string, unknown>): Promise<ClaimActionResult> {
+  const res = await fetch(`${BASE}/api/claims/${claimId}/facts`, { method: "PATCH", headers: headers(), body: JSON.stringify({ facts_patch: factsPatch }) });
+  return (await expectOk(res)).json();
+}
+
+export async function refreshClaimAssessment(claimId: string): Promise<ClaimActionResult> {
+  const res = await fetch(`${BASE}/api/claims/${claimId}/facts/refresh`, { method: "POST", headers: headers() });
   return (await expectOk(res)).json();
 }
 

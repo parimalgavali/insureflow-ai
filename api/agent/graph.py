@@ -34,6 +34,7 @@ from api.agent.schemas import (
     ComposeOutput,
     CostContext,
     FactChange,
+    FactsPatch,
     FollowupOutput,
     Language,
     PolicyContext,
@@ -132,6 +133,12 @@ class AgentState(TypedDict, total=False):
     submission_id: str
     review_action_id: str
     review_changes: list[FactChange]
+    customer_patch: dict | None
+    customer_action_id: str
+    customer_changes: list[FactChange]
+    assessment_target: Literal["assessed", "awaiting_review"]
+    customer_correction_message: str | None
+    customer_assessment_message: str | None
 
 
 def _conversation(state: AgentState) -> list[ChatMessage]:
@@ -146,6 +153,64 @@ def _last_user_text(state: AgentState) -> str:
 
 
 def build_graph(deps: AgentDeps, checkpointer=None):
+    def route_entry(state: AgentState) -> Literal["customer_correct", "extract"]:
+        return "customer_correct" if state.get("customer_patch") is not None else "extract"
+
+    def customer_correct(state: AgentState) -> dict:
+        facts = state["facts"]
+        patch = FactsPatch.model_validate(state["customer_patch"]).model_dump(exclude_unset=True)
+        updated = ClaimFacts(**{**facts.model_dump(), **patch})
+        changes = [
+            FactChange(field=k, before=getattr(facts, k), after=getattr(updated, k))
+            for k in patch
+            if getattr(facts, k) != getattr(updated, k)
+        ]
+        missing = missing_facts(updated)
+        status = "collecting" if missing else "assessed"
+        card = state.get("card") or ClaimCard(facts=facts, policy=state["policy"])
+        message = None
+        if missing:
+            message = (
+                "Ergänzen Sie die fehlenden Angaben vor der Bewertung."
+                if state["language"] == "de"
+                else "Fill in the missing claim details before the assessment can be refreshed."
+            )
+        card = card.model_copy(
+            update={
+                "facts": updated,
+                "status": status,
+                "assessment_stale": not missing or bool(card.coverage_summary or card.risk),
+                "assessment_error": message,
+                "review": None,
+                "corrections": changes or card.corrections,
+            }
+        )
+        correction_message = None
+        if changes:
+            label = (
+                "Bestätigte Korrekturen" if state["language"] == "de" else "Confirmed corrections"
+            )
+            correction_message = f"{label}: {json.dumps(patch, ensure_ascii=False)}"
+        return {
+            "facts": updated,
+            "card": card,
+            "status": status,
+            "missing": missing,
+            "customer_patch": None,
+            "customer_changes": changes,
+            "assessment_target": "assessed",
+            "review": None,
+            "followups_asked": 0,
+            "customer_correction_message": correction_message,
+            "customer_assessment_message": None,
+            "messages": [ChatMessage(role="user", content=correction_message)]
+            if correction_message
+            else [],
+        }
+
+    def route_customer(state: AgentState) -> Literal["reassess", "__end__"]:
+        return END if state.get("missing") else "reassess"
+
     def extract(state: AgentState) -> dict:
         language = state.get("language") or detect_language(_last_user_text(state))
         facts = state.get("facts") or ClaimFacts()
@@ -308,6 +373,8 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         confirmed = interrupt({"action": "submit", "card": state["card"].model_dump()})
         if confirmed is not True:
             raise ValueError("submission requires customer confirmation")
+        if state["card"].assessment_stale:
+            raise ValueError("refresh the assessment before submitting")
         card = state["card"].model_copy(update={"status": "awaiting_review"})
         return {"card": card, "status": "awaiting_review", "submission_id": uuid.uuid4().hex}
 
@@ -344,6 +411,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                 "reassessment_needed": True,
                 "review_action_id": action_id,
                 "review_changes": changes,
+                "assessment_target": "awaiting_review",
             }
         if decision.decision == "request_info":
             request = ReviewRequest(**decision.model_dump(exclude={"reviewer"}))
@@ -376,6 +444,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
     def reassess(state: AgentState) -> dict:
         """Refresh authoritative corrected facts without extracting them again from old chat."""
         card = state["card"]
+        target = state.get("assessment_target", "awaiting_review")
         try:
             if missing_facts(state["facts"]):
                 raise ValueError("missing claim facts")
@@ -390,7 +459,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                 raise ValueError("coverage assessment unavailable")
             fresh_card = composed.model_copy(
                 update={
-                    "status": "awaiting_review",
+                    "status": target,
                     "corrections": card.corrections,
                 }
             )
@@ -399,8 +468,18 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                 "retrieved": refreshed["retrieved"],
                 "risk": refreshed["risk"],
                 "cost": refreshed.get("cost"),
-                "status": "awaiting_review",
+                "status": target,
                 "reassessment_needed": False,
+                **(
+                    {
+                        "customer_assessment_message": fresh_card.coverage_summary,
+                        "messages": [
+                            ChatMessage(role="assistant", content=fresh_card.coverage_summary)
+                        ],
+                    }
+                    if target == "assessed"
+                    else {}
+                ),
             }
         except Exception as exc:  # noqa: BLE001
             logging.getLogger("claimpilot.agent").warning(
@@ -414,16 +493,35 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                 else "Corrections were saved, but the assessment could not be refreshed. Previous "
                 "guidance is out of date. Retry the assessment or request more information."
             )
+            if target == "assessed":
+                message = (
+                    "Ihre Änderungen wurden gespeichert. Die Bewertung konnte nicht aktualisiert "
+                    "werden. Versuchen Sie es vor dem Einreichen erneut."
+                    if state["language"] == "de"
+                    else "Your changes were saved, but the assessment could not be refreshed. "
+                    "Retry before submitting the claim."
+                )
             return {
                 "card": card.model_copy(
                     update={"assessment_stale": True, "assessment_error": message}
                 ),
-                "status": "awaiting_review",
+                "status": target,
                 "reassessment_needed": False,
+                **(
+                    {
+                        "customer_assessment_message": message,
+                        "messages": [ChatMessage(role="assistant", content=message)],
+                    }
+                    if target == "assessed"
+                    else {}
+                ),
             }
 
     def route_after_review(state: AgentState) -> Literal["reassess", "__end__"]:
         return "reassess" if state.get("reassessment_needed") else END
+
+    def route_after_reassessment(state: AgentState) -> Literal["submit", "human_review"]:
+        return "submit" if state.get("assessment_target") == "assessed" else "human_review"
 
     graph = StateGraph(AgentState)
     graph.add_node("extract", extract)
@@ -435,7 +533,9 @@ def build_graph(deps: AgentDeps, checkpointer=None):
     graph.add_node("submit", submit)
     graph.add_node("human_review", human_review)
     graph.add_node("reassess", reassess)
-    graph.add_edge(START, "extract")
+    graph.add_node("customer_correct", customer_correct)
+    graph.add_conditional_edges(START, route_entry)
+    graph.add_conditional_edges("customer_correct", route_customer)
     graph.add_edge("extract", "check_missing")
     graph.add_conditional_edges("check_missing", route_after_missing)
     graph.add_edge("ask_followup", END)
@@ -444,7 +544,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
     graph.add_edge("compose", "submit")
     graph.add_edge("submit", "human_review")
     graph.add_conditional_edges("human_review", route_after_review)
-    graph.add_edge("reassess", "human_review")
+    graph.add_conditional_edges("reassess", route_after_reassessment)
     return graph.compile(checkpointer=checkpointer)
 
 
@@ -537,7 +637,26 @@ def submit_for_review(graph, thread_id: str) -> dict:
         return snapshot.values
     if snapshot.next != ("submit",):
         raise ValueError("claim is not ready to submit")
+    if snapshot.values["card"].assessment_stale:
+        raise ValueError("refresh the assessment before submitting")
     return graph.invoke(Command(resume=True), thread_config(thread_id))
+
+
+def correct_customer_facts(graph, thread_id: str, patch: dict, *, refresh: bool = False) -> dict:
+    config = thread_config(thread_id)
+    snapshot = graph.get_state(config)
+    if snapshot.values.get("status") not in ("collecting", "assessed", "information_needed"):
+        raise ValueError("customer corrections are only available before submission")
+    if not snapshot.values.get("facts"):
+        raise ValueError("describe the incident before editing collected facts")
+    patch = FactsPatch.model_validate(patch).model_dump(exclude_unset=True)
+    if snapshot.next == ("reassess",) and snapshot.values.get("assessment_target") == "assessed":
+        if refresh or all(getattr(snapshot.values["facts"], k) == v for k, v in patch.items()):
+            return graph.invoke(None, config)
+        raise ValueError("retry the pending assessment before making more corrections")
+    if not refresh and all(getattr(snapshot.values["facts"], k) == v for k, v in patch.items()):
+        return snapshot.values
+    return graph.invoke({"customer_patch": patch, "customer_action_id": uuid.uuid4().hex}, config)
 
 
 def pending_interrupt(result: dict) -> dict | None:

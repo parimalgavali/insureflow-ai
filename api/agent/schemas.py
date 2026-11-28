@@ -114,6 +114,18 @@ class FactsPatch(ClaimFacts):
         return value
 
 
+class CustomerCorrection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    facts_patch: dict
+
+    @field_validator("facts_patch")
+    @classmethod
+    def _valid_patch(cls, value: dict) -> dict:
+        if not value:
+            raise ValueError("provide the facts to correct")
+        return FactsPatch.model_validate(value).model_dump(exclude_unset=True)
+
+
 class ReviewRequest(BaseModel):
     """Body of POST /api/claims/{id}/review; the reviewer comes from the credential."""
 

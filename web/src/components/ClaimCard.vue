@@ -17,7 +17,7 @@ const props = defineProps<{
   history?: HistoryEntry[];
   claimId?: string | null;
 }>();
-const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: [] }>();
+const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: []; customerCorrect: [patch: Record<string, unknown>]; customerRefresh: [] }>();
 const requestNote = ref("");
 const reviewNote = ref("");
 
@@ -85,6 +85,8 @@ const summaryParts = computed(() => {
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en");
 const canReview = computed(() => props.reviewer && props.status === "awaiting_review" && !props.busy);
+const canEdit = computed(() => !!props.facts && (props.reviewer ? props.status === "awaiting_review" : ["collecting", "assessed", "information_needed"].includes(props.status)));
+const eventOptions = ["unknown", "collision", "hit_and_run", "theft", "vandalism", "glass", "wild_animal", "storm_hail", "fire", "other"];
 
 const booleanFields = new Set(["third_party_involved", "third_party_known", "injuries", "police_report_filed", "witnesses", "vehicle_drivable", "photos_attached"]);
 const draftPatch = computed(() => {
@@ -103,6 +105,25 @@ const draftPatch = computed(() => {
   }
   return patch;
 });
+
+const draftErrors = computed(() => {
+  const errors: Record<string, string> = {};
+  if (props.reviewer) return errors;
+  const day = draftPatch.value.incident_date;
+  if (day !== undefined && day !== null) {
+    const date = typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(`${day}T00:00:00Z`) : new Date(NaN);
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== day) errors.incident_date = t("customer.invalidDate");
+  }
+  const time = draftPatch.value.incident_time;
+  if (time !== undefined && time !== null && (typeof time !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time))) errors.incident_time = t("customer.invalidTime");
+  const amount = draftPatch.value.estimated_amount_eur;
+  if (amount !== undefined && amount !== null && (typeof amount !== "number" || amount < 0)) errors.estimated_amount_eur = t("customer.invalidAmount");
+  return errors;
+});
+
+function saveCustomerCorrections() {
+  if (!props.busy && Object.keys(draftPatch.value).length && !Object.keys(draftErrors.value).length) emit("customerCorrect", draftPatch.value);
+}
 
 function toggleEditing() {
   Object.keys(edits).forEach((k) => delete edits[k]);
@@ -133,23 +154,33 @@ function submitReview() {
   <aside class="panel card" :aria-label="t('card.aria')">
     <h2>
       {{ t("card.title") }}
-      <span class="badge" :class="status" data-testid="status">{{ t(`status.${status}`) }}</span>
+      <span class="badge" :class="status" data-testid="status">{{ status === 'assessed' && card?.assessment_stale ? t('customer.needsRefresh') : t(`status.${status}`) }}</span>
     </h2>
 
     <section v-if="card?.assessment_stale" class="assessment-warning" role="alert" data-testid="assessment-stale">
       <strong>{{ t("card.outOfDate") }}</strong>
       <p>{{ card.assessment_error || t("card.refreshRequired") }}</p>
       <button v-if="reviewer" class="btn" :disabled="busy" data-testid="reassess" @click="emit('reassess')">{{ t("card.retryAssessment") }}</button>
+      <button v-else-if="status === 'assessed' && !missing.length && !editing" class="btn" :disabled="busy" data-testid="customer-refresh" @click="emit('customerRefresh')">{{ t("card.retryAssessment") }}</button>
     </section>
 
     <section>
       <h3>{{ t("card.facts") }}</h3>
+      <p v-if="missing.length" class="missing-summary" data-testid="missing-summary">{{ t("customer.stillMissing") }}: {{ missing.map((key) => t(`fact.${key}`)).join(", ") }}</p>
       <p v-if="!facts" class="empty">{{ t("card.factsEmpty") }}</p>
       <dl v-else class="facts">
         <template v-for="row in factRows" :key="row.key">
           <dt>{{ row.label }}</dt>
-          <dd v-if="reviewer && editing && status === 'awaiting_review'">
-            <input v-model="edits[row.key]" :placeholder="display(row.value)" :aria-label="row.label" :disabled="busy" />
+          <dd v-if="editing && canEdit">
+            <select v-if="!reviewer && booleanFields.has(row.key)" v-model="edits[row.key]" :aria-label="row.label" :disabled="busy">
+              <option v-if="row.key !== 'photos_attached'" value="">{{ t("customer.notKnown") }}</option>
+              <option value="true">{{ t("card.yes") }}</option><option value="false">{{ t("card.no") }}</option>
+            </select>
+            <select v-else-if="!reviewer && row.key === 'event_type'" v-model="edits[row.key]" :aria-label="row.label" :disabled="busy">
+              <option v-for="event in eventOptions" :key="event" :value="event">{{ t(`customer.event.${event}`) }}</option>
+            </select>
+            <input v-else v-model="edits[row.key]" :placeholder="display(row.value)" :aria-label="row.label" :disabled="busy" :aria-invalid="!!draftErrors[row.key]" :aria-describedby="draftErrors[row.key] ? `error-${row.key}` : undefined" />
+            <p v-if="draftErrors[row.key]" :id="`error-${row.key}`" class="field-error" role="alert">{{ draftErrors[row.key] }}</p>
           </dd>
           <dd v-else :class="{ missing: row.missing }" :data-testid="`fact-${row.key}`">
             {{ row.missing ? t("card.missing") : display(row.value) }}
@@ -160,7 +191,7 @@ function submitReview() {
 
     <section>
       <h3>{{ t("card.coverage") }}</h3>
-      <template v-if="card">
+      <template v-if="card && (status !== 'collecting' || card.coverage_summary)">
         <span class="badge" :class="card.assessment_stale ? 'unclear' : card.coverage_status" data-testid="coverage">{{ card.assessment_stale ? t("card.outOfDate") : t(`status.${card.coverage_status}`) }}</span>
         <p class="summary" data-testid="summary">
           <template v-for="(part, i) in summaryParts" :key="i">
@@ -246,14 +277,18 @@ function submitReview() {
       </template>
       <template v-else>
         <template v-if="status === 'assessed'">
-          <p>{{ t("card.readyToSubmit") }}</p>
-          <button class="btn primary" :disabled="busy" data-testid="submit" @click="emit('submit')">{{ t("card.sendToAdjuster") }}</button>
+          <p v-if="!card?.assessment_stale">{{ t("card.readyToSubmit") }}</p>
+          <button class="btn primary" :disabled="busy || editing || card?.assessment_stale" data-testid="submit" @click="emit('submit')">{{ t("card.sendToAdjuster") }}</button>
         </template>
         <p v-if="status === 'awaiting_review'">{{ t("card.submitted") }}</p>
         <button v-if="reviewer && status === 'awaiting_review'" class="btn primary" :disabled="!canReview || (editing ? !Object.keys(draftPatch).length : card?.assessment_stale)" data-testid="review" @click="submitReview">{{ editing ? t("card.saveCorrections") : t("card.recordReview") }}</button>
         <button v-if="reviewer && status === 'awaiting_review'" class="btn" type="button" :disabled="busy" @click="toggleEditing">
           {{ editing ? t("card.cancelEdits") : t("card.editFacts") }}
         </button>
+      </template>
+      <template v-if="!reviewer && canEdit">
+        <button v-if="editing" class="btn primary" data-testid="save-customer-facts" :disabled="busy || !Object.keys(draftPatch).length || !!Object.keys(draftErrors).length" @click="saveCustomerCorrections">{{ t("card.saveCorrections") }}</button>
+        <button class="btn" :disabled="busy" data-testid="edit-customer-facts" @click="toggleEditing">{{ editing ? t("card.cancelEdits") : t("card.editFacts") }}</button>
       </template>
     </section>
     <form v-if="reviewer && !editing && status === 'awaiting_review'" class="request-info" @submit.prevent="emit('requestInfo', requestNote.trim())">

@@ -38,7 +38,11 @@ def missing_facts(facts: ClaimFacts) -> list[str]:
     missing = []
     for name in REQUIRED:
         value = getattr(facts, name)
-        if value is None or (name == "event_type" and value == "unknown"):
+        if (
+            value is None
+            or (isinstance(value, str) and not value.strip())
+            or (name == "event_type" and value == "unknown")
+        ):
             missing.append(name)
     return missing
 

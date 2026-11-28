@@ -38,6 +38,19 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(card.getByTestId("popover")).toContainText(/Aufklärungspflicht/);
   await expect(card.getByTestId("risk")).toHaveText(/low|medium|high/);
 
+  // The customer can correct facts before submitting and sees simple validation.
+  await card.getByTestId("edit-customer-facts").click();
+  await page.getByLabel("Date", { exact: true }).fill("2026-02-30");
+  await expect(page.getByRole("alert")).toContainText("real date");
+  await expect(card.getByTestId("save-customer-facts")).toBeDisabled();
+  await page.getByLabel("Date", { exact: true }).fill("2026-10-25");
+  await page.getByLabel("Estimated amount (EUR)", { exact: true }).fill("-10");
+  await expect(page.getByRole("alert")).toContainText("zero or more");
+  await page.getByLabel("Estimated amount (EUR)", { exact: true }).fill("900");
+  await card.getByTestId("save-customer-facts").click();
+  await expect(card.getByTestId("fact-estimated_amount_eur")).toHaveText("900");
+  await expect(card.getByTestId("status")).toHaveText("Ready to submit");
+
   // Customer submission never prompts for adjuster credentials or completes a review.
   await expect(card.getByTestId("review")).toHaveCount(0);
   const submission = page.waitForResponse((r) => r.url().endsWith("/submit") && r.request().method() === "POST");
@@ -99,11 +112,11 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByLabel("Claim card")).toHaveCount(0);
   await page.getByTestId("reviewer-link").click();
   await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
-  await expect(page.getByTestId("history-event")).toHaveCount(6);
+  await expect(page.getByTestId("history-event")).toHaveCount(8);
   await page.getByTestId("saved-history-link").click();
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
   await expect(page.getByTestId("claim-history")).toContainText("Reviewer (shared demo access)");
   await page.reload();
-  await expect(page.getByTestId("history-event")).toHaveCount(6);
+  await expect(page.getByTestId("history-event")).toHaveCount(8);
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
 });

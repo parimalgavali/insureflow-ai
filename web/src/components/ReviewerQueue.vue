@@ -142,7 +142,7 @@ onUnmounted(lock);
         <button v-if="hasMore" class="btn" :disabled="busy" @click="load(true)">{{ t("queue.more") }}</button>
       </template>
     </div>
-    <ClaimCard v-if="selected?.card" :key="selected.id" :facts="selected.card.facts" :missing="[]" :citations="selected.card.citations" :risk="selected.card.risk" :card="selected.card" :status="selected.status" :busy="busy" :claim-id="selected.id" :history="selected.history || []" reviewer @review="review" @request-info="requestInfo" @reassess="reassess" />
+    <ClaimCard v-if="selected?.card" :key="selected.id" :facts="selected.card.facts" :missing="selected.missing || []" :citations="selected.card.citations" :risk="selected.card.risk" :card="selected.card" :status="selected.status" :busy="busy" :claim-id="selected.id" :history="selected.history || []" reviewer @review="review" @request-info="requestInfo" @reassess="reassess" />
     <p v-else-if="credential && !busy" class="panel queue-list">{{ t("queue.choose") }}</p>
   </section>
 </template>

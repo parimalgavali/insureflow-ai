@@ -510,6 +510,114 @@ def test_history_does_not_repeat_an_old_correction_when_the_value_is_unchanged(c
     assert second["history"][-1]["note"] == "Rechecked without changing facts"
 
 
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
+def test_customer_corrections_refresh_and_retry_without_duplicate_history_or_messages(client):
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim_id = conv["id"], conv["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    url = f"/api/claims/{claim_id}/facts"
+    body = {"facts_patch": {"estimated_amount_eur": 900}}
+    result = client.patch(url, json=body)
+    assert result.status_code == 200
+    saved = result.json()
+    assert saved["status"] == "assessed" and saved["missing"] == []
+    assert saved["card"]["facts"]["estimated_amount_eur"] == 900
+    assert saved["card"]["assessment_stale"] is False and saved["card"]["review"] is None
+    assert [e["kind"] for e in saved["history"]] == ["corrected", "assessment_refreshed"]
+    assert all(e["actor"] == "customer" for e in saved["history"])
+    conversation = client.get(f"/api/conversations/{cid}").json()
+    assert len(conversation["messages"]) == 7
+    assert "900" in conversation["messages"][-2]["content"]
+    calls = len(client.app.state.claimpilot.provider.calls)
+    assert client.patch(url, json=body).json() == saved
+    assert len(client.app.state.claimpilot.provider.calls) == calls
+    assert client.get(f"/api/conversations/{cid}").json()["messages"] == conversation["messages"]
+    assert client.post(f"/api/claims/{claim_id}/submit").status_code == 200
+    assert client.patch(url, json=body).status_code == 409
+    assert client.post(url + "/refresh").status_code == 409
+
+
+def test_customer_can_edit_partial_facts_and_invalid_values_are_not_saved(client):
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim_id = conv["id"], conv["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    url = f"/api/claims/{claim_id}/facts"
+    for patch in (
+        {"incident_date": "2026-02-30"},
+        {"estimated_amount_eur": -1},
+        {},
+        {"fraud_score": 0},
+    ):
+        assert client.patch(url, json={"facts_patch": patch}).status_code == 422
+    partial = client.patch(url, json={"facts_patch": {"location": "Berlin"}}).json()
+    assert partial["status"] == "collecting" and partial["missing"] == ["incident_date"]
+    assert partial["card"]["facts"]["location"] == "Berlin"
+    assert client.post(f"/api/claims/{claim_id}/submit").status_code == 409
+    completed = client.patch(url, json={"facts_patch": {"incident_date": "2026-10-25"}}).json()
+    assert completed["status"] == "assessed" and completed["missing"] == []
+    assert completed["card"]["facts"]["location"] == "Berlin"
+    assert completed["card"]["assessment_stale"] is False
+
+
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
+def test_customer_refresh_failure_keeps_edits_and_blocks_submission(client, monkeypatch):
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim_id = conv["id"], conv["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    url = f"/api/claims/{claim_id}/facts"
+
+    def unavailable(*args, **kwargs):
+        raise RuntimeError("simulated retrieval failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(client.app.state.claimpilot.retriever, "retrieve_many", unavailable)
+        saved = client.patch(url, json={"facts_patch": {"location": "Berlin"}}).json()
+    assert saved["status"] == "assessed" and saved["card"]["assessment_stale"] is True
+    assert saved["card"]["facts"]["location"] == "Berlin"
+    assert client.post(f"/api/claims/{claim_id}/submit").status_code == 409
+    retried = client.post(url + "/refresh").json()
+    assert retried["card"]["assessment_stale"] is False
+    assert [e["kind"] for e in retried["history"]] == [
+        "corrected",
+        "assessment_refresh_failed",
+        "assessment_refreshed",
+    ]
+    assert client.post(f"/api/claims/{claim_id}/submit").status_code == 200
+
+
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
+def test_customer_correction_retry_recovers_a_failed_commit_without_duplicate_messages(
+    client, monkeypatch
+):
+    from sqlalchemy.orm import Session
+
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim_id = conv["id"], conv["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    url = f"/api/claims/{claim_id}/facts"
+    body = {"facts_patch": {"estimated_amount_eur": 900}}
+
+    def fail_commit(_session):
+        raise RuntimeError("simulated customer commit failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Session, "commit", fail_commit)
+        with pytest.raises(RuntimeError, match="simulated customer commit failure"):
+            client.patch(url, json=body)
+    calls = len(client.app.state.claimpilot.provider.calls)
+    recovered = client.patch(url, json=body)
+    assert recovered.status_code == 200
+    assert recovered.json()["card"]["facts"]["estimated_amount_eur"] == 900
+    assert len(client.app.state.claimpilot.provider.calls) == calls
+    assert [e["kind"] for e in recovered.json()["history"]] == ["corrected", "assessment_refreshed"]
+    messages = client.get(f"/api/conversations/{cid}").json()["messages"]
+    assert len(messages) == 7
+    assert sum("900" in m["content"] and m["role"] == "user" for m in messages) == 1
+
+
 def test_reviewer_queue_is_protected_and_lists_pending_claims(client, tmp_path):
     from api.agent.schemas import Citation, ClaimCard, ClaimFacts, PolicyContext, RiskSignal
     from db.models import Claim, Conversation
@@ -587,6 +695,13 @@ def test_bearer_token_required_when_configured(tmp_path: Path):
     with TestClient(create_app(lambda: make_state(tmp_path, token="s3cret"))) as c:
         assert c.get("/api/health").status_code == 200  # health stays open
         assert c.post("/api/conversations", json={}).status_code == 401
+        assert (
+            c.patch(
+                "/api/claims/00000000-0000-0000-0000-000000000000/facts",
+                json={"facts_patch": {"location": "Berlin"}},
+            ).status_code
+            == 401
+        )
         assert c.get("/api/claims/00000000-0000-0000-0000-000000000000/history").status_code == 401
         assert c.post("/api/claims/00000000-0000-0000-0000-000000000000/submit").status_code == 401
         assert (

@@ -140,6 +140,11 @@ completed reviews. **Open saved history** provides a link that survives a reload
 server-recorded times and the available demo access role; they do not identify a named reviewer
 when a shared credential was used. Earlier activity may not be available.
 
+Customers can use **Edit facts** before submission. Missing details remain visible;
+invalid dates or negative amounts show simple explanations. Saving complete details
+refreshes coverage and risk before submission. If that refresh fails, the changes
+stay saved and **Retry assessment** must succeed before the claim can be sent.
+
 ### Measured numbers
 
 RAG over AKB 2015 — 28 hand-written DE/EN questions, hit if the expected clause is in the top 3

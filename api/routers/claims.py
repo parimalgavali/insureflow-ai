@@ -7,8 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from api.agent.graph import resume_review, submit_for_review, thread_config
-from api.agent.schemas import ClaimCard, ReviewDecision, ReviewRequest
+from api.agent.graph import correct_customer_facts, resume_review, submit_for_review, thread_config
+from api.agent.required_facts import missing_facts
+from api.agent.schemas import ClaimCard, CustomerCorrection, ReviewDecision, ReviewRequest
 from api.history import HistoryEntry, history_out, record_event, record_review_events
 from api.security import get_state, require_adjuster, require_token
 from db.models import Claim, Message
@@ -23,6 +24,7 @@ class ClaimOut(BaseModel):
     card: ClaimCard | None
     submitted_at: datetime | None
     history: list[HistoryEntry]
+    missing: list[str]
 
 
 def _out(claim: Claim) -> ClaimOut:
@@ -33,6 +35,7 @@ def _out(claim: Claim) -> ClaimOut:
         card=ClaimCard.model_validate(claim.card) if claim.card else None,
         submitted_at=claim.submitted_at,
         history=history_out(claim),
+        missing=missing_facts(ClaimCard.model_validate(claim.card).facts) if claim.card else [],
     )
 
 
@@ -109,6 +112,8 @@ def submit_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
             return _out(claim)
         if claim.status != "assessed":
             raise HTTPException(409, "claim is not ready to submit")
+        if (claim.card or {}).get("assessment_stale"):
+            raise HTTPException(409, "refresh the assessment before submitting")
         try:
             result = submit_for_review(state.graph, str(claim.conversation_id))
         except ValueError as exc:
@@ -127,6 +132,70 @@ def submit_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
         )
         session.commit()
         return _out(claim)
+
+
+def _customer_action(claim_id: uuid.UUID, patch: dict, state, *, refresh: bool = False) -> ClaimOut:
+    with state.session() as session:
+        claim = session.scalar(select(Claim).where(Claim.id == claim_id).with_for_update())
+        if claim is None:
+            raise HTTPException(404, "claim not found")
+        if claim.status not in ("collecting", "assessed", "information_needed"):
+            raise HTTPException(409, "customer corrections are only available before submission")
+        try:
+            result = correct_customer_facts(
+                state.graph, str(claim.conversation_id), patch, refresh=refresh
+            )
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        card = result.get("card") or ClaimCard(
+            facts=result["facts"], policy=result["policy"], status=result["status"]
+        )
+        claim.card = card.model_dump(mode="json")
+        claim.status = card.status
+        claim.conversation.status = card.status
+        operation_id = result.get("customer_action_id")
+        if operation_id:
+            changes = result.get("customer_changes", [])
+            if changes and record_event(
+                session,
+                claim,
+                operation_id=operation_id,
+                kind="corrected",
+                actor="customer",
+                decision="edit",
+                changes=[c.model_dump(mode="json") for c in changes],
+            ):
+                note = result.get("customer_correction_message")
+                if note:
+                    claim.conversation.messages.append(Message(role="user", content=note))
+            if result["status"] == "assessed" and not result.get("reassessment_needed"):
+                failed = card.assessment_stale
+                if record_event(
+                    session,
+                    claim,
+                    operation_id=operation_id,
+                    kind="assessment_refresh_failed" if failed else "assessment_refreshed",
+                    actor="customer",
+                    decision="reassess" if refresh else "edit",
+                    note=card.assessment_error if failed else None,
+                ):
+                    note = result.get("customer_assessment_message")
+                    if note:
+                        claim.conversation.messages.append(Message(role="assistant", content=note))
+        session.commit()
+        return _out(claim)
+
+
+@router.patch("/{claim_id}/facts", response_model=ClaimOut)
+def correct_facts(
+    claim_id: uuid.UUID, body: CustomerCorrection, state=Depends(get_state)
+) -> ClaimOut:
+    return _customer_action(claim_id, body.facts_patch, state)
+
+
+@router.post("/{claim_id}/facts/refresh", response_model=ClaimOut)
+def refresh_customer_assessment(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
+    return _customer_action(claim_id, {}, state, refresh=True)
 
 
 @router.post("/{claim_id}/review", response_model=ClaimOut)
