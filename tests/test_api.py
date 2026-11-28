@@ -703,6 +703,12 @@ def test_bearer_token_required_when_configured(tmp_path: Path):
         assert c.get("/api/health").status_code == 200  # health stays open
         assert c.post("/api/conversations", json={}).status_code == 401
         assert (
+            c.post(
+                "/api/conversations/00000000-0000-0000-0000-000000000000/policy/prepare"
+            ).status_code
+            == 401
+        )
+        assert (
             c.get("/api/conversations/00000000-0000-0000-0000-000000000000/policy").status_code
             == 401
         )
@@ -1172,3 +1178,72 @@ def test_empty_policy_is_failed_and_never_search_ready(client):
             )
             is None
         )
+
+
+def test_policy_preparation_is_serialized_and_completed_work_is_reused(client, monkeypatch):
+    from threading import Event
+
+    from api.policy_text import Passage
+    from api.routers import policies
+
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    data = (Path(__file__).parent / "fixtures/akb_2015_first2pages.pdf").read_bytes()
+    url = f"/api/conversations/{cid}/policy"
+    client.post(url, files={"file": ("policy.pdf", data, "application/pdf")})
+    entered, release = Event(), Event()
+    calls = []
+
+    def pause(path):
+        calls.append(path)
+        entered.set()
+        assert release.wait(10)
+        return 1, [Passage(1, "A.1 Coverage", "Readable policy wording for a collision claim.")]
+
+    with monkeypatch.context() as patch, ThreadPoolExecutor(max_workers=2) as pool:
+        patch.setattr(policies, "prepare_pdf", pause)
+        first = pool.submit(client.post, url + "/prepare")
+        try:
+            assert entered.wait(10)
+            assert client.get(url).json()["document"]["status"] == "processing"
+            assert client.post(url + "/prepare").status_code == 409
+        finally:
+            release.set()
+        prepared = first.result(timeout=15).json()
+        assert prepared["document"]["status"] == "ready"
+        assert client.post(url + "/prepare").json() == prepared
+    assert len(calls) == 1
+
+
+def test_policy_preparation_commit_failure_is_not_ready_and_can_retry(client, monkeypatch):
+    from sqlalchemy import select
+    from sqlalchemy.orm import Session
+
+    from db.models import PolicyPassage
+
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    data = (Path(__file__).parent / "fixtures/akb_2015_first2pages.pdf").read_bytes()
+    url = f"/api/conversations/{cid}/policy"
+    client.post(url, files={"file": ("policy.pdf", data, "application/pdf")})
+    original = Session.commit
+    calls = 0
+
+    def fail_passages(session):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            session.flush()
+            raise RuntimeError("simulated commit failure")
+        return original(session)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Session, "commit", fail_passages)
+        failed = client.post(url + "/prepare").json()["document"]
+    assert failed["status"] == "failed" and failed["passage_count"] == 0
+    with client.app.state.claimpilot.session() as session:
+        assert not list(
+            session.scalars(
+                select(PolicyPassage).where(PolicyPassage.conversation_id == uuid.UUID(cid))
+            )
+        )
+    recovered = client.post(url + "/prepare").json()["document"]
+    assert recovered["status"] == "ready" and recovered["passage_count"] > 0

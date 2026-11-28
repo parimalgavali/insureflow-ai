@@ -1,8 +1,8 @@
 import { mount, flushPromises } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PolicyUpload from "../src/components/PolicyUpload.vue";
-import { fetchPolicy, uploadPolicy } from "../src/api/client";
-vi.mock("../src/api/client", () => ({ fetchPolicy: vi.fn(), uploadPolicy: vi.fn() }));
+import { fetchPolicy, uploadPolicy, preparePolicy } from "../src/api/client";
+vi.mock("../src/api/client", () => ({ fetchPolicy: vi.fn(), uploadPolicy: vi.fn(), preparePolicy: vi.fn() }));
 const empty = { coverage_source: "standard_demo" as const, document: null, max_upload_bytes: 1024 * 1024 };
 const saved = { ...empty, document: { id: "document", filename: "sample.pdf", size_bytes: 12, status: "uploaded", error: null } };
 const props = { conversationId: "conversation", busy: false, canUpload: true };
@@ -64,4 +64,25 @@ describe("policy upload", () => {
     expect(uploadPolicy).not.toHaveBeenCalled();
     w.unmount();
   });
+});
+
+
+it("shows preparation failure and retries to a ready state without claiming policy-based answers", async () => {
+  vi.mocked(fetchPolicy).mockResolvedValue(saved);
+  vi.mocked(preparePolicy).mockResolvedValueOnce({ ...saved, document: { ...saved.document, status: "failed", error: "no_readable_text" } })
+    .mockResolvedValueOnce({ ...saved, document: { ...saved.document, status: "ready", page_count: 2, passage_count: 4 } });
+  const w = mount(PolicyUpload, { props });
+  await flushPromises();
+  await w.get('[data-testid="prepare-policy"]').trigger("click");
+  await flushPromises();
+  expect(w.get('[role="alert"]').text()).toContain("text-based PDF");
+  expect(w.get('[data-testid="policy-status"]').text()).toContain("failed");
+  await w.get('[data-testid="prepare-policy"]').trigger("click");
+  await flushPromises();
+  expect(w.get('[data-testid="policy-status"]').text()).toBe("Text prepared for searching");
+  expect(w.get('[data-testid="policy-counts"]').text()).toContain("2 pages; 4 searchable passages");
+  expect(w.get('[data-testid="policy-source"]').text()).toContain("standard GDV");
+  expect(w.find('[role="alert"]').exists()).toBe(false);
+  expect(w.find('[data-testid="prepare-policy"]').exists()).toBe(false);
+  w.unmount();
 });

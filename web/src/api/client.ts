@@ -326,7 +326,7 @@ export async function fetchEval(): Promise<EvalReport> {
 
 export interface PolicySelection {
   coverage_source: "standard_demo";
-  document: { id: string; filename: string; size_bytes: number; status: string; error: string | null } | null;
+  document: { id: string; filename: string; size_bytes: number; status: string; error: string | null; page_count?: number | null; passage_count?: number } | null;
   max_upload_bytes: number;
 }
 export async function fetchPolicy(conversationId: string): Promise<PolicySelection> {
@@ -336,4 +336,8 @@ export async function uploadPolicy(conversationId: string, file: File): Promise<
   const body = new FormData();
   body.append("file", file);
   return (await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(conversationId)}/policy`, { method: "POST", headers: headers(false), body }))).json();
+}
+
+export async function preparePolicy(conversationId: string): Promise<PolicySelection> {
+  return (await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(conversationId)}/policy/prepare`, { method: "POST", headers: headers(false) }))).json();
 }

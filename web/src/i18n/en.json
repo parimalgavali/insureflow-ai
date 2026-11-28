@@ -184,5 +184,19 @@
   "policy.invalid": "This PDF could not be accepted. Use an unencrypted, valid PDF with 1–300 pages.",
   "policy.conflict": "A policy is already attached, a message is unfinished, or this claim has been submitted.",
   "policy.failed": "The upload could not be completed. Your current policy selection is unchanged. Please retry.",
-  "policy.status.uploaded": "Uploaded; awaiting text preparation"
+  "policy.status.uploaded": "Uploaded; awaiting text preparation",
+  "policy.prepare": "Prepare policy text",
+  "policy.retryPreparation": "Retry preparation",
+  "policy.checkPreparation": "Check preparation",
+  "policy.status.processing": "Preparing policy text…",
+  "policy.status.ready": "Text prepared for searching",
+  "policy.status.failed": "Text preparation failed",
+  "policy.preparedNotUsed": "The policy text is prepared. Coverage answers still use standard demo wording until policy-based answers are enabled.",
+  "policy.preparedCounts": "{pages} pages; {passages} searchable passages.",
+  "policy.prepareEncrypted": "This policy is password protected. Use an unencrypted PDF.",
+  "policy.prepareUnreadable": "Readable text could not be prepared from every nonempty page. Use a text-based PDF; scanned images need OCR.",
+  "policy.prepareLimit": "This policy exceeds the preparation limits. Use a smaller policy PDF.",
+  "policy.prepareTimeout": "Preparation took too long. Retry or use a smaller text-based PDF.",
+  "policy.prepareFailed": "Policy preparation could not be completed. Retry when the service is available.",
+  "policy.processingElsewhere": "This policy is still being prepared. Check again shortly."
 }

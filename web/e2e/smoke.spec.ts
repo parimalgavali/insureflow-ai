@@ -38,6 +38,9 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await page.getByTestId("upload-policy").click();
   await expect(page.getByTestId("policy-filename")).toHaveText("akb_2015_first2pages.pdf");
   await expect(page.getByTestId("policy-status")).toContainText("awaiting text preparation");
+  await page.getByTestId("prepare-policy").click();
+  await expect(page.getByTestId("policy-status")).toHaveText("Text prepared for searching", { timeout: 45_000 });
+  await expect(page.getByTestId("policy-counts")).toContainText("2 pages");
   await expect(page.getByTestId("policy-source")).toContainText("standard GDV");
 
   await composer.fill(MSG1);
@@ -53,6 +56,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await page.reload();
   await expect(composer).toBeEnabled();
   await expect(page.getByRole("log")).toContainText(MSG1);
+  await expect(page.getByTestId("policy-status")).toHaveText("Text prepared for searching");
   await expect(page.getByTestId("policy-filename")).toHaveText("akb_2015_first2pages.pdf");
   expect(await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"))).toBe(savedId);
 
