@@ -85,6 +85,7 @@ const summaryParts = computed(() => {
   return parts;
 });
 
+const coverageUncertainty = computed(() => props.missing.length ? "missing_facts" : props.card?.assessment_stale ? "human_review" : props.card?.coverage_uncertainty ?? (props.card?.coverage_status === "no_evidence" ? "missing_policy_wording" : props.card?.coverage_status === "unclear" ? "human_review" : null));
 const riskAvailability = computed(() => props.riskStatus ?? props.card?.risk_status ?? (props.risk ? "available" : "pending"));
 const visibleRisk = computed(() => riskAvailability.value === "available" ? props.risk : null);
 const riskNeeded = computed(() => props.riskMissing ?? props.card?.risk_missing ?? []);
@@ -198,6 +199,11 @@ function submitReview() {
 
     <section>
       <h3>{{ t("card.coverage") }}</h3>
+      <div v-if="coverageUncertainty" data-testid="coverage-uncertainty" role="status">
+        <p>{{ t(`uncertainty.${coverageUncertainty}`) }}</p>
+        <p>{{ t(`uncertainty.next.${coverageUncertainty}`) }}</p>
+      </div>
+      <p v-if="card?.coverage_summary" class="disclaimer">{{ t("uncertainty.preliminary") }}</p>
       <template v-if="card && (status !== 'collecting' || card.coverage_summary)">
         <span class="badge" :class="card.assessment_stale ? 'unclear' : card.coverage_status" data-testid="coverage">{{ card.assessment_stale ? t("card.outOfDate") : t(`status.${card.coverage_status}`) }}</span>
         <p class="summary" data-testid="summary">

@@ -150,5 +150,14 @@
   "risk.needed": "Für ein Risikosignal fehlen:",
   "risk.unavailable": "Risikosignal vorübergehend nicht verfügbar. Ein Mensch kann den Schaden weiterhin prüfen.",
   "risk.policy_product": "Versicherungsprodukt",
-  "risk.policy_deductible": "Selbstbeteiligung"
+  "risk.policy_deductible": "Selbstbeteiligung",
+  "uncertainty.missing_facts": "Es fehlen Angaben zum Schaden.",
+  "uncertainty.missing_policy_wording": "Die verfügbaren Versicherungsbedingungen belegen keine Deckung für diesen Fall.",
+  "uncertainty.conflicting_evidence": "Die verfügbaren Angaben widersprechen sich. Ein Mensch muss die Deckung prüfen.",
+  "uncertainty.human_review": "Ein Sachbearbeiter muss die Deckung prüfen.",
+  "uncertainty.next.missing_facts": "Prüfen und ergänzen Sie die oben aufgeführten fehlenden Angaben.",
+  "uncertainty.next.missing_policy_wording": "Stellen Sie die passende Klausel aus Ihrem tatsächlichen Vertrag zur Prüfung bereit.",
+  "uncertainty.next.conflicting_evidence": "Bitten Sie einen Sachbearbeiter, die widersprüchlichen Angaben vor einer Entscheidung zu vergleichen.",
+  "uncertainty.next.human_review": "Reichen Sie den Schaden zur Prüfung ein oder beantworten Sie die Rückfrage des Sachbearbeiters.",
+  "uncertainty.preliminary": "Dies ist eine vorläufige Einschätzung anhand von Musterbedingungen. Ein Klauselverweis ist kein Deckungsnachweis und keine Zahlungszusage."
 }
