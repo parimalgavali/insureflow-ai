@@ -38,3 +38,21 @@ it("shows stored attachment labels as plain text and keeps legacy files unverifi
   expect(w.find("script").exists()).toBe(false);
   w.unmount();
 });
+
+
+it("shows source-linked suggestions separately and offers explicit PDF reading", async () => {
+  setLocale("en");
+  const attachment = { id: "pdf", filename: "estimate.pdf", content_type: "application/pdf", media_type: "pdf", document_type: "repair_estimate" as const, processing_state: "stored", size_bytes: 100, error: null };
+  const w = mount(AttachmentList, { props: { attachments: [attachment], canExtract: true, busy: true } });
+  expect(w.get("button").attributes("disabled")).toBeDefined();
+  await w.setProps({ busy: false });
+  await w.get("button").trigger("click");
+  expect(w.emitted("extract")?.[0]).toEqual(["pdf"]);
+  await w.setProps({ attachments: [{ ...attachment, processing_state: "ready", suggestions: [{ id: "s", field: "estimated_amount_eur", value: 1200, page: 2, quote: "<script>EUR 1200</script>", status: "pending", source_document_id: "pdf", source_name: "estimate.pdf" }] }] });
+  expect(w.text()).toContain("have not changed your claim facts");
+  expect(w.get('[data-testid="evidence-suggestion"]').text()).toContain("1200");
+  expect(w.text()).toContain("estimate.pdf · page 2");
+  expect(w.find("script").exists()).toBe(false);
+  expect(w.find("button").exists()).toBe(false);
+  w.unmount();
+});
