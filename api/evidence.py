@@ -15,6 +15,7 @@ class SuggestionOut(BaseModel):
     page: int
     quote: str
     status: str
+    expected_value: str | float | bool | None = None
     source_document_id: uuid.UUID
     source_name: str
 
@@ -67,6 +68,7 @@ def attachment_out(session, row, suggestions=None):
             page=s.page,
             quote=s.quote,
             status=s.status,
+            expected_value=s.expected_value,
             source_document_id=row.id,
             source_name=row.filename,
         )

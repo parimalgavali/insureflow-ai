@@ -9,6 +9,7 @@ from sqlalchemy import delete, select
 from sqlalchemy import text as sql_text
 
 from api.evidence import AttachmentOut, attachment_out
+from api.evidence_decisions import require_no_pending_evidence
 from api.evidence_extraction import extract_suggestions
 from api.evidence_text import EvidenceTextError, prepare_evidence_pdf
 from api.security import get_state, require_token
@@ -70,6 +71,7 @@ def extract_evidence(
                     .limit(1)
                 ):
                     raise HTTPException(409, "message_unfinished")
+                require_no_pending_evidence(session, conversation_id)
                 filename, path = attachment.filename, attachment.path
                 attachment.processing_state, attachment.error = "processing", None
                 session.commit()

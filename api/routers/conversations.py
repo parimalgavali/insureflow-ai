@@ -21,6 +21,7 @@ from api.agent.graph import thread_config
 from api.agent.required_facts import missing_facts
 from api.agent.schemas import ChatMessage, ClaimCard, Language, PolicyContext
 from api.evidence import AttachmentOut, attachments_out
+from api.evidence_decisions import require_no_pending_evidence
 from api.evidence_files import DocumentType, EvidenceFileError, validate_upload
 from api.history import HistoryEntry, history_out
 from api.policy_coverage import coverage_source_changed, current_coverage_card
@@ -206,6 +207,7 @@ def post_message(
                     raise HTTPException(409, "retry the unfinished message first")
                 if conv.status not in ("collecting", "information_needed"):
                     raise HTTPException(409, "claim assessment is complete; use the claim actions")
+                require_no_pending_evidence(session, conversation_id)
                 if language:
                     conv.language = language
                 if file is not None and media_type is None:

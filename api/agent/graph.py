@@ -789,7 +789,9 @@ def submit_for_review(graph, thread_id: str) -> dict:
     return graph.invoke(Command(resume=True), thread_config(thread_id))
 
 
-def correct_customer_facts(graph, thread_id: str, patch: dict, *, refresh: bool = False) -> dict:
+def correct_customer_facts(
+    graph, thread_id: str, patch: dict, *, refresh: bool = False, action_id: str | None = None
+) -> dict:
     config = thread_config(thread_id)
     snapshot = graph.get_state(config)
     if snapshot.values.get("status") not in ("collecting", "assessed", "information_needed"):
@@ -797,13 +799,19 @@ def correct_customer_facts(graph, thread_id: str, patch: dict, *, refresh: bool 
     if not snapshot.values.get("facts"):
         raise ValueError("describe the incident before editing collected facts")
     patch = FactsPatch.model_validate(patch).model_dump(exclude_unset=True)
+    if action_id and snapshot.values.get("customer_action_id") == action_id:
+        if snapshot.next and snapshot.next not in (("submit",), ("human_review",)):
+            return graph.invoke(None, config)
+        return snapshot.values
     if snapshot.next == ("reassess",) and snapshot.values.get("assessment_target") == "assessed":
         if refresh or all(getattr(snapshot.values["facts"], k) == v for k, v in patch.items()):
             return graph.invoke(None, config)
         raise ValueError("retry the pending assessment before making more corrections")
     if not refresh and all(getattr(snapshot.values["facts"], k) == v for k, v in patch.items()):
         return snapshot.values
-    return graph.invoke({"customer_patch": patch, "customer_action_id": uuid.uuid4().hex}, config)
+    return graph.invoke(
+        {"customer_patch": patch, "customer_action_id": action_id or uuid.uuid4().hex}, config
+    )
 
 
 def pending_interrupt(result: dict) -> dict | None:

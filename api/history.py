@@ -16,6 +16,8 @@ EventKind = Literal[
     "assessment_refreshed",
     "assessment_refresh_failed",
     "review_completed",
+    "evidence_accepted",
+    "evidence_rejected",
 ]
 
 

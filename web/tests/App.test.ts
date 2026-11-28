@@ -5,12 +5,13 @@ import PolicyUpload from "../src/components/PolicyUpload.vue";
 import ClaimCard from "../src/components/ClaimCard.vue";
 import ChatColumn from "../src/components/ChatColumn.vue";
 import HistoryPage from "../src/components/HistoryPage.vue";
-import { createConversation, extractEvidence, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
+import { createConversation, decideEvidenceSuggestion, extractEvidence, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
 import { initialState, store } from "../src/store";
 
 vi.mock("../src/api/client", () => ({
   createConversation: vi.fn(),
   extractEvidence: vi.fn(),
+  decideEvidenceSuggestion: vi.fn(),
   setAccessToken: vi.fn(),
   retrySavedMessage: vi.fn(),
   submitClaim: vi.fn(),
@@ -29,7 +30,7 @@ const card = {
 
 function mountApp() {
   return mount(App, { global: { stubs: {
-    ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh", "extractEvidence"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
+    ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh", "extractEvidence", "decideEvidence"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
     ChatColumn: { props: ["canSend"], emits: ["retry", "send"], template: '<button data-testid="retry-action" @click="$emit(\'retry\')">Retry</button>' },
     PolicyUpload: true,
     EvalPage: true,
@@ -279,5 +280,61 @@ it("retries reading the same PDF without resending chat or changing confirmed fa
   expect(store.attachments[0].suggestions?.[0].value).toBe(1200);
   expect(store.facts).toBe(factsBefore);
   expect(store.error).toBeNull();
+  w.unmount();
+});
+
+
+it("restores and finishes a pending document decision without a new chat turn", async () => {
+  localStorage.setItem("claimpilot_conversation_id", "saved-conversation");
+  const suggestion = { id: "s", field: "estimated_amount_eur", value: 1200, page: 1, quote: "EUR 1200", status: "applying", expected_value: 900, source_document_id: "pdf", source_name: "estimate.pdf" };
+  const attachment = { id: "pdf", filename: "estimate.pdf", content_type: "application/pdf", media_type: "pdf", document_type: "repair_estimate", processing_state: "ready", size_bytes: 100, error: null, suggestions: [suggestion] };
+  const saved = { id: "saved-conversation", claim_id: "claim-1", language: "en", status: "assessed", card: { ...card, facts: { estimated_amount_eur: 900 } }, policy: {}, messages: [], attachments: [attachment] };
+  vi.mocked(getConversation).mockResolvedValueOnce(saved as never).mockResolvedValueOnce({ ...saved, card: { ...card, facts: { estimated_amount_eur: 1200 } }, attachments: [{ ...attachment, suggestions: [{ ...suggestion, status: "accepted" }] }] } as never);
+  vi.mocked(decideEvidenceSuggestion).mockResolvedValue({ status: "assessed", card: { ...card, facts: { estimated_amount_eur: 1200 } }, attachments: [{ ...attachment, suggestions: [{ ...suggestion, status: "accepted" }] }] } as never);
+  const w = mountApp();
+  await flushPromises();
+  expect(w.findComponent(ChatColumn).props("canSend")).toBe(false);
+  expect(w.get('[data-testid="pending-evidence-decision"]').text()).toContain("needs to finish");
+  await w.get('[data-testid="pending-evidence-decision"] button').trigger("click");
+  await flushPromises();
+  expect(decideEvidenceSuggestion).toHaveBeenCalledWith("claim-1", "s", { decision: "accept", expected_current: 900, replace_existing: true });
+  expect(store.facts?.estimated_amount_eur).toBe(1200);
+  expect(w.find('[data-testid="pending-evidence-decision"]').exists()).toBe(false);
+  expect(sendMessage).not.toHaveBeenCalled();
+  w.unmount();
+});
+
+
+it("keeps an earlier correction retry when document confirmation is attempted", async () => {
+  vi.mocked(correctClaimFacts).mockRejectedValueOnce(new Error("write failed"))
+    .mockResolvedValueOnce({ status: "assessed", card } as never);
+  vi.mocked(getConversation).mockResolvedValue({ id: "conversation-1", claim_id: "claim-1", language: "en", status: "assessed", card, policy: {}, messages: [] } as never);
+  const w = mountApp();
+  await flushPromises();
+  w.findComponent(ClaimCard).vm.$emit("customerCorrect", { location: "Berlin" });
+  await flushPromises();
+  w.findComponent(ClaimCard).vm.$emit("decideEvidence", "s", { decision: "accept", expected_current: null });
+  await flushPromises();
+  expect(decideEvidenceSuggestion).not.toHaveBeenCalled();
+  expect(store.error).toContain("earlier failed action");
+  await w.get('[data-testid="retry-action"]').trigger("click");
+  await flushPromises();
+  expect(correctClaimFacts).toHaveBeenCalledTimes(2);
+  expect(store.error).toBeNull();
+  w.unmount();
+});
+
+it("reloads changed facts after a stale document decision without automatically overwriting them", async () => {
+  const w = mountApp();
+  await flushPromises();
+  vi.mocked(decideEvidenceSuggestion).mockRejectedValueOnce(new Error("409 claim_fact_changed"));
+  vi.mocked(getConversation).mockResolvedValueOnce({ id: "conversation-1", claim_id: "claim-1", language: "en", status: "assessed", card: { ...card, facts: { estimated_amount_eur: 1000 } }, policy: {}, messages: [] } as never);
+  w.findComponent(ClaimCard).vm.$emit("decideEvidence", "s", { decision: "accept", expected_current: 900, replace_existing: true });
+  await flushPromises();
+  expect(decideEvidenceSuggestion).toHaveBeenCalledTimes(1);
+  expect(store.facts?.estimated_amount_eur).toBe(1000);
+  expect(store.error).toContain("Check the current saved details");
+  expect(w.find('[data-testid="pending-evidence-decision"]').exists()).toBe(false);
+  expect(w.findComponent(ChatColumn).attributes("retryable")).toBe("false");
   w.unmount();
 });

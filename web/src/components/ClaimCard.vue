@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal, RiskStatus, HistoryEntry, EvidenceAttachment } from "../api/client";
+import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal, RiskStatus, HistoryEntry, EvidenceAttachment, EvidenceDecision } from "../api/client";
 import CitationPill from "./CitationPill.vue";
 import AttachmentList from "./AttachmentList.vue";
 import ClaimHistory from "./ClaimHistory.vue";
@@ -21,7 +21,7 @@ const props = defineProps<{
   attachments?: EvidenceAttachment[];
   claimId?: string | null;
 }>();
-const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: []; customerCorrect: [patch: Record<string, unknown>]; customerRefresh: []; extractEvidence: [attachmentId: string] }>();
+const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: []; customerCorrect: [patch: Record<string, unknown>]; customerRefresh: []; extractEvidence: [attachmentId: string]; decideEvidence: [suggestionId: string, decision: EvidenceDecision] }>();
 const requestNote = ref("");
 const reviewNote = ref("");
 
@@ -264,7 +264,7 @@ function submitReview() {
       </p>
     </section>
 
-    <AttachmentList :attachments="attachments || []" :busy="busy" :can-extract="!reviewer && ['collecting', 'assessed', 'information_needed'].includes(status)" @extract="emit('extractEvidence', $event)" />
+    <AttachmentList :facts="facts" :can-confirm="!reviewer && !editing && ['collecting', 'assessed', 'information_needed'].includes(status)" @decide="(id, decision) => emit('decideEvidence', id, decision)" :attachments="attachments || []" :busy="busy" :can-extract="!reviewer && ['collecting', 'assessed', 'information_needed'].includes(status)" @extract="emit('extractEvidence', $event)" />
 
     <section v-if="card?.missing_documents.length">
       <h3>{{ t("card.provide") }}</h3>
