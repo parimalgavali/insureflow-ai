@@ -102,6 +102,24 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(card.getByTestId("fact-estimated_amount_eur")).toHaveText("900");
   await expect(card.getByTestId("status")).toHaveText("Ready to submit");
 
+  // Confirm a replacement, prepare it, and refresh before submission.
+  await page.getByTestId("replace-policy").click();
+  await page.locator('#policy-file').setInputFiles('../tests/fixtures/replacement_policy.pdf');
+  await expect(page.getByTestId("replacement-confirmation")).toContainText("Replace sample_policy.pdf with replacement_policy.pdf?");
+  await page.getByTestId("upload-policy").click();
+  await expect(page.getByTestId("policy-filename")).toHaveText("replacement_policy.pdf");
+  await expect(page.getByTestId("policy-revision")).toHaveText("Version 2");
+  await expect(card.getByTestId("assessment-stale")).toBeVisible();
+  await expect(card.getByTestId("submit")).toBeDisabled();
+  await page.getByTestId("prepare-policy").click();
+  await expect(page.getByTestId("policy-status")).toHaveText("Text prepared for searching");
+  await expect(card.getByTestId("assessment-stale")).toBeVisible();
+  await card.getByTestId("customer-refresh").click();
+  await expect(card.getByTestId("assessment-stale")).toHaveCount(0);
+  await expect(card.getByTestId("coverage-source")).toContainText("replacement_policy.pdf");
+  await card.getByRole("button", { name: "Show passage P.2 from replacement_policy.pdf" }).first().click();
+  await expect(card.getByTestId("popover")).toContainText("EUR 500");
+
   // Customer submission never prompts for adjuster credentials or completes a review.
   await expect(card.getByTestId("review")).toHaveCount(0);
   const submission = page.waitForResponse((r) => r.url().endsWith("/submit") && r.request().method() === "POST");
@@ -165,12 +183,12 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByLabel("Claim card")).toHaveCount(0);
   await page.getByTestId("reviewer-link").click();
   await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
-  await expect(page.getByTestId("history-event")).toHaveCount(8);
+  await expect(page.getByTestId("history-event")).toHaveCount(9);
   await page.getByTestId("saved-history-link").click();
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
   await expect(page.getByTestId("claim-history")).toContainText("Reviewer (shared demo access)");
   await page.reload();
-  await expect(page.getByTestId("history-event")).toHaveCount(8);
+  await expect(page.getByTestId("history-event")).toHaveCount(9);
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
   await page.goto("/");
   await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
@@ -179,6 +197,6 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   expect(await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"))).not.toBe(savedId);
   const oldClaim = await (await page.request.get(savedConversationUrl)).json();
   expect(oldClaim.status).toBe("reviewed");
-  expect(oldClaim.history).toHaveLength(8);
+  expect(oldClaim.history).toHaveLength(9);
 
 });

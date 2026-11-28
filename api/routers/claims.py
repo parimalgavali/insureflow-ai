@@ -187,6 +187,9 @@ def _customer_action(claim_id: uuid.UUID, patch: dict, state, *, refresh: bool =
         card = result.get("card") or ClaimCard(
             facts=result["facts"], policy=result["policy"], status=result["status"]
         )
+        card = current_coverage_card(
+            session, card, claim.conversation_id, claim.conversation.language
+        )
         claim.card = card.model_dump(mode="json")
         claim.status = card.status
         claim.conversation.status = card.status

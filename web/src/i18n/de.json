@@ -204,5 +204,13 @@
   "policy.noAnswersYet": "Dieser Vertrag ist noch nicht für die Deckungssuche bereit. Bereiten Sie den Text vor oder bitten Sie einen Sachbearbeiter um Prüfung.",
   "card.policyCoverage": "Deckung (ausgewählter Vertrag)",
   "uncertainty.policyPreliminary": "Dies ist eine vorläufige Einschätzung aus den ausgewählten Vertragspassagen. Ein Verweis ist kein Deckungsnachweis und keine Zahlungszusage.",
-  "card.showPolicyPassage": "Passage {id} aus {name}, Seite {page} anzeigen: {title}"
+  "card.showPolicyPassage": "Passage {id} aus {name}, Seite {page} anzeigen: {title}",
+  "policy.replace": "Vertrag ersetzen",
+  "policy.confirmReplacement": "Ersetzung bestätigen",
+  "policy.cancelReplacement": "Ersetzung abbrechen",
+  "policy.confirmText": "{current} durch {name} ersetzen? Die bisherige Einschätzung bleibt veraltet, bis diese Datei vorbereitet und die Bewertung aktualisiert wurde.",
+  "policy.revision": "Version {revision}",
+  "policy.replacementPending": "Bereiten Sie diesen Ersatzvertrag vor und aktualisieren Sie danach die Schadenbewertung. Die bisherige Einschätzung bleibt veraltet.",
+  "policy.sameFile": "Diese Datei hat denselben Inhalt wie der ausgewählte Vertrag. Die aktuelle Auswahl bleibt unverändert.",
+  "policy.replacementConflict": "Der aktuelle Vertrag wurde geändert, wird verarbeitet oder der Schaden ist nicht mehr bearbeitbar. Laden Sie die Auswahl vor einem neuen Versuch erneut."
 }

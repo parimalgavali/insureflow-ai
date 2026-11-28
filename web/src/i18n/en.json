@@ -204,5 +204,13 @@
   "policy.noAnswersYet": "This policy is not ready for coverage searches. Prepare its text or ask a claims handler for review.",
   "card.policyCoverage": "Coverage (selected policy)",
   "uncertainty.policyPreliminary": "This is preliminary guidance from the selected policy passages. A citation is a reference, not proof of coverage or a payment decision.",
-  "card.showPolicyPassage": "Show passage {id} from {name}, page {page}: {title}"
+  "card.showPolicyPassage": "Show passage {id} from {name}, page {page}: {title}",
+  "policy.replace": "Replace policy",
+  "policy.confirmReplacement": "Confirm replacement",
+  "policy.cancelReplacement": "Cancel replacement",
+  "policy.confirmText": "Replace {current} with {name}? Previous guidance will be out of date until this file is prepared and the assessment refreshed.",
+  "policy.revision": "Version {revision}",
+  "policy.replacementPending": "Prepare this replacement, then refresh the claim assessment. Previous guidance remains out of date.",
+  "policy.sameFile": "This file has the same content as the selected policy. The current selection is unchanged.",
+  "policy.replacementConflict": "The current policy changed, is processing, or the claim is no longer editable. Reload the selection before trying again."
 }

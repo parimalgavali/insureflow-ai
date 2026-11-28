@@ -1,15 +1,15 @@
 import { mount, flushPromises } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PolicyUpload from "../src/components/PolicyUpload.vue";
-import { fetchPolicy, uploadPolicy, preparePolicy } from "../src/api/client";
-vi.mock("../src/api/client", () => ({ fetchPolicy: vi.fn(), uploadPolicy: vi.fn(), preparePolicy: vi.fn() }));
+import { fetchPolicy, uploadPolicy, preparePolicy, replacePolicy } from "../src/api/client";
+vi.mock("../src/api/client", () => ({ fetchPolicy: vi.fn(), uploadPolicy: vi.fn(), preparePolicy: vi.fn(), replacePolicy: vi.fn() }));
 const empty = { coverage_source: "standard_demo" as const, document: null, max_upload_bytes: 1024 * 1024 };
 const saved = { ...empty, document: { id: "document", filename: "sample.pdf", size_bytes: 12, status: "uploaded", error: null } };
 const props = { conversationId: "conversation", busy: false, canUpload: true };
 beforeEach(() => { vi.resetAllMocks(); vi.mocked(fetchPolicy).mockResolvedValue(empty); });
-async function choose(w: ReturnType<typeof mount>, size = 12) {
+async function choose(w: ReturnType<typeof mount>, size = 12, filename = "sample.pdf") {
   const input = w.get('input[type="file"]');
-  const file = new File([new Uint8Array(size)], "sample.pdf", { type: "application/pdf" });
+  const file = new File([new Uint8Array(size)], filename, { type: "application/pdf" });
   Object.defineProperty(input.element, "files", { value: [file], configurable: true });
   await input.trigger("change");
   return file;
@@ -84,5 +84,40 @@ it("shows preparation failure and retries to a ready state without claiming poli
   expect(w.get('[data-testid="policy-source"]').text()).toContain("sample.pdf");
   expect(w.find('[role="alert"]').exists()).toBe(false);
   expect(w.find('[data-testid="prepare-policy"]').exists()).toBe(false);
+  w.unmount();
+});
+
+
+it("requires filename confirmation and preserves the old selection when replacement fails", async () => {
+  vi.mocked(fetchPolicy).mockResolvedValue(saved);
+  vi.mocked(replacePolicy).mockRejectedValueOnce(new Error("network error"))
+    .mockResolvedValueOnce({ ...saved, document: { ...saved.document, id: "replacement", filename: "correct.pdf", revision: 2 } });
+  const w = mount(PolicyUpload, { props });
+  await flushPromises();
+  await w.get('[data-testid="replace-policy"]').trigger("click");
+  const file = await choose(w, 12, "correct.pdf");
+  expect(w.get('[data-testid="replacement-confirmation"]').text()).toContain("Replace sample.pdf with correct.pdf?");
+  expect(replacePolicy).not.toHaveBeenCalled();
+  await w.get("form").trigger("submit");
+  await flushPromises();
+  expect(w.get('[data-testid="policy-filename"]').text()).toBe("sample.pdf");
+  expect(w.get('[role="alert"]').text()).toContain("could not be completed");
+  await w.get("form").trigger("submit");
+  await flushPromises();
+  expect(replacePolicy).toHaveBeenLastCalledWith("conversation", "document", file);
+  expect(w.get('[data-testid="policy-revision"]').text()).toBe("Version 2");
+  expect(w.find('[data-testid="replacement-confirmation"]').exists()).toBe(false);
+  expect(w.emitted("changed")).toBeTruthy();
+  w.unmount();
+});
+
+
+it("keeps a submitted claim policy read-only", async () => {
+  vi.mocked(fetchPolicy).mockResolvedValue(saved);
+  const w = mount(PolicyUpload, { props: { ...props, canUpload: false } });
+  await flushPromises();
+  expect(w.find('[data-testid="replace-policy"]').exists()).toBe(false);
+  expect(w.find('[data-testid="prepare-policy"]').exists()).toBe(false);
+  expect(w.find('input[type="file"]').exists()).toBe(false);
   w.unmount();
 });
