@@ -25,7 +25,20 @@ class EvidenceFileError(Exception):
         super().__init__(code)
 
 
+def safe_upload_name(filename: str | None) -> str:
+    name = Path((filename or "upload").replace("\\", "/")).name
+    if (
+        not name
+        or len(name.encode("utf-8")) > 200
+        or any(ord(c) < 32 or ord(c) == 127 for c in name)
+    ):
+        raise EvidenceFileError("invalid_filename")
+    return name
+
+
 def validate_upload(filename: str, content_type: str, data: bytes) -> str:
+    if not data:
+        raise EvidenceFileError("empty_file")
     if content_type not in EXTENSIONS:
         raise EvidenceFileError("unsupported_file_type", 415)
     if Path(filename).suffix.lower() not in EXTENSIONS[content_type]:
@@ -57,11 +70,18 @@ def _inspect(data: bytes, content_type: str) -> str:
 
         if not data.startswith(b"%PDF-"):
             raise EvidenceFileError("file_type_mismatch")
-        reader = PdfReader(BytesIO(data))
-        if reader.is_encrypted:
-            raise EvidenceFileError("encrypted_pdf")
-        if not 0 < len(reader.pages) <= 300:
-            raise EvidenceFileError("unsupported_page_count")
+        try:
+            reader = PdfReader(BytesIO(data))
+            if reader.is_encrypted:
+                raise EvidenceFileError("encrypted_pdf")
+            if len(reader.pages) == 0:
+                raise EvidenceFileError("empty_pdf")
+            if len(reader.pages) > 300:
+                raise EvidenceFileError("unsupported_page_count")
+        except EvidenceFileError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise EvidenceFileError("damaged_pdf") from exc
         return "pdf"
     from PIL import Image
 

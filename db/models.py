@@ -129,6 +129,17 @@ class ClaimEvent(Base):
 
 class Attachment(Base):
     __tablename__ = "attachments"
+    __table_args__ = (
+        UniqueConstraint("id", "conversation_id", name="uq_attachment_conversation"),
+        UniqueConstraint("replaces_attachment_id", name="uq_attachment_replacement"),
+        ForeignKeyConstraint(
+            ["replaces_attachment_id", "conversation_id"],
+            ["attachments.id", "attachments.conversation_id"],
+            name="fk_attachment_replacement_scope",
+            deferrable=True,
+            initially="DEFERRED",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     conversation_id: Mapped[uuid.UUID] = mapped_column(
@@ -138,6 +149,10 @@ class Attachment(Base):
         ForeignKey("messages.id", ondelete="SET NULL")
     )
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_current: Mapped[bool] = mapped_column(default=True, nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    replaces_attachment_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    content_hash: Mapped[str | None] = mapped_column(String(64))
     media_type: Mapped[str] = mapped_column(String(16), default="unknown", nullable=False)
     document_type: Mapped[str] = mapped_column(String(32), default="unknown", nullable=False)
     processing_state: Mapped[str] = mapped_column(String(32), default="unknown", nullable=False)

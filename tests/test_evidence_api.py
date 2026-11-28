@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from api.llm.provider import Completion, ProviderError
-from db.models import EvidenceSuggestion
+from db.models import Attachment
 from tests.test_api import ADJUSTER, MSG1
 from tests.test_api import client as client
 
@@ -178,7 +178,10 @@ def test_failed_suggestion_commit_is_not_ready_and_retry_is_atomic(client, monke
 
     def commit(session):
         nonlocal failed
-        if not failed and any(isinstance(row, EvidenceSuggestion) for row in session.new):
+        if not failed and any(
+            isinstance(row, Attachment) and row.processing_state == "ready"
+            for row in session.identity_map.values()
+        ):
             failed = True
             raise RuntimeError("simulated write failure")
         return original(session)
@@ -188,3 +191,29 @@ def test_failed_suggestion_commit_is_not_ready_and_retry_is_atomic(client, monke
     assert result["processing_state"] == "failed" and result["suggestions"] == []
     result = client.post(endpoint(conv, attachment)).json()
     assert result["processing_state"] == "ready" and len(result["suggestions"]) == 2
+
+
+def test_lost_read_commit_acknowledgement_keeps_completed_suggestions(client, monkeypatch):
+    conv, attachment = upload(client)
+    calls = provider(monkeypatch, client.app.state.claimpilot)
+    original = Session.commit
+    failed = False
+
+    def commit(session):
+        nonlocal failed
+        ready = any(
+            isinstance(row, Attachment) and row.processing_state == "ready"
+            for row in session.identity_map.values()
+        )
+        result = original(session)
+        if ready and not failed:
+            failed = True
+            raise RuntimeError("lost read commit acknowledgement")
+        return result
+
+    monkeypatch.setattr(Session, "commit", commit)
+    result = client.post(endpoint(conv, attachment)).json()
+    assert result["processing_state"] == "ready" and len(result["suggestions"]) == 2
+    assert len(calls) == 1
+    assert client.post(endpoint(conv, attachment)).json() == result
+    assert len(calls) == 1

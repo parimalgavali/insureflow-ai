@@ -23,7 +23,7 @@ def read_pages(path: Path) -> list[dict]:
             raise EvidenceTextError("encrypted_pdf")
         if not 0 < len(reader.pages) <= 300:
             raise EvidenceTextError("unsupported_page_count")
-        pages, total = [], 0
+        pages, total, unreadable = [], 0, False
         for number, page in enumerate(reader.pages, 1):
             text = " ".join((page.extract_text() or "").replace("\x00", "").split())
             total += len(text)
@@ -31,17 +31,21 @@ def read_pages(path: Path) -> list[dict]:
                 raise EvidenceTextError("document_text_too_long")
             if not text:
                 if page.get_contents() is not None:
-                    raise EvidenceTextError("unreadable_page")
+                    unreadable = True
             elif sum(c.isalpha() for c in text) < 3 or "\ufffd" in text:
-                raise EvidenceTextError("unreadable_page")
+                unreadable = True
             pages.append({"page": number, "text": text})
+        if unreadable:
+            raise EvidenceTextError(
+                "unreadable_pages" if any(p["text"] for p in pages) else "no_selectable_text"
+            )
         if not any(p["text"] for p in pages):
-            raise EvidenceTextError("no_readable_text")
+            raise EvidenceTextError("empty_pdf")
         return pages
     except EvidenceTextError:
         raise
     except Exception as exc:  # noqa: BLE001
-        raise EvidenceTextError("unreadable_pdf") from exc
+        raise EvidenceTextError("damaged_pdf") from exc
 
 
 def prepare_evidence_pdf(path: Path) -> list[dict]:

@@ -22,7 +22,7 @@ from api.agent.required_facts import missing_facts
 from api.agent.schemas import ChatMessage, ClaimCard, Language, PolicyContext
 from api.evidence import AttachmentOut, attachments_out
 from api.evidence_decisions import require_no_pending_evidence
-from api.evidence_files import DocumentType, EvidenceFileError, validate_upload
+from api.evidence_files import DocumentType, EvidenceFileError, safe_upload_name, validate_upload
 from api.history import HistoryEntry, history_out
 from api.policy_coverage import coverage_source_changed, current_coverage_card
 from api.security import get_state, require_token
@@ -166,13 +166,8 @@ def post_message(
         if previous is not None and previous.fingerprint != fingerprint:
             raise HTTPException(409, "retry must use the original message and attachment")
     if file is not None and previous is None:
-        if (
-            not safe_name
-            or len(safe_name.encode("utf-8")) > 200
-            or any(ord(char) < 32 or ord(char) == 127 for char in safe_name)
-        ):
-            raise HTTPException(422, "invalid_filename")
         try:
+            safe_name = safe_upload_name(file.filename)
             media_type = validate_upload(safe_name, file.content_type, data)
         except EvidenceFileError as exc:
             raise HTTPException(exc.status, exc.code) from exc
@@ -285,6 +280,7 @@ def _store_upload(state, conversation_id, filename, content_type, data, media_ty
     return Attachment(
         conversation_id=conversation_id,
         filename=filename,
+        content_hash=hashlib.sha256(data).hexdigest(),
         content_type=content_type,
         size_bytes=len(data),
         path=str(target),

@@ -5,12 +5,13 @@ import PolicyUpload from "../src/components/PolicyUpload.vue";
 import ClaimCard from "../src/components/ClaimCard.vue";
 import ChatColumn from "../src/components/ChatColumn.vue";
 import HistoryPage from "../src/components/HistoryPage.vue";
-import { createConversation, decideEvidenceSuggestion, extractEvidence, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
+import { createConversation, decideEvidenceSuggestion, extractEvidence, replaceEvidencePdf, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
 import { initialState, store } from "../src/store";
 
 vi.mock("../src/api/client", () => ({
   createConversation: vi.fn(),
   extractEvidence: vi.fn(),
+  replaceEvidencePdf: vi.fn(),
   decideEvidenceSuggestion: vi.fn(),
   setAccessToken: vi.fn(),
   retrySavedMessage: vi.fn(),
@@ -30,7 +31,7 @@ const card = {
 
 function mountApp() {
   return mount(App, { global: { stubs: {
-    ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh", "extractEvidence", "decideEvidence"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
+    ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh", "extractEvidence", "decideEvidence", "replaceEvidence"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
     ChatColumn: { props: ["canSend"], emits: ["retry", "send"], template: '<button data-testid="retry-action" @click="$emit(\'retry\')">Retry</button>' },
     PolicyUpload: true,
     EvalPage: true,
@@ -336,5 +337,26 @@ it("reloads changed facts after a stale document decision without automatically 
   expect(store.error).toContain("Check the current saved details");
   expect(w.find('[data-testid="pending-evidence-decision"]').exists()).toBe(false);
   expect(w.findComponent(ChatColumn).attributes("retryable")).toBe("false");
+  w.unmount();
+});
+
+
+it("retries the same replacement file and reloads the claim without a new chat turn", async () => {
+  const w = mountApp();
+  await flushPromises();
+  const copy = new File(["PDF"], "clear.pdf", { type: "application/pdf" });
+  vi.mocked(replaceEvidencePdf).mockRejectedValueOnce(new Error("Network lost"))
+    .mockResolvedValueOnce({ id: "new" } as never);
+  const saved = { id: "conversation-1", claim_id: "claim-1", language: "en", status: "assessed", card, policy: {}, messages: [], attachments: [] };
+  vi.mocked(getConversation).mockResolvedValue(saved as never);
+  w.findComponent(ClaimCard).vm.$emit("replaceEvidence", "old", copy);
+  await flushPromises();
+  expect(store.error).toContain("Retry with the same copy");
+  await w.get('[data-testid="retry-action"]').trigger("click");
+  await flushPromises();
+  expect(replaceEvidencePdf).toHaveBeenNthCalledWith(1, "conversation-1", "old", copy);
+  expect(replaceEvidencePdf).toHaveBeenNthCalledWith(2, "conversation-1", "old", copy);
+  expect(sendMessage).not.toHaveBeenCalled();
+  expect(store.error).toBeNull();
   w.unmount();
 });

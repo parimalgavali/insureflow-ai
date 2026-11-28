@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, nextTick, reactive, ref, watch } from "vue";
 import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal, RiskStatus, HistoryEntry, EvidenceAttachment, EvidenceDecision } from "../api/client";
 import CitationPill from "./CitationPill.vue";
 import AttachmentList from "./AttachmentList.vue";
@@ -21,7 +21,7 @@ const props = defineProps<{
   attachments?: EvidenceAttachment[];
   claimId?: string | null;
 }>();
-const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: []; customerCorrect: [patch: Record<string, unknown>]; customerRefresh: []; extractEvidence: [attachmentId: string]; decideEvidence: [suggestionId: string, decision: EvidenceDecision] }>();
+const emit = defineEmits<{ submit: []; review: [patch: Record<string, unknown>, note?: string]; requestInfo: [note: string]; reassess: []; customerCorrect: [patch: Record<string, unknown>]; customerRefresh: []; extractEvidence: [attachmentId: string]; decideEvidence: [suggestionId: string, decision: EvidenceDecision]; replaceEvidence: [attachmentId: string, file: File] }>();
 const requestNote = ref("");
 const reviewNote = ref("");
 
@@ -44,6 +44,12 @@ const FACT_KEYS = [
 
 const edits = reactive<Record<string, string>>({});
 const editing = ref(false);
+const factsElement = ref<HTMLElement | null>(null);
+async function enterManually() {
+  if (!editing.value) toggleEditing();
+  await nextTick();
+  factsElement.value?.querySelector<HTMLElement>("input, select")?.focus();
+}
 const activeCitation = ref<Citation | null>(null);
 function toggleCitation(c: Citation) {
   activeCitation.value = activeCitation.value?.clause_id === c.clause_id ? null : c;
@@ -180,7 +186,7 @@ function submitReview() {
       <h3>{{ t("card.facts") }}</h3>
       <p v-if="missing.length" class="missing-summary" data-testid="missing-summary">{{ t("customer.stillMissing") }}: {{ missing.map((key) => t(`fact.${key}`)).join(", ") }}</p>
       <p v-if="!facts" class="empty">{{ t("card.factsEmpty") }}</p>
-      <dl v-else class="facts">
+      <dl v-else ref="factsElement" class="facts">
         <template v-for="row in factRows" :key="row.key">
           <dt>{{ row.label }}</dt>
           <dd v-if="editing && canEdit">
@@ -264,7 +270,7 @@ function submitReview() {
       </p>
     </section>
 
-    <AttachmentList :facts="facts" :can-confirm="!reviewer && !editing && ['collecting', 'assessed', 'information_needed'].includes(status)" @decide="(id, decision) => emit('decideEvidence', id, decision)" :attachments="attachments || []" :busy="busy" :can-extract="!reviewer && ['collecting', 'assessed', 'information_needed'].includes(status)" @extract="emit('extractEvidence', $event)" />
+    <AttachmentList :can-manual="!reviewer && canEdit" :can-replace="!reviewer && !editing && ['collecting', 'assessed', 'information_needed'].includes(status)" @manual-entry="enterManually" @replace-file="(id, file) => emit('replaceEvidence', id, file)" :facts="facts" :can-confirm="!reviewer && !editing && ['collecting', 'assessed', 'information_needed'].includes(status)" @decide="(id, decision) => emit('decideEvidence', id, decision)" :attachments="attachments || []" :busy="busy" :can-extract="!reviewer && ['collecting', 'assessed', 'information_needed'].includes(status)" @extract="emit('extractEvidence', $event)" />
 
     <section v-if="card?.missing_documents.length">
       <h3>{{ t("card.provide") }}</h3>

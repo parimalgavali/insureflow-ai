@@ -18,6 +18,7 @@ EventKind = Literal[
     "review_completed",
     "evidence_accepted",
     "evidence_rejected",
+    "evidence_replaced",
 ]
 
 

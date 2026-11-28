@@ -52,7 +52,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(composer).toBeEnabled();
   await expect(composer).toHaveValue(MSG1);
   await expect(page.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
-  await page.locator('.chat input[type="file"]').setInputFiles('../tests/fixtures/sample_policy.pdf');
+  await page.locator('.chat input[type="file"]').setInputFiles('../tests/fixtures/unreadable_claim.pdf');
   await page.getByLabel("What is this attachment?").selectOption("police_report");
   await composer.press("Enter");
   await expect(page.getByRole("alert")).toHaveCount(0);
@@ -66,6 +66,34 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByTestId("risk")).toHaveCount(0);
 
   const savedId = await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"));
+  const firstConversation = await (await page.request.get(`/api/conversations/${savedId}`)).json();
+  const unreadableId = firstConversation.attachments[0].id;
+  const unreadable = page.getByTestId(`attachment-${unreadableId}`);
+  await unreadable.getByRole("button", { name: "Read claim PDF" }).click();
+  await expect(unreadable).toContainText("no selectable text");
+  await expect(unreadable).toContainText("scans are not read automatically");
+  await expect(page.getByTestId("evidence-suggestion")).toHaveCount(0);
+  await unreadable.getByRole("button", { name: "Enter details yourself" }).click();
+  await expect(page.getByLabel("Date", { exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "Cancel edits", exact: true }).click();
+  await unreadable.getByRole("button", { name: "Replace PDF copy" }).click();
+  await unreadable.getByLabel("Choose a clearer PDF copy").setInputFiles({ name: "clear-report.pdf", mimeType: "application/pdf", buffer: readFileSync('../tests/fixtures/claim_evidence.pdf') });
+  await expect(unreadable).toContainText("Replace unreadable_claim.pdf with clear-report.pdf?");
+  await page.route("**/api/conversations/*/attachments/*", async (route) => {
+    if (route.request().method() !== "PUT") return route.continue();
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    await route.fulfill({ response, body: "{" });
+  }, { times: 1 });
+  await unreadable.getByRole("button", { name: "Save replacement copy" }).click();
+  await expect(page.getByRole("alert")).toContainText("Retry with the same copy");
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(unreadable).toContainText("Previous copy");
+  await expect(unreadable.getByRole("button")).toHaveCount(0);
+  await expect(page.getByTestId("evidence-list")).toContainText("clear-report.pdf");
+  await expect(page.getByTestId("evidence-list")).toContainText("Version 2");
+  await expect(page.locator('[data-history-kind="evidence_replaced"]')).toHaveCount(1);
   await page.reload();
   await expect(composer).toBeEnabled();
   await expect(page.getByRole("log")).toContainText(MSG1);
@@ -99,7 +127,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   const card = page.getByLabel("Claim card");
   await expect(card.getByTestId("fact-photos_attached")).toHaveText("no");
   await expect(card.getByTestId("evidence-list")).toContainText("Not yet analysed for claim details");
-  expect(canonical.attachments).toHaveLength(2);
+  expect(canonical.attachments).toHaveLength(3);
   const evidenceId = canonical.attachments.find((a: { filename: string }) => a.filename === "claim.pdf").id;
   // Lose the extraction response after it is committed; retry reuses saved suggestions.
   await page.route("**/api/conversations/*/attachments/*/extract", async (route) => {
@@ -252,12 +280,12 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByLabel("Claim card")).toHaveCount(0);
   await page.getByTestId("reviewer-link").click();
   await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
-  await expect(page.getByTestId("history-event")).toHaveCount(13);
+  await expect(page.getByTestId("history-event")).toHaveCount(14);
   await page.getByTestId("saved-history-link").click();
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
   await expect(page.getByTestId("claim-history")).toContainText("Reviewer (shared demo access)");
   await page.reload();
-  await expect(page.getByTestId("history-event")).toHaveCount(13);
+  await expect(page.getByTestId("history-event")).toHaveCount(14);
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
   await page.goto("/");
   await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
@@ -266,6 +294,6 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   expect(await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"))).not.toBe(savedId);
   const oldClaim = await (await page.request.get(savedConversationUrl)).json();
   expect(oldClaim.status).toBe("reviewed");
-  expect(oldClaim.history).toHaveLength(13);
+  expect(oldClaim.history).toHaveLength(14);
 
 });

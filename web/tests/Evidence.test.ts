@@ -75,3 +75,26 @@ it("requires a separate replacement confirmation and resets it when saved facts 
   expect(w.emitted("decide")?.[1]).toEqual(["s", { decision: "reject", expected_current: 1000, replace_existing: false }]);
   w.unmount();
 });
+
+
+it("explains unreadable copies, offers manual entry and keeps previous versions read-only", async () => {
+  setLocale("en");
+  const old = { id: "old", filename: "scan.pdf", content_type: "application/pdf", media_type: "pdf", document_type: "police_report" as const, processing_state: "failed", size_bytes: 100, error: "no_selectable_text", is_current: false, revision: 1 };
+  const current = { ...old, id: "current", is_current: true, revision: 2 };
+  const w = mount(AttachmentList, { props: { attachments: [old, current], canReplace: true, canExtract: true, canManual: true } });
+  expect(w.text()).toContain("no selectable text");
+  const previous = w.get('[data-testid="attachment-old"]');
+  expect(previous.text()).toContain("Previous copy");
+  expect(previous.find("button").exists()).toBe(false);
+  const live = w.get('[data-testid="attachment-current"]');
+  await live.findAll("button").find((button) => button.text() === "Enter details yourself")!.trigger("click");
+  expect(w.emitted("manualEntry")).toHaveLength(1);
+  await live.findAll("button").find((button) => button.text() === "Replace PDF copy")!.trigger("click");
+  const copy = new File(["PDF"], "clear.pdf", { type: "application/pdf" });
+  Object.defineProperty(w.get('input[type="file"]').element, "files", { value: [copy], configurable: true });
+  await w.get('input[type="file"]').trigger("change");
+  expect(w.text()).toContain("Replace scan.pdf with clear.pdf?");
+  await w.get("form").trigger("submit");
+  expect(w.emitted("replaceFile")?.[0]).toEqual(["current", copy]);
+  w.unmount();
+});
