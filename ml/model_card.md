@@ -2,8 +2,8 @@
 
 ## Intended use
 Decision support only. `ml.predict.load_scorer().score(facts, policy)` returns a
-`RiskSignal(score, band, reasons)` that the claim card shows to the **adjuster** as one input
-among others. It never denies, approves, or accuses; the UI labels it as a signal and the agent
+`RiskSignal(score, band, reasons)` (or `None` when minimum inputs are missing). The claim card
+shows the signal as one input for human review. It never denies, approves, or accuses; the UI labels it as a signal and the agent
 prompts forbid repeating it to the policyholder as a verdict. It is a portfolio demonstration of
 honest, explainable tabular ML on real data — not a production fraud system.
 
@@ -17,14 +17,29 @@ values. Fetched by `scripts/fetch_data.py kaggle`; see `data/README.md` and `ml/
 `Days:Policy-Accident`, `Days:Policy-Claim`, `PastNumberOfClaims`, `AgeOfVehicle`,
 `PoliceReportFiled`, `WitnessPresent`, `BasePolicy`, `Deductible`.
 
-Only columns that a ClaimPilot conversation plus the seed policy can supply are used.
+Some features use live claim and policy inputs; others remain documented assumptions.
 Mapping (`ml/features.py::facts_to_features`): incident date → `Month`/`DayOfWeek`;
 `event_type`/third-party facts → `Fault`; `police_report_filed` → `PoliceReportFiled`;
 `witnesses` → `WitnessPresent`; `policy.product` → `BasePolicy`
 (haftpflicht→Liability, vollkasko→All Perils, teilkasko→Collision — nearest category, not an
 exact equivalent); `deductible_eur` → nearest of {300,400,500,700}; `vehicle_age_years` →
-`AgeOfVehicle`. Unknown facts take documented defaults (`DEFAULTS`), chosen as the
-*common/low-risk* value so a sparse conversation yields a baseline score, not an inflated one.
+`AgeOfVehicle`.
+
+## Minimum inputs and availability
+`ml/risk_inputs.py` gates both the scorer and agent before prediction. Required: a valid
+ISO incident date, a known incident type, explicit yes/no answers for third-party involvement,
+police reporting and witnesses, a known policy product, and a finite nonnegative deductible.
+A collision involving another party also needs a yes/no answer for whether that party is known.
+“No” is a known answer; missing is not “No”. Missing inputs produce no score or band. The card
+shows “Not enough information” and names the needed details, including on saved legacy cards.
+A scoring service failure is separately labelled unavailable. Coverage guidance and human review
+can proceed when the risk inputs are incomplete.
+
+This is an operational minimum, not a statistical guarantee of reliability. Mapping still uses
+`DEFAULTS` for area, vehicle category/price, policy timing and past claims, and for vehicle age
+when absent. Incident/third-party categories are proxies for fault, not findings of liability.
+Policy categories and deductible rounding are approximate. The minimum-input gate does not
+resolve these limitations or the data mismatch described below.
 
 ## Excluded columns and why
 - Fairness / protected attributes: `Sex`, `MaritalStatus`, `Age`, `AgeOfPolicyHolder`.

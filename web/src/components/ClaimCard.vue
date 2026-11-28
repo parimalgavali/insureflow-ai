@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal, HistoryEntry } from "../api/client";
+import type { Citation, ClaimCard, ClaimFacts, ClaimStatus, RiskSignal, RiskStatus, HistoryEntry } from "../api/client";
 import CitationPill from "./CitationPill.vue";
 import ClaimHistory from "./ClaimHistory.vue";
 import { t } from "../i18n";
@@ -10,6 +10,8 @@ const props = defineProps<{
   missing: string[];
   citations: Citation[];
   risk: RiskSignal | null;
+  riskStatus?: RiskStatus;
+  riskMissing?: string[];
   card: ClaimCard | null;
   status: ClaimStatus;
   busy: boolean;
@@ -82,6 +84,11 @@ const summaryParts = computed(() => {
   if (last < text.length) parts.push({ text: text.slice(last) });
   return parts;
 });
+
+const riskAvailability = computed(() => props.riskStatus ?? props.card?.risk_status ?? (props.risk ? "available" : "pending"));
+const visibleRisk = computed(() => riskAvailability.value === "available" ? props.risk : null);
+const riskNeeded = computed(() => props.riskMissing ?? props.card?.risk_missing ?? []);
+const riskInputLabel = (key: string) => t(key.startsWith("policy_") ? `risk.${key}` : `fact.${key}`);
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en");
 const canReview = computed(() => props.reviewer && props.status === "awaiting_review" && !props.busy);
@@ -226,18 +233,24 @@ function submitReview() {
 
     <section>
       <h3>{{ t("card.risk") }}</h3>
-      <template v-if="risk">
-        <span class="badge" :class="card?.assessment_stale ? 'unclear' : risk.band" data-testid="risk">{{ card?.assessment_stale ? t("card.outOfDate") : t(`band.${risk.band}`) }}</span>
+      <template v-if="visibleRisk">
+        <span class="badge" :class="card?.assessment_stale ? 'unclear' : visibleRisk.band" data-testid="risk">{{ card?.assessment_stale ? t("card.outOfDate") : t(`band.${visibleRisk.band}`) }}</span>
         <ul class="reasons">
-          <li v-for="r in risk.reasons" :key="r">{{ r }}</li>
+          <li v-for="r in visibleRisk.reasons" :key="r">{{ r }}</li>
         </ul>
-        <p class="disclaimer">{{ t("card.riskDisclaimer") }}</p>
       </template>
+      <template v-else-if="riskAvailability === 'insufficient_information'">
+        <span class="badge unclear" data-testid="risk-insufficient">{{ t("risk.insufficient") }}</span>
+        <p>{{ t("risk.needed") }}</p>
+        <ul data-testid="risk-missing"><li v-for="key in riskNeeded" :key="key">{{ riskInputLabel(key) }}</li></ul>
+      </template>
+      <p v-else-if="riskAvailability === 'unavailable'" data-testid="risk-unavailable">{{ t("risk.unavailable") }}</p>
+      <p v-else class="empty">{{ t("card.riskEmpty") }}</p>
+      <p class="disclaimer">{{ t("card.riskDisclaimer") }}</p>
       <p v-if="card?.cost" class="cost" data-testid="cost">
         {{ t("card.cost", { claim: fmt(card.cost.claim_eur), portfolio: fmt(card.cost.portfolio_claim_eur), freq: card.cost.claims_per_year.toFixed(2) }) }}
         <small>· {{ card.cost.basis }} – {{ t("card.costNote") }}</small>
       </p>
-      <p v-else-if="!risk" class="empty">{{ t("card.riskEmpty") }}</p>
     </section>
 
     <section v-if="card?.missing_documents.length">

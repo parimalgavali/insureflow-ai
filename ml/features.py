@@ -82,8 +82,8 @@ THIRD_PARTY_FAULT_EVENTS = {
     "hit_and_run",
     "theft",
     "vandalism",
-    "weather",
-    "animal",
+    "storm_hail",
+    "wild_animal",
     "fire",
     "glass",
 }
@@ -128,8 +128,8 @@ def _yes_no(flag: bool | None, default: str) -> str:
 def facts_to_features(facts: Any, policy: Any, today: date | None = None) -> dict[str, Any]:
     """Map ClaimFacts + PolicyContext (duck-typed) onto one model row.
 
-    Unknown facts fall back to DEFAULTS, so a sparse conversation yields a *baseline* score,
-    not a high one.
+    This mapping retains documented defaults for training and unsupported inputs.
+    FraudScorer checks minimum inputs before using this row for prediction.
     """
     today = today or date.today()
     row: dict[str, Any] = dict(DEFAULTS)

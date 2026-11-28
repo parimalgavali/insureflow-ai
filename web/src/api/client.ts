@@ -42,6 +42,8 @@ export interface CostContext {
   basis: string;
 }
 
+export type RiskStatus = "pending" | "available" | "insufficient_information" | "unavailable";
+
 export interface RiskSignal {
   score: number;
   band: "low" | "medium" | "high";
@@ -63,6 +65,8 @@ export interface ClaimCard {
   coverage_summary: string;
   citations: Citation[];
   risk: RiskSignal | null;
+  risk_status?: RiskStatus;
+  risk_missing?: string[];
   cost: CostContext | null;
   missing_documents: string[];
   next_steps: string[];
@@ -115,6 +119,7 @@ export type AgentEvent =
   | { type: "token"; data: { text: string } }
   | { type: "question"; data: { text: string } }
   | { type: "citations"; data: { citations: Citation[] } }
+  | { type: "risk_availability"; data: { status: RiskStatus; missing: string[] } }
   | { type: "risk"; data: { risk: RiskSignal | null } }
   | { type: "card"; data: { card: ClaimCard } }
   | { type: "done"; data: { status: ClaimStatus; claim_id: string; awaiting_review: boolean } }

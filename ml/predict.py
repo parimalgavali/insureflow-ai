@@ -1,4 +1,4 @@
-"""`load_scorer()` -> object with `.score(facts, policy) -> RiskSignal`; used by api/state.py."""
+"""Load a scorer returning RiskSignal, or None when minimum inputs are missing."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import joblib
 from api.agent.schemas import RiskSignal
 from ml.explain import top_reasons
 from ml.features import facts_to_features, row_frame
+from ml.risk_inputs import missing_risk_inputs
 
 ARTIFACT = Path(__file__).parent / "artifacts" / "fraud_model.joblib"
 
@@ -28,7 +29,9 @@ class FraudScorer:
             return "medium"
         return "low"
 
-    def score(self, facts: Any, policy: Any) -> RiskSignal:
+    def score(self, facts: Any, policy: Any) -> RiskSignal | None:
+        if missing_risk_inputs(facts, policy):
+            return None
         row = row_frame(facts_to_features(facts, policy))
         p = float(self.model.predict_proba(row)[0, 1])
         return RiskSignal(

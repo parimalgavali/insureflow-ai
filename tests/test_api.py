@@ -630,7 +630,14 @@ def test_reviewer_queue_is_protected_and_lists_pending_claims(client, tmp_path):
         ):
             conv = Conversation(status=status)
             card = ClaimCard(
-                facts=ClaimFacts(event_type="theft", location="Berlin"),
+                facts=ClaimFacts(
+                    event_type="theft",
+                    location="Berlin",
+                    incident_date="2026-10-25",
+                    third_party_involved=False,
+                    police_report_filed=False,
+                    witnesses=False,
+                ),
                 policy=PolicyContext(),
                 citations=[
                     Citation(clause_id="A.2.2.1.2", excerpt="Theft policy wording", page=10)

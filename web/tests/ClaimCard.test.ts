@@ -175,3 +175,16 @@ it("blocks customer submission on stale guidance and offers a refresh without re
   expect(w.find('[data-testid="edit-customer-facts"]').exists()).toBe(false);
   expect(w.find('[data-testid="customer-refresh"]').exists()).toBe(false);
 });
+
+it("shows needed inputs instead of an old risk band and retains the human guidance label", async () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: [], risk: card.risk, card: { ...card, risk_status: "insufficient_information", risk_missing: ["police_report_filed", "witnesses", "policy_product"] }, status: "assessed", busy: false } });
+  expect(w.get('[data-testid="risk-insufficient"]').text()).toBe("Not enough information");
+  expect(w.get('[data-testid="risk-missing"]').text()).toContain("Police informed");
+  expect(w.get('[data-testid="risk-missing"]').text()).toContain("Policy product");
+  expect(w.find('[data-testid="risk"]').exists()).toBe(false);
+  expect(w.find(".reasons").exists()).toBe(false);
+  expect(w.text()).toContain("Reviewed by a human");
+  await w.setProps({ card: { ...card, risk: null, risk_status: "unavailable", risk_missing: [] }, risk: null });
+  expect(w.find('[data-testid="risk-insufficient"]').exists()).toBe(false);
+  expect(w.get('[data-testid="risk-unavailable"]').text()).toContain("temporarily unavailable");
+});
