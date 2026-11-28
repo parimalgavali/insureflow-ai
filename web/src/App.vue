@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import { locale, setLocale, t } from "./i18n";
 import { createConversation, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type Language, type ReviewerClaim } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
+import PolicyUpload from "./components/PolicyUpload.vue";
 import ClaimCard from "./components/ClaimCard.vue";
 import EvalPage from "./components/EvalPage.vue";
 import ReviewerQueue from "./components/ReviewerQueue.vue";
@@ -15,6 +16,7 @@ const showReviewer = ref(location.hash === "#review");
 const historyId = ref(location.hash.startsWith("#history/") ? location.hash.slice(9) : null);
 const retrySubmission = ref(false);
 const opening = ref(false);
+const policyBusy = ref(false);
 const openError = ref(false);
 const accessDraft = ref("");
 let openVersion = 0;
@@ -30,10 +32,10 @@ function navigate() {
 window.addEventListener("hashchange", navigate);
 onUnmounted(() => { window.removeEventListener("hashchange", navigate); openVersion++; accessDraft.value = ""; setAccessToken(""); });
 
-const canSend = computed(() => store.conversationId !== null && !opening.value && !openError.value && !messageNeedsRetry.value && ["collecting", "information_needed"].includes(store.status));
+const canSend = computed(() => store.conversationId !== null && !opening.value && !openError.value && !policyBusy.value && !messageNeedsRetry.value && ["collecting", "information_needed"].includes(store.status));
 
 async function start(language: Language, forceNew = false) {
-  if (opening.value || store.busy) return;
+  if (opening.value || store.busy || policyBusy.value) return;
   const version = ++openVersion;
   opening.value = true;
   openError.value = false;
@@ -193,7 +195,7 @@ onMounted(() => {
     <EvalPage v-else-if="showEval" />
     <HistoryPage v-else-if="historyId" :claim-id="historyId" />
     <template v-else>
-    <section class="panel" data-testid="claim-session">
+    <section class="panel claim-session" data-testid="claim-session">
       <p v-if="opening" role="status">{{ t("session.loading") }}</p>
       <div v-if="openError" role="alert">
         <p>{{ t("session.unavailable") }}</p>
@@ -204,11 +206,12 @@ onMounted(() => {
           <button class="btn" :disabled="opening">{{ t("chat.retry") }}</button>
         </form>
       </div>
-      <button class="btn" data-testid="new-claim" :disabled="opening || store.busy" @click="start(locale, true)">{{ t("session.new") }}</button>
+      <button class="btn" data-testid="new-claim" :disabled="opening || store.busy || policyBusy" @click="start(locale, true)">{{ t("session.new") }}</button>
       <p>{{ t("session.newNote") }}</p>
     </section>
+    <PolicyUpload v-if="store.conversationId && !openError && !opening" :key="store.conversationId" :conversation-id="store.conversationId" :busy="store.busy || messageNeedsRetry" :can-upload="['collecting', 'assessed', 'information_needed'].includes(store.status)" @busy="policyBusy = $event" />
     <ChatColumn v-if="!openError && !opening" :key="store.conversationId || 'new'" :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" @send="send" @retry="retry" />
-    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry" :claim-id="store.claimId" :history="store.history" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
+    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry || policyBusy" :claim-id="store.claimId" :history="store.history" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
     </template>
   </div>
 </template>

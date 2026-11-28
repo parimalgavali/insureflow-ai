@@ -28,6 +28,7 @@ function mountApp() {
   return mount(App, { global: { stubs: {
     ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
     ChatColumn: { props: ["canSend"], emits: ["retry", "send"], template: '<button data-testid="retry-action" @click="$emit(\'retry\')">Retry</button>' },
+    PolicyUpload: true,
     EvalPage: true,
     ReviewerQueue: true,
     HistoryPage: true,

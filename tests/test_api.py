@@ -702,6 +702,17 @@ def test_bearer_token_required_when_configured(tmp_path: Path):
     with TestClient(create_app(lambda: make_state(tmp_path, token="s3cret"))) as c:
         assert c.get("/api/health").status_code == 200  # health stays open
         assert c.post("/api/conversations", json={}).status_code == 401
+        assert (
+            c.get("/api/conversations/00000000-0000-0000-0000-000000000000/policy").status_code
+            == 401
+        )
+        assert (
+            c.post(
+                "/api/conversations/00000000-0000-0000-0000-000000000000/policy",
+                files={"file": ("policy.pdf", b"sample", "application/pdf")},
+            ).status_code
+            == 401
+        )
         assert c.get("/api/conversations/00000000-0000-0000-0000-000000000000").status_code == 401
         assert (
             c.post(
@@ -997,3 +1008,102 @@ def test_reload_can_resume_saved_message_with_attachment_without_uploading_again
     assert len(list(state.settings.upload_dir.rglob("*_saved.pdf"))) == 1
     other = client.post("/api/conversations", json={}).json()["id"]
     assert client.post(f"/api/conversations/{other}/messages/{oid}/retry").status_code == 404
+
+
+def test_policy_upload_is_separate_idempotent_and_does_not_change_demo_coverage(client):
+    state = client.app.state.claimpilot
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    path = f"/api/conversations/{cid}/policy"
+    initial = client.get(path).json()
+    assert initial["document"] is None and initial["coverage_source"] == "standard_demo"
+    data = (Path(__file__).parent / "fixtures/akb_2015_first2pages.pdf").read_bytes()
+    files = {"file": ("../../policy.pdf", data, "application/pdf")}
+    response = client.post(path, files=files)
+    assert response.status_code == 200
+    selected = response.json()
+    assert selected["document"]["filename"] == "policy.pdf"
+    assert selected["document"]["status"] == "uploaded"
+    assert "path" not in selected["document"]
+    assert selected["coverage_source"] == "standard_demo"
+    assert client.post(path, files=files).json() == selected
+    assert client.get(path).json() == selected
+    assert len(list((state.settings.upload_dir / "policies").rglob("*.pdf"))) == 1
+    from sqlalchemy import select
+
+    from db.models import Attachment
+
+    with state.session() as session:
+        assert (
+            session.scalar(select(Attachment).where(Attachment.conversation_id == uuid.UUID(cid)))
+            is None
+        )
+    conversation = client.get(f"/api/conversations/{cid}").json()
+    assert len(conversation["messages"]) == 1
+    assert conversation["card"] is None
+
+
+def test_policy_upload_rejects_invalid_protected_and_oversized_files(client):
+    from dataclasses import replace
+    from io import BytesIO
+
+    from pypdf import PdfWriter
+
+    state = client.app.state.claimpilot
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    url = f"/api/conversations/{cid}/policy"
+    assert (
+        client.post(url, files={"file": ("image.png", b"sample", "image/png")}).status_code == 415
+    )
+    assert (
+        client.post(url, files={"file": ("bad.pdf", b"not a pdf", "application/pdf")}).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            url, files={"file": ("bad.pdf", b"%PDF-1.7 broken", "application/pdf")}
+        ).status_code
+        == 422
+    )
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    writer.encrypt("sample-password")
+    buffer = BytesIO()
+    writer.write(buffer)
+    assert (
+        client.post(
+            url, files={"file": ("locked.pdf", buffer.getvalue(), "application/pdf")}
+        ).json()["detail"]
+        == "encrypted_pdf"
+    )
+    state.settings = replace(state.settings, max_upload_bytes=16)
+    assert (
+        client.post(url, files={"file": ("big.pdf", b"x" * 17, "application/pdf")}).status_code
+        == 413
+    )
+    assert client.get(url).json()["document"] is None
+    assert not list(state.settings.upload_dir.rglob("*.pdf"))
+
+
+def test_policy_upload_rejects_replacement_and_is_conversation_scoped(client):
+    from io import BytesIO
+
+    from pypdf import PdfWriter
+
+    first = client.post("/api/conversations", json={}).json()["id"]
+    second = client.post("/api/conversations", json={}).json()["id"]
+    data = (Path(__file__).parent / "fixtures/akb_2015_first2pages.pdf").read_bytes()
+    url = f"/api/conversations/{first}/policy"
+    selected = client.post(url, files={"file": ("first.pdf", data, "application/pdf")}).json()
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    buffer = BytesIO()
+    writer.write(buffer)
+    assert (
+        client.post(
+            url, files={"file": ("second.pdf", buffer.getvalue(), "application/pdf")}
+        ).status_code
+        == 409
+    )
+    assert client.get(url).json() == selected
+    assert client.get(f"/api/conversations/{second}/policy").json()["document"] is None
+    assert client.get(f"/api/conversations/{uuid.uuid4()}/policy").status_code == 404
