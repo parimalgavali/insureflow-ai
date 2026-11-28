@@ -12,4 +12,4 @@ All completions use committed RecordedProvider fixtures. Live Anthropic/Ollama c
 
 The fictional policy's six pages were rendered and visually inspected. The scenario fixtures contain only synthetic narratives and documents. The tests run in the existing Python CI job and require no new paid service or workflow configuration.
 
-Checkpoint validation: all 11 new scenario checks and the full 225-test backend suite passed before final fixture/test refinements. Final review added explicit product/deductible and complete composer-fact input assertions, and adjusted recorded explanations to include the policy filename/page. Lint, formatting and the policy/matrix inventory check passed afterward. The final database rerun was not executed because automatic approval review reached its usage limit; rerun the scenario module before publishing the PR.
+Final validation: all 225 backend tests passed, including the final 11-check scenario rerun. Lint and formatting passed. Self-review added explicit product/deductible and complete composer-fact input assertions, and made recorded explanations include the selected policy filename/page. No unresolved findings remain.
