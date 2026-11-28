@@ -1107,3 +1107,68 @@ def test_policy_upload_rejects_replacement_and_is_conversation_scoped(client):
     assert client.get(url).json() == selected
     assert client.get(f"/api/conversations/{second}/policy").json()["document"] is None
     assert client.get(f"/api/conversations/{uuid.uuid4()}/policy").status_code == 404
+
+
+def test_policy_preparation_saves_page_references_and_scoped_search(client):
+    from sqlalchemy import select
+
+    from api.policy_text import search_passages
+    from db.models import PolicyPassage
+
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    other = client.post("/api/conversations", json={}).json()["id"]
+    data = (Path(__file__).parent / "fixtures/akb_2015_first2pages.pdf").read_bytes()
+    url = f"/api/conversations/{cid}/policy"
+    client.post(url, files={"file": ("policy.pdf", data, "application/pdf")})
+    prepared = client.post(url + "/prepare")
+    assert prepared.status_code == 200
+    selected = prepared.json()
+    doc = selected["document"]
+    assert doc["status"] == "ready" and doc["page_count"] == 2 and doc["passage_count"] > 0
+    assert selected["coverage_source"] == "standard_demo"
+    with client.app.state.claimpilot.session() as session:
+        passages = list(
+            session.scalars(
+                select(PolicyPassage).where(PolicyPassage.conversation_id == uuid.UUID(cid))
+            )
+        )
+        assert len(passages) == doc["passage_count"]
+        assert {p.page for p in passages} == {1, 2}
+        assert any(p.section_heading for p in passages)
+        word = next(w for w in passages[0].text.split() if w.isalpha() and len(w) > 5)
+        hits = search_passages(session, uuid.UUID(cid), uuid.UUID(doc["id"]), word)
+        assert hits
+        assert not search_passages(session, uuid.UUID(other), uuid.UUID(doc["id"]), word)
+    assert client.post(url + "/prepare").json() == selected
+
+
+def test_empty_policy_is_failed_and_never_search_ready(client):
+    from io import BytesIO
+
+    from pypdf import PdfWriter
+    from sqlalchemy import select
+
+    from db.models import PolicyPassage
+
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    buffer = BytesIO()
+    writer.write(buffer)
+    url = f"/api/conversations/{cid}/policy"
+    assert (
+        client.post(
+            url, files={"file": ("blank.pdf", buffer.getvalue(), "application/pdf")}
+        ).status_code
+        == 200
+    )
+    failed = client.post(url + "/prepare").json()["document"]
+    assert failed["status"] == "failed" and failed["error"] == "no_readable_text"
+    assert failed["passage_count"] == 0 and failed["page_count"] is None
+    with client.app.state.claimpilot.session() as session:
+        assert (
+            session.scalar(
+                select(PolicyPassage).where(PolicyPassage.conversation_id == uuid.UUID(cid))
+            )
+            is None
+        )

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import Computed, ForeignKeyConstraint, Index, Integer, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from rag.embeddings import EMBEDDING_DIM
@@ -167,6 +167,9 @@ class MessageOperation(Base):
 
 class PolicyDocument(Base):
     __tablename__ = "policy_documents"
+    __table_args__ = (
+        UniqueConstraint("id", "conversation_id", name="uq_policy_document_conversation"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     conversation_id: Mapped[uuid.UUID] = mapped_column(
@@ -178,6 +181,35 @@ class PolicyDocument(Base):
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="uploaded")
     error: Mapped[str | None] = mapped_column(Text)
+    page_count: Mapped[int | None] = mapped_column(Integer)
+    passage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, nullable=False
+    )
+
+
+class PolicyPassage(Base):
+    __tablename__ = "policy_passages"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["document_id", "conversation_id"],
+            ["policy_documents.id", "policy_documents.conversation_id"],
+            ondelete="CASCADE",
+        ),
+        UniqueConstraint("document_id", "position", name="uq_policy_passage_position"),
+        Index("ix_policy_passages_scope", "conversation_id", "document_id"),
+        Index("ix_policy_passages_search", "search_vector", postgresql_using="gin"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    document_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    page: Mapped[int] = mapped_column(Integer, nullable=False)
+    section_heading: Mapped[str | None] = mapped_column(Text)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    search_vector = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('simple', coalesce(section_heading, '') || ' ' || text)", persisted=True
+        ),
     )
