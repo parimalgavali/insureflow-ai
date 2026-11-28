@@ -25,7 +25,7 @@ def test_blank_pdf_is_not_claimed_to_be_read(tmp_path):
     writer.add_blank_page(width=100, height=100)
     path = tmp_path / "blank.pdf"
     writer.write(path)
-    with pytest.raises(EvidenceTextError, match="no_readable_text"):
+    with pytest.raises(EvidenceTextError, match="empty_pdf"):
         prepare_evidence_pdf(path)
 
 

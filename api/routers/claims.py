@@ -349,6 +349,7 @@ def _load_suggestion(session, claim, suggestion_id):
             EvidenceSuggestion.id == suggestion_id,
             Attachment.conversation_id == claim.conversation_id,
             Attachment.processing_state == "ready",
+            Attachment.is_current.is_(True),
         )
         .with_for_update(of=EvidenceSuggestion)
     )

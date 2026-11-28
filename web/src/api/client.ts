@@ -110,6 +110,9 @@ export interface EvidenceAttachment {
   id: string;
   filename: string;
   content_type: string;
+  is_current?: boolean;
+  revision?: number;
+  replaces_attachment_id?: string | null;
   media_type: string;
   document_type: DocumentType | "unknown";
   processing_state: string;
@@ -135,7 +138,7 @@ export interface Conversation {
 
 export interface HistoryEntry {
   id: number;
-  kind: "submitted" | "information_requested" | "corrected" | "assessment_refreshed" | "assessment_refresh_failed" | "review_completed" | "evidence_accepted" | "evidence_rejected";
+  kind: "submitted" | "information_requested" | "corrected" | "assessment_refreshed" | "assessment_refresh_failed" | "review_completed" | "evidence_accepted" | "evidence_rejected" | "evidence_replaced";
   actor: string;
   decision: string | null;
   note: string | null;
@@ -403,4 +406,11 @@ export interface EvidenceDecision {
 }
 export async function decideEvidenceSuggestion(claimId: string, suggestionId: string, decision: EvidenceDecision): Promise<ClaimActionResult> {
   return (await expectOk(await fetch(`${BASE}/api/claims/${encodeURIComponent(claimId)}/evidence-suggestions/${encodeURIComponent(suggestionId)}/decision`, { method: "POST", headers: headers(), body: JSON.stringify(decision) }))).json();
+}
+
+
+export async function replaceEvidencePdf(conversationId: string, attachmentId: string, file: File): Promise<EvidenceAttachment> {
+  const body = new FormData();
+  body.append("file", file);
+  return (await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(conversationId)}/attachments/${encodeURIComponent(attachmentId)}`, { method: "PUT", headers: headers(false), body }))).json();
 }

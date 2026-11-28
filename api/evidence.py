@@ -23,6 +23,9 @@ class SuggestionOut(BaseModel):
 class AttachmentOut(BaseModel):
     id: uuid.UUID
     filename: str
+    is_current: bool = True
+    revision: int = 1
+    replaces_attachment_id: uuid.UUID | None = None
     content_type: str
     media_type: str
     document_type: str
