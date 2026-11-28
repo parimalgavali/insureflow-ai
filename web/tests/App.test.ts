@@ -1,6 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App.vue";
+import PolicyUpload from "../src/components/PolicyUpload.vue";
 import ChatColumn from "../src/components/ChatColumn.vue";
 import HistoryPage from "../src/components/HistoryPage.vue";
 import { createConversation, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
@@ -213,5 +214,18 @@ it("restores and retries an unfinished saved message without its old in-memory f
   expect(store.pendingOperationId).toBeNull();
   expect(store.error).toBeNull();
   expect(w.findComponent(ChatColumn).props("canSend")).toBe(true);
+  w.unmount();
+});
+
+
+it("reloads the canonical assessment after a policy selection change", async () => {
+  const w = mountApp();
+  await flushPromises();
+  vi.mocked(getConversation).mockResolvedValueOnce({ id: "conversation-1", claim_id: "claim-1", language: "en", status: "assessed", card: { ...card, assessment_stale: true }, policy: {}, messages: [] } as never);
+  w.findComponent(PolicyUpload).vm.$emit("changed", "conversation-1");
+  await flushPromises();
+  expect(getConversation).toHaveBeenCalledWith("conversation-1");
+  expect(store.card?.assessment_stale).toBe(true);
+  expect(store.busy).toBe(false);
   w.unmount();
 });

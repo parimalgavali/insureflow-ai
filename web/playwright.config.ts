@@ -14,7 +14,7 @@ export default defineConfig({
   use: { baseURL: `http://localhost:${webPort}`, trace: "retain-on-failure" },
   webServer: [
     {
-      command: `cd .. && LLM_PROVIDER=recorded ALLOW_OPEN_API=1 ADJUSTER_API_TOKEN=${adjusterToken} uv run uvicorn api.main:app --port ${apiPort}`,
+      command: `cd .. && LLM_PROVIDER=recorded RECORDED_FIXTURE=tests/fixtures/agent/policy_hit_and_run_followup.json ALLOW_OPEN_API=1 ADJUSTER_API_TOKEN=${adjusterToken} uv run uvicorn api.main:app --port ${apiPort}`,
       url: `http://localhost:${apiPort}/api/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

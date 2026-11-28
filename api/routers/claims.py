@@ -6,13 +6,15 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.orm import object_session
 
 from api.agent.graph import correct_customer_facts, resume_review, submit_for_review, thread_config
 from api.agent.required_facts import missing_facts
 from api.agent.schemas import ClaimCard, CustomerCorrection, ReviewDecision, ReviewRequest
 from api.history import HistoryEntry, history_out, record_event, record_review_events
+from api.policy_coverage import coverage_source_changed, current_coverage_card
 from api.security import get_state, require_adjuster, require_token
-from db.models import Claim, Conversation, Message, MessageOperation
+from db.models import Claim, Conversation, Message, MessageOperation, PolicyDocument
 
 router = APIRouter(prefix="/api/claims", tags=["claims"], dependencies=[Depends(require_token)])
 
@@ -28,11 +30,16 @@ class ClaimOut(BaseModel):
 
 
 def _out(claim: Claim) -> ClaimOut:
+    card = ClaimCard.model_validate(claim.card) if claim.card else None
+    if card is not None:
+        card = current_coverage_card(
+            object_session(claim), card, claim.conversation_id, claim.conversation.language
+        )
     return ClaimOut(
         id=claim.id,
         conversation_id=claim.conversation_id,
         status=claim.status,
-        card=ClaimCard.model_validate(claim.card) if claim.card else None,
+        card=card,
         submitted_at=claim.submitted_at,
         history=history_out(claim),
         missing=missing_facts(ClaimCard.model_validate(claim.card).facts) if claim.card else [],
@@ -116,6 +123,13 @@ def _require_finished_message(session, claim):
     )
     if pending:
         raise HTTPException(409, "retry the unfinished message before changing this claim")
+    policy = session.scalar(
+        select(PolicyDocument)
+        .where(PolicyDocument.conversation_id == claim.conversation_id)
+        .with_for_update()
+    )
+    if policy is not None and policy.status == "processing":
+        raise HTTPException(409, "wait for policy text preparation before changing this claim")
 
 
 @router.post("/{claim_id}/submit", response_model=ClaimOut)
@@ -131,7 +145,7 @@ def submit_claim(claim_id: uuid.UUID, state=Depends(get_state)) -> ClaimOut:
             return _out(claim)
         if claim.status != "assessed":
             raise HTTPException(409, "claim is not ready to submit")
-        if (claim.card or {}).get("assessment_stale"):
+        if _out(claim).card.assessment_stale:
             raise HTTPException(409, "refresh the assessment before submitting")
         try:
             result = submit_for_review(state.graph, str(claim.conversation_id))
@@ -237,7 +251,7 @@ def review_claim(
         thread = str(claim.conversation_id)
         snapshot = state.graph.get_state(thread_config(thread))
         if decision.decision == "accept" and (
-            (claim.card or {}).get("assessment_stale")
+            _out(claim).card.assessment_stale
             or getattr(snapshot.values.get("card"), "assessment_stale", False)
         ):
             raise HTTPException(409, "refresh the out-of-date assessment before completing review")
@@ -251,6 +265,7 @@ def review_claim(
             )
             and snapshot.values.get("status") == "awaiting_review"
             and snapshot.values.get("review") == decision
+            and not coverage_source_changed(session, snapshot.values["card"], claim.conversation_id)
         ):
             # Recover saved corrections or a successful recheck without another model call.
             result = snapshot.values

@@ -13,9 +13,9 @@ const emit = defineEmits<{ select: [citation: Citation] }>();
     class="pill"
     :class="{ active }"
     :aria-pressed="active"
-    :aria-label="t('card.showClause', { id: citation.clause_id, title: citation.title })"
+    :aria-label="citation.source === 'uploaded_policy' ? t('card.showPolicyPassage', { id: citation.clause_id, title: citation.title, name: citation.source_name || '', page: citation.page || '' }) : t('card.showClause', { id: citation.clause_id, title: citation.title })"
     @click="emit('select', citation)"
   >
-    {{ citation.clause_id }}
+    {{ citation.clause_id }}<template v-if="citation.source === 'uploaded_policy' && citation.page"> · {{ t("card.page", { page: citation.page }) }}</template>
   </button>
 </template>

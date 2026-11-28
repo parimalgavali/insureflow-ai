@@ -64,6 +64,19 @@ function retryOpen() {
   return start(locale.value);
 }
 
+async function onPolicyChanged(conversationId: string) {
+  if (store.conversationId !== conversationId) return;
+  store.busy = true;
+  try {
+    const conversation = await getConversation(conversationId);
+    if (store.conversationId === conversationId) loadConversation(store, conversation);
+  } catch {
+    openError.value = true;
+  } finally {
+    store.busy = false;
+  }
+}
+
 async function send(text: string, file: File | null, retrying = false) {
   if (!store.conversationId || store.busy || (pendingMessage && !retrying)) return;
   retryCorrection.value = null;
@@ -209,7 +222,7 @@ onMounted(() => {
       <button class="btn" data-testid="new-claim" :disabled="opening || store.busy || policyBusy" @click="start(locale, true)">{{ t("session.new") }}</button>
       <p>{{ t("session.newNote") }}</p>
     </section>
-    <PolicyUpload v-if="store.conversationId && !openError && !opening" :key="store.conversationId" :conversation-id="store.conversationId" :busy="store.busy || messageNeedsRetry" :can-upload="['collecting', 'assessed', 'information_needed'].includes(store.status)" @busy="policyBusy = $event" />
+    <PolicyUpload v-if="store.conversationId && !openError && !opening" :key="store.conversationId" :conversation-id="store.conversationId" :busy="store.busy || messageNeedsRetry" :can-upload="['collecting', 'assessed', 'information_needed'].includes(store.status)" @busy="policyBusy = $event" @changed="onPolicyChanged" />
     <ChatColumn v-if="!openError && !opening" :key="store.conversationId || 'new'" :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" @send="send" @retry="retry" />
     <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry || policyBusy" :claim-id="store.claimId" :history="store.history" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
     </template>

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from api.agent.graph import AgentDeps, CostEstimator, RetrieverLike, RiskScorer, build_graph
 from api.config import Settings
 from api.llm.provider import Provider, RecordedProvider, make_provider
+from api.policy_coverage import PolicyCoverageStore
 from db.session import get_engine
 
 log = logging.getLogger("claimpilot")
@@ -124,6 +125,7 @@ def build_state(settings: Settings | None = None) -> AppState:
     graph = build_graph(
         AgentDeps(
             provider=provider,
+            policy_retriever=PolicyCoverageStore(engine),
             retriever=retriever,
             risk_scorer=scorer,
             cost_estimator=build_cost_estimator(),

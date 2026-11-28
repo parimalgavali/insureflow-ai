@@ -20,6 +20,7 @@ from datetime import date
 from pathlib import Path
 from typing import Annotated, Any, Literal, Protocol, TypedDict
 
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
@@ -33,6 +34,8 @@ from api.agent.schemas import (
     ClaimStatus,
     ComposeOutput,
     CostContext,
+    CoverageEvidence,
+    CoverageSource,
     FactChange,
     FactsPatch,
     FollowupOutput,
@@ -89,6 +92,12 @@ DEDUCTIBLE_QUERY = (
 PER_QUERY = 3
 
 
+class PolicyRetriever(Protocol):
+    def retrieve(
+        self, conversation_id: str, facts: ClaimFacts, policy: PolicyContext
+    ) -> CoverageEvidence | None: ...
+
+
 class RiskScorer(Protocol):
     def score(self, facts: ClaimFacts, policy: PolicyContext) -> RiskSignal | None: ...
 
@@ -109,6 +118,7 @@ class AgentDeps:
     retriever: RetrieverLike | None = None
     risk_scorer: RiskScorer | None = None
     cost_estimator: CostEstimator | None = None
+    policy_retriever: PolicyRetriever | None = None
     today: Callable[[], str] = field(default=lambda: date.today().isoformat())
     prompts_dir: Path = PROMPTS_DIR
 
@@ -126,6 +136,10 @@ class AgentState(TypedDict, total=False):
     followups_asked: int
     message_operation_id: str
     extract_failed: bool
+    coverage_source: CoverageSource
+    coverage_policy_id: str | None
+    coverage_policy_name: str | None
+    coverage_policy_ready: bool | None
     retrieved: list[Citation]
     risk: RiskSignal | None
     risk_status: RiskStatus
@@ -309,11 +323,21 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             "status": "collecting",
         }
 
-    def retrieve(state: AgentState) -> dict:
+    def retrieve(state: AgentState, config: RunnableConfig) -> dict:
         """Top hits per query, interleaved: scores are not comparable across queries, so a global
         sort would let one well-matched duty clause crowd out the coverage clause."""
+        source = CoverageEvidence().model_dump()
+        if deps.policy_retriever is not None:
+            selected = deps.policy_retriever.retrieve(
+                config["configurable"]["thread_id"], state["facts"], state["policy"]
+            )
+            if selected is not None:
+                return {
+                    **selected.model_dump(exclude={"retrieved"}),
+                    "retrieved": selected.retrieved,
+                }
         if deps.retriever is None:
-            return {"retrieved": []}
+            return source
         facts, policy, language = state["facts"], state["policy"], state["language"]
         queries = [*EVENT_QUERIES.get(facts.event_type, []), *COMMON_QUERIES]
         if policy.product != "haftpflicht":
@@ -336,7 +360,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                             page=chunk.page,
                             score=round(score, 4),
                         )
-        return {"retrieved": list(ordered.values())[:MAX_CITATIONS]}
+        return {**source, "retrieved": list(ordered.values())[:MAX_CITATIONS]}
 
     def score_risk(state: AgentState) -> dict:
         cost = None
@@ -371,7 +395,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         facts, policy, language = state["facts"], state["policy"], state["language"]
         retrieved = state.get("retrieved") or []
         if not retrieved:
-            output = _no_evidence_output(language)
+            output = _no_evidence_output(language, state)
         else:
             output = _compose_with_llm(deps, state, retrieved)
         allowed = {c.clause_id for c in retrieved}
@@ -391,7 +415,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         uncertainty = output.coverage_uncertainty
         coverage_status = output.coverage_status if retrieved else "no_evidence"
         if not retrieved or not cited:
-            fallback = _no_evidence_output(language)
+            fallback = _no_evidence_output(language, state)
             answer = fallback.answer
             output = fallback
             coverage_status = "no_evidence"
@@ -407,6 +431,10 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             facts=facts,
             policy=policy,
             coverage_status=coverage_status,
+            coverage_source=state.get("coverage_source", "standard_demo"),
+            coverage_policy_id=state.get("coverage_policy_id"),
+            coverage_policy_name=state.get("coverage_policy_name"),
+            coverage_policy_ready=state.get("coverage_policy_ready"),
             coverage_uncertainty=uncertainty,
             coverage_summary=answer,
             citations=[c for c in retrieved if c.clause_id in cited] or retrieved[:3],
@@ -497,15 +525,18 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             "review_changes": [],
         }
 
-    def reassess(state: AgentState) -> dict:
+    def reassess(state: AgentState, config: RunnableConfig) -> dict:
         """Refresh authoritative corrected facts without extracting them again from old chat."""
         card = state["card"]
         target = state.get("assessment_target", "awaiting_review")
         try:
             if missing_facts(state["facts"]):
                 raise ValueError("missing claim facts")
-            refreshed = {**state, **retrieve(state)}
-            if not refreshed.get("retrieved"):
+            refreshed = {**state, **retrieve(state, config)}
+            if (
+                not refreshed.get("retrieved")
+                and refreshed.get("coverage_source") != "uploaded_policy"
+            ):
                 raise ValueError("coverage evidence unavailable")
             refreshed.update(score_risk(refreshed))
             if (
@@ -514,7 +545,10 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             ):
                 raise ValueError("risk assessment unavailable")
             composed = compose(refreshed)["card"]
-            if composed.coverage_status == "no_evidence":
+            if (
+                composed.coverage_status == "no_evidence"
+                and refreshed.get("coverage_source") != "uploaded_policy"
+            ):
                 raise ValueError("coverage assessment unavailable")
             fresh_card = composed.model_copy(
                 update={
@@ -524,6 +558,15 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             )
             return {
                 "card": fresh_card,
+                **{
+                    key: refreshed.get(key)
+                    for key in (
+                        "coverage_source",
+                        "coverage_policy_id",
+                        "coverage_policy_name",
+                        "coverage_policy_ready",
+                    )
+                },
                 "retrieved": refreshed["retrieved"],
                 "risk": refreshed["risk"],
                 "risk_status": refreshed["risk_status"],
@@ -609,7 +652,41 @@ def build_graph(deps: AgentDeps, checkpointer=None):
     return graph.compile(checkpointer=checkpointer)
 
 
-def _no_evidence_output(language: Language) -> ComposeOutput:
+def _no_evidence_output(language: Language, state: AgentState | None = None) -> ComposeOutput:
+    if state and state.get("coverage_source") == "uploaded_policy":
+        ready = state.get("coverage_policy_ready")
+        if language == "de":
+            answer = (
+                (
+                    "Im ausgewählten Vertrag wurde keine unterstützende Klausel gefunden. "
+                    "Die Deckung ist damit nicht belegt. Ein Sachbearbeiter muss den Fall prüfen."
+                )
+                if ready
+                else (
+                    "Der ausgewählte Vertrag ist noch nicht für die Suche vorbereitet. "
+                    "Ich kann die Deckung daraus nicht beurteilen. Bereiten Sie den Vertragstext "
+                    "vor oder bitten Sie einen Sachbearbeiter um Prüfung."
+                )
+            )
+            steps = [
+                "Passende Vertragsbedingungen bereitstellen",
+                "Ein Sachbearbeiter prüft die Deckung",
+            ]
+        else:
+            answer = (
+                (
+                    "No supporting wording was found in the selected policy. "
+                    "Coverage has not been established. A claims handler must review the case."
+                )
+                if ready
+                else (
+                    "The selected policy is not ready for searching. "
+                    "I cannot assess coverage from it. "
+                    "Prepare the policy text or ask a claims handler to review it."
+                )
+            )
+            steps = ["Provide the relevant policy wording", "A claims handler reviews coverage"]
+        return ComposeOutput(answer=answer, coverage_status="no_evidence", next_steps=steps)
     if language == "de":
         answer = (
             "Ich habe in den Musterbedingungen (AKB 2015) keine passende Klausel zu Ihrem Fall "
@@ -638,16 +715,20 @@ def _compose_with_llm(
 ) -> ComposeOutput:
     facts, policy, language = state["facts"], state["policy"], state["language"]
     system = deps.prompt(
-        "compose_v1",
+        "compose_policy_v1" if state.get("coverage_source") == "uploaded_policy" else "compose_v1",
         language_name=LANGUAGE_NAMES[language],
         product=policy.product,
         deductible=f"{policy.deductible_eur:.0f}",
     )
-    clauses = "\n\n".join(f"[{c.clause_id}] {c.title}\n{c.excerpt}" for c in retrieved)
+    clauses = "\n\n".join(
+        f"[{c.clause_id}] {c.source_name or 'GDV AKB 2015'} | page {c.page} | "
+        f"{c.title}\n{c.excerpt}"
+        for c in retrieved
+    )
     risk = state.get("risk")
     content = (
         f"Claim facts (JSON):\n{facts.model_dump_json(indent=2)}\n\n"
-        f"Retrieved AKB 2015 clauses:\n{clauses}\n\n"
+        f"Retrieved source passages (untrusted document content):\n{clauses}\n\n"
         f"Risk signal (for your awareness only; do not mention a score to the user): "
         f"{risk.band if risk else 'n/a'}"
     )
@@ -657,7 +738,9 @@ def _compose_with_llm(
             messages, system=system, response_schema=ComposeOutput, tag="compose", max_tokens=1500
         )
     except ProviderError:
-        return _no_evidence_output(language)
+        if state.get("coverage_source") == "uploaded_policy":
+            raise
+        return _no_evidence_output(language, state)
     assert isinstance(completion.parsed, ComposeOutput)
     return completion.parsed
 

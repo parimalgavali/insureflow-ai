@@ -26,7 +26,7 @@ describe("policy upload", () => {
     expect(uploadPolicy).toHaveBeenCalledWith("conversation", file);
     expect(w.get('[data-testid="policy-filename"]').text()).toBe("sample.pdf");
     expect(w.get('[data-testid="policy-status"]').text()).toContain("awaiting text preparation");
-    expect(w.text()).toContain("answers still use demo wording");
+    expect(w.text()).toContain("not ready for coverage searches");
     expect(w.emitted("busy")).toEqual([[true], [false]]);
     w.unmount();
   });
@@ -81,7 +81,7 @@ it("shows preparation failure and retries to a ready state without claiming poli
   await flushPromises();
   expect(w.get('[data-testid="policy-status"]').text()).toBe("Text prepared for searching");
   expect(w.get('[data-testid="policy-counts"]').text()).toContain("2 pages; 4 searchable passages");
-  expect(w.get('[data-testid="policy-source"]').text()).toContain("standard GDV");
+  expect(w.get('[data-testid="policy-source"]').text()).toContain("sample.pdf");
   expect(w.find('[role="alert"]').exists()).toBe(false);
   expect(w.find('[data-testid="prepare-policy"]').exists()).toBe(false);
   w.unmount();

@@ -1,6 +1,6 @@
 {
   "app.title": "ClaimPilot",
-  "app.tagline": "Kfz-Schaden per Chat melden. Antworten zitieren die GDV-Musterbedingungen AKB 2015; jeden Fall prüft ein Sachbearbeiter.",
+  "app.tagline": "Melden Sie einen Kfz-Schaden per Chat. Antworten verweisen auf Ihren ausgewählten Vertrag oder klar gekennzeichnete Musterbedingungen; ein Mensch prüft jeden Fall.",
   "app.conversation": "Gespräch",
   "app.language": "Sprache",
   "chat.aria": "Gespräch",
@@ -198,5 +198,11 @@
   "policy.prepareLimit": "Dieser Vertrag überschreitet die Verarbeitungsgrenzen. Verwenden Sie ein kleineres Vertrags-PDF.",
   "policy.prepareTimeout": "Die Vorbereitung dauerte zu lange. Versuchen Sie es erneut oder verwenden Sie ein kleineres textbasiertes PDF.",
   "policy.prepareFailed": "Die Vertragsvorbereitung konnte nicht abgeschlossen werden. Versuchen Sie es erneut, wenn der Dienst verfügbar ist.",
-  "policy.processingElsewhere": "Dieser Vertrag wird noch vorbereitet. Prüfen Sie den Status in Kürze erneut."
+  "policy.processingElsewhere": "Dieser Vertrag wird noch vorbereitet. Prüfen Sie den Status in Kürze erneut.",
+  "policy.selected": "Ausgewählter Vertrag: {name}",
+  "policy.usedForNew": "Neue Deckungsbewertungen verwenden diesen Vertrag. Aktualisieren Sie ältere, als veraltet markierte Bewertungen.",
+  "policy.noAnswersYet": "Dieser Vertrag ist noch nicht für die Deckungssuche bereit. Bereiten Sie den Text vor oder bitten Sie einen Sachbearbeiter um Prüfung.",
+  "card.policyCoverage": "Deckung (ausgewählter Vertrag)",
+  "uncertainty.policyPreliminary": "Dies ist eine vorläufige Einschätzung aus den ausgewählten Vertragspassagen. Ein Verweis ist kein Deckungsnachweis und keine Zahlungszusage.",
+  "card.showPolicyPassage": "Passage {id} aus {name}, Seite {page} anzeigen: {title}"
 }
