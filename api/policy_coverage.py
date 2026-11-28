@@ -79,17 +79,20 @@ class PolicyCoverageStore:
             return result
 
 
-def current_coverage_card(session, card: ClaimCard, conversation_id, language: str) -> ClaimCard:
-    """Read old assessments honestly; graph actions must also check this view before finalizing."""
+def coverage_source_changed(session, card: ClaimCard, conversation_id) -> bool:
     document = session.scalar(
         select(PolicyDocument).where(PolicyDocument.conversation_id == conversation_id)
     )
-    mismatch = document is not None and (
+    return document is not None and (
         card.coverage_source != "uploaded_policy"
         or card.coverage_policy_id != str(document.id)
         or card.coverage_policy_ready != (document.status == "ready")
     )
-    if mismatch and card.coverage_summary:
+
+
+def current_coverage_card(session, card: ClaimCard, conversation_id, language: str) -> ClaimCard:
+    """Read old assessments honestly; finalization must enforce this source check too."""
+    if coverage_source_changed(session, card, conversation_id) and card.coverage_summary:
         message = (
             (
                 "Der ausgewählte Vertrag hat sich geändert. Aktualisieren Sie die Bewertung "

@@ -21,6 +21,7 @@ from api.agent.graph import thread_config
 from api.agent.required_facts import missing_facts
 from api.agent.schemas import ChatMessage, ClaimCard, Language, PolicyContext
 from api.history import HistoryEntry, history_out
+from api.policy_coverage import current_coverage_card
 from api.security import get_state, require_token
 from db.models import Attachment, Claim, Conversation, Message, MessageOperation
 
@@ -66,6 +67,8 @@ class ConversationOut(BaseModel):
 
 def _conversation_out(conv: Conversation) -> ConversationOut:
     card = ClaimCard.model_validate(conv.claim.card) if conv.claim and conv.claim.card else None
+    if card is not None:
+        card = current_coverage_card(object_session(conv), card, conv.id, conv.language)
     pending = object_session(conv).scalar(
         select(MessageOperation.id)
         .where(

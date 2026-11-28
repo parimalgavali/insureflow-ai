@@ -4,7 +4,7 @@ import { fetchPolicy, uploadPolicy, preparePolicy, type PolicySelection } from "
 import { t } from "../i18n";
 
 const props = defineProps<{ conversationId: string; busy: boolean; canUpload: boolean }>();
-const emit = defineEmits<{ busy: [value: boolean] }>();
+const emit = defineEmits<{ busy: [value: boolean]; changed: [conversationId: string] }>();
 const selection = ref<PolicySelection | null>(null);
 const file = ref<File | null>(null);
 const loading = ref(false);
@@ -41,7 +41,7 @@ async function upload() {
   error.value = "";
   try {
     const result = await uploadPolicy(props.conversationId, file.value);
-    if (current === version) { selection.value = result; file.value = null; }
+    if (current === version) { selection.value = result; file.value = null; emit("changed", props.conversationId); }
   } catch (e) {
     if (current === version) {
       const message = (e as Error).message;
@@ -66,7 +66,7 @@ async function prepare() {
   error.value = "";
   try {
     const result = await preparePolicy(props.conversationId);
-    if (current === version) selection.value = result;
+    if (current === version) { selection.value = result; emit("changed", props.conversationId); }
   } catch (e) {
     if (current === version) error.value = t((e as Error).message.startsWith("409 ") ? "policy.processingElsewhere" : "policy.prepareFailed");
   } finally {
@@ -81,13 +81,13 @@ onUnmounted(() => { version++; emit("busy", false); });
 <template>
   <section class="panel policy-upload" aria-labelledby="policy-heading" data-testid="policy-upload">
     <h2 id="policy-heading">{{ t("policy.title") }}</h2>
-    <p data-testid="policy-source">{{ t("policy.demo") }}</p>
+    <p data-testid="policy-source">{{ selection?.document ? t("policy.selected", { name: selection.document.filename }) : t("policy.demo") }}</p>
     <p>{{ t("policy.sample") }}</p>
     <p v-if="loading" role="status">{{ t("policy.loading") }}</p>
     <template v-else-if="selection?.document">
       <p data-testid="policy-filename">{{ selection.document.filename }}</p>
       <p role="status" data-testid="policy-status">{{ t(`policy.status.${preparing ? 'processing' : selection.document.status}`) }}</p>
-      <p>{{ t(selection.document.status === 'ready' ? "policy.preparedNotUsed" : "policy.notUsed") }}</p>
+      <p>{{ t(selection.document.status === 'ready' ? "policy.usedForNew" : "policy.noAnswersYet") }}</p>
       <p v-if="selection.document.status === 'ready'" data-testid="policy-counts">{{ t("policy.preparedCounts", { pages: selection.document.page_count || 0, passages: selection.document.passage_count || 0 }) }}</p>
       <p v-if="selection.document.status === 'failed' && !preparing" role="alert">{{ preparationError(selection.document.error) }}</p>
       <button v-if="selection.document.status !== 'ready'" class="btn" data-testid="prepare-policy" :disabled="busy || preparing || uploading" @click="prepare">{{ t(selection.document.status === 'processing' ? "policy.checkPreparation" : selection.document.status === 'failed' ? "policy.retryPreparation" : "policy.prepare") }}</button>

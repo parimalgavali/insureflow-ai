@@ -86,6 +86,8 @@ const summaryParts = computed(() => {
 });
 
 const coverageUncertainty = computed(() => props.missing.length ? "missing_facts" : props.card?.assessment_stale ? "human_review" : props.card?.coverage_uncertainty ?? (props.card?.coverage_status === "no_evidence" ? "missing_policy_wording" : props.card?.coverage_status === "unclear" ? "human_review" : null));
+const uploadedCoverage = computed(() => (props.card?.coverage_source ?? props.citations[0]?.source) === "uploaded_policy");
+const coveragePolicyName = computed(() => props.card?.coverage_policy_name ?? props.citations[0]?.source_name ?? "");
 const riskAvailability = computed(() => props.riskStatus ?? props.card?.risk_status ?? (props.risk ? "available" : "pending"));
 const visibleRisk = computed(() => riskAvailability.value === "available" ? props.risk : null);
 const riskNeeded = computed(() => props.riskMissing ?? props.card?.risk_missing ?? []);
@@ -198,12 +200,13 @@ function submitReview() {
     </section>
 
     <section>
-      <h3>{{ t("card.coverage") }}</h3>
+      <h3>{{ t(uploadedCoverage ? "card.policyCoverage" : "card.coverage") }}</h3>
+      <p v-if="uploadedCoverage" data-testid="coverage-source">{{ t("policy.selected", { name: coveragePolicyName }) }}</p>
       <div v-if="coverageUncertainty" data-testid="coverage-uncertainty" role="status">
         <p>{{ t(`uncertainty.${coverageUncertainty}`) }}</p>
         <p>{{ t(`uncertainty.next.${coverageUncertainty}`) }}</p>
       </div>
-      <p v-if="card?.coverage_summary" class="disclaimer">{{ t("uncertainty.preliminary") }}</p>
+      <p v-if="card?.coverage_summary" class="disclaimer">{{ t(uploadedCoverage ? "uncertainty.policyPreliminary" : "uncertainty.preliminary") }}</p>
       <template v-if="card && (status !== 'collecting' || card.coverage_summary)">
         <span class="badge" :class="card.assessment_stale ? 'unclear' : card.coverage_status" data-testid="coverage">{{ card.assessment_stale ? t("card.outOfDate") : t(`status.${card.coverage_status}`) }}</span>
         <p class="summary" data-testid="summary">
@@ -228,7 +231,7 @@ function submitReview() {
           />
         </p>
         <blockquote v-if="activeCitation" class="clause" data-testid="popover" aria-live="polite">
-          <strong>AKB 2015 {{ activeCitation.clause_id }} – {{ activeCitation.title || t("card.clause") }}</strong>
+          <strong>{{ activeCitation.source_name || "AKB 2015" }} {{ activeCitation.clause_id }} – {{ activeCitation.title || t("card.clause") }}</strong>
           {{ activeCitation.excerpt }}
           <small v-if="activeCitation.page">{{ t("card.page", { page: activeCitation.page }) }}</small>
         </blockquote>

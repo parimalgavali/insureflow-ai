@@ -26,7 +26,12 @@ export interface PolicyContext {
   deductible_eur: number;
 }
 
+export type CoverageSource = "standard_demo" | "uploaded_policy";
+
 export interface Citation {
+  source?: CoverageSource;
+  document_id?: string | null;
+  source_name?: string | null;
   clause_id: string;
   title: string;
   excerpt: string;
@@ -63,6 +68,10 @@ export interface ClaimCard {
   policy: PolicyContext;
   coverage_status: CoverageStatus;
   coverage_summary: string;
+  coverage_source?: CoverageSource;
+  coverage_policy_id?: string | null;
+  coverage_policy_name?: string | null;
+  coverage_policy_ready?: boolean | null;
   coverage_uncertainty?: "missing_facts" | "missing_policy_wording" | "conflicting_evidence" | "human_review" | null;
   citations: Citation[];
   risk: RiskSignal | null;
@@ -325,7 +334,7 @@ export async function fetchEval(): Promise<EvalReport> {
 
 
 export interface PolicySelection {
-  coverage_source: "standard_demo";
+  coverage_source: CoverageSource;
   document: { id: string; filename: string; size_bytes: number; status: string; error: string | null; page_count?: number | null; passage_count?: number } | null;
   max_upload_bytes: number;
 }

@@ -199,3 +199,14 @@ it("explains coverage uncertainty with a next step and labels citations as refer
   await w.setProps({ missing: [], card: { ...card, coverage_status: "no_evidence" } });
   expect(w.get('[data-testid="coverage-uncertainty"]').text()).toContain("actual policy");
 });
+
+it("shows the selected policy and page with its full supporting passage", async () => {
+  const passage = { clause_id: "P.1", title: "Collision cover", excerpt: "Collision damage is covered subject to the stated conditions.", page: 3, score: null, source: "uploaded_policy" as const, document_id: "document", source_name: "selected.pdf" };
+  const selected = { ...card, coverage_source: "uploaded_policy" as const, coverage_policy_id: "document", coverage_policy_name: "selected.pdf", coverage_policy_ready: true, coverage_summary: "Selected policy supports collision cover [P.1].", citations: [passage] };
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: [passage], risk: card.risk, card: selected, status: "assessed", busy: false } });
+  expect(w.get('[data-testid="coverage-source"]').text()).toContain("selected.pdf");
+  await w.get('button[aria-label="Show passage P.1 from selected.pdf, page 3: Collision cover"]').trigger("click");
+  expect(w.get('[data-testid="popover"]').text()).toContain(passage.excerpt);
+  expect(w.get('[data-testid="popover"]').text()).toContain("page 3");
+  expect(w.get('[data-testid="popover"]').text()).not.toContain("AKB 2015");
+});

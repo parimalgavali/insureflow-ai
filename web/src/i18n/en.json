@@ -198,5 +198,11 @@
   "policy.prepareLimit": "This policy exceeds the preparation limits. Use a smaller policy PDF.",
   "policy.prepareTimeout": "Preparation took too long. Retry or use a smaller text-based PDF.",
   "policy.prepareFailed": "Policy preparation could not be completed. Retry when the service is available.",
-  "policy.processingElsewhere": "This policy is still being prepared. Check again shortly."
+  "policy.processingElsewhere": "This policy is still being prepared. Check again shortly.",
+  "policy.selected": "Selected policy: {name}",
+  "policy.usedForNew": "New coverage assessments use this policy. Refresh any older assessment marked out of date.",
+  "policy.noAnswersYet": "This policy is not ready for coverage searches. Prepare its text or ask a claims handler for review.",
+  "card.policyCoverage": "Coverage (selected policy)",
+  "uncertainty.policyPreliminary": "This is preliminary guidance from the selected policy passages. A citation is a reference, not proof of coverage or a payment decision.",
+  "card.showPolicyPassage": "Show passage {id} from {name}, page {page}: {title}"
 }

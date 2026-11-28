@@ -48,7 +48,11 @@ def make_state(
         llm_provider="recorded",
     )
     provider = RecordedProvider(fixture)
+    engine = get_engine(settings.database_url)
+    from api.policy_coverage import PolicyCoverageStore
+
     deps = AgentDeps(
+        policy_retriever=PolicyCoverageStore(engine),
         provider=provider,
         retriever=make_retriever(),
         risk_scorer=FakeScorer(),
@@ -58,7 +62,7 @@ def make_state(
     settings.upload_dir.mkdir(parents=True)
     return AppState(
         settings,
-        get_engine(settings.database_url),
+        engine,
         graph,
         provider,
         deps.retriever,
@@ -1030,7 +1034,7 @@ def test_policy_upload_is_separate_idempotent_and_does_not_change_demo_coverage(
     assert selected["document"]["filename"] == "policy.pdf"
     assert selected["document"]["status"] == "uploaded"
     assert "path" not in selected["document"]
-    assert selected["coverage_source"] == "standard_demo"
+    assert selected["coverage_source"] == "uploaded_policy"
     assert client.post(path, files=files).json() == selected
     assert client.get(path).json() == selected
     assert len(list((state.settings.upload_dir / "policies").rglob("*.pdf"))) == 1
@@ -1131,7 +1135,7 @@ def test_policy_preparation_saves_page_references_and_scoped_search(client):
     selected = prepared.json()
     doc = selected["document"]
     assert doc["status"] == "ready" and doc["page_count"] == 2 and doc["passage_count"] > 0
-    assert selected["coverage_source"] == "standard_demo"
+    assert selected["coverage_source"] == "uploaded_policy"
     with client.app.state.claimpilot.session() as session:
         passages = list(
             session.scalars(
@@ -1247,3 +1251,111 @@ def test_policy_preparation_commit_failure_is_not_ready_and_can_retry(client, mo
         )
     recovered = client.post(url + "/prepare").json()["document"]
     assert recovered["status"] == "ready" and recovered["passage_count"] > 0
+
+
+def _select_test_policy(
+    state, cid, text="Collision damage is covered subject to the stated conditions."
+):
+    from db.models import PolicyDocument, PolicyPassage
+
+    with state.session() as session:
+        document = PolicyDocument(
+            conversation_id=uuid.UUID(cid),
+            filename="selected.pdf",
+            content_hash="a" * 64,
+            path="unused-test-policy.pdf",
+            size_bytes=20,
+            status="ready",
+            page_count=3,
+            passage_count=1,
+        )
+        session.add(document)
+        session.flush()
+        session.add(
+            PolicyPassage(
+                document_id=document.id,
+                conversation_id=uuid.UUID(cid),
+                position=0,
+                page=3,
+                section_heading="A.1 Collision cover",
+                text=text,
+            )
+        )
+        session.commit()
+        return str(document.id)
+
+
+def _policy_answer_provider(state, monkeypatch):
+    from api.agent.schemas import ComposeOutput
+    from api.llm.provider import Completion
+
+    original = state.provider.complete
+    seen = []
+
+    def complete(*args, **kwargs):
+        if kwargs.get("tag") == "compose" and "Never supplement" in (kwargs.get("system") or ""):
+            seen.append(args[0][-1].content)
+            output = ComposeOutput(
+                answer="Selected policy selected.pdf, page 3: collision cover [P.1]. A claims handler reviews the case.",
+                coverage_status="likely_covered",
+                cited_clause_ids=["P.1"],
+                next_steps=["Human review"],
+            )
+            return Completion(text=output.model_dump_json(), parsed=output)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(state.provider, "complete", complete)
+    return seen
+
+
+def test_api_coverage_and_corrections_use_the_selected_policy_only(client, monkeypatch):
+    state = client.app.state.claimpilot
+    conversation = client.post("/api/conversations", json={}).json()
+    cid, claim = conversation["id"], conversation["claim_id"]
+    document = _select_test_policy(state, cid)
+    seen = _policy_answer_provider(state, monkeypatch)
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    result = client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    card = dict(parse_sse(result.text))["card"]["card"]
+    assert card["coverage_status"] == "likely_covered"
+    assert card["coverage_source"] == "uploaded_policy" and card["coverage_policy_id"] == document
+    assert card["citations"][0]["source_name"] == "selected.pdf"
+    assert card["citations"][0]["page"] == 3
+    assert all(c["document_id"] == document for c in card["citations"])
+    assert "Collision damage is covered" in seen[0] and "A.2.2.2.2" not in seen[0]
+    corrected = client.patch(
+        f"/api/claims/{claim}/facts", json={"facts_patch": {"police_report_filed": True}}
+    ).json()["card"]
+    assert corrected["coverage_source"] == "uploaded_policy" and not corrected["assessment_stale"]
+    assert client.post(f"/api/claims/{claim}/submit").status_code == 200
+    reviewed = client.post(
+        f"/api/claims/{claim}/review",
+        json={"decision": "edit", "facts_patch": {"witnesses": True}},
+        headers=ADJUSTER,
+    ).json()["card"]
+    assert reviewed["coverage_policy_id"] == document and not reviewed["assessment_stale"]
+    assert (
+        client.post(
+            f"/api/claims/{claim}/review", json={"decision": "accept"}, headers=ADJUSTER
+        ).json()["status"]
+        == "reviewed"
+    )
+
+
+def test_selecting_policy_marks_old_demo_assessment_stale_and_blocks_submission(
+    client, monkeypatch
+):
+    state = client.app.state.claimpilot
+    conversation = client.post("/api/conversations", json={}).json()
+    cid, claim = conversation["id"], conversation["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    document = _select_test_policy(state, cid)
+    restored = client.get(f"/api/conversations/{cid}").json()["card"]
+    assert restored["assessment_stale"]
+    assert client.get(f"/api/claims/{claim}").json()["card"]["assessment_stale"]
+    assert client.post(f"/api/claims/{claim}/submit").status_code == 409
+    _policy_answer_provider(state, monkeypatch)
+    refreshed = client.post(f"/api/claims/{claim}/facts/refresh").json()["card"]
+    assert refreshed["coverage_policy_id"] == document and not refreshed["assessment_stale"]
+    assert client.post(f"/api/claims/{claim}/submit").status_code == 200

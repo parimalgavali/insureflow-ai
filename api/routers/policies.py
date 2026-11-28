@@ -32,13 +32,14 @@ class PolicyDocumentOut(BaseModel):
 
 
 class PolicySelection(BaseModel):
-    coverage_source: Literal["standard_demo"] = "standard_demo"
+    coverage_source: Literal["standard_demo", "uploaded_policy"] = "standard_demo"
     document: PolicyDocumentOut | None = None
     max_upload_bytes: int
 
 
 def _selection(document, state):
     return PolicySelection(
+        coverage_source="uploaded_policy" if document else "standard_demo",
         document=PolicyDocumentOut.model_validate(document, from_attributes=True)
         if document
         else None,
@@ -157,6 +158,20 @@ def prepare_policy(conversation_id: uuid.UUID, state=Depends(get_state)):
                 document = session.get(PolicyDocument, document_id)
                 if document.status == "ready":
                     return _selection(document, state)
+                conv = session.scalar(
+                    select(Conversation).where(Conversation.id == conversation_id).with_for_update()
+                )
+                if conv.status not in ("collecting", "assessed", "information_needed"):
+                    raise HTTPException(409, "claim_already_submitted")
+                if session.scalar(
+                    select(MessageOperation.id)
+                    .where(
+                        MessageOperation.conversation_id == conversation_id,
+                        MessageOperation.response.is_(None),
+                    )
+                    .limit(1)
+                ):
+                    raise HTTPException(409, "message_unfinished")
                 document.status, document.error = "processing", None
                 session.commit()
             try:
