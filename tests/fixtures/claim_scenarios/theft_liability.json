@@ -1,0 +1,57 @@
+{
+  "extract": [
+    {
+      "event_type": "theft",
+      "location": "Berlin parking garage",
+      "description": "Locked car stolen by an unidentified person from a parking garage.",
+      "third_party_involved": true,
+      "third_party_known": false,
+      "injuries": false,
+      "police_report_filed": null,
+      "witnesses": null,
+      "damage_description": "Entire vehicle missing",
+      "estimated_amount_eur": null,
+      "vehicle_drivable": false,
+      "incident_time": null,
+      "incident_date": null,
+      "photos_attached": false
+    },
+    {
+      "incident_date": "2026-10-25",
+      "incident_time": null,
+      "police_report_filed": true,
+      "witnesses": false,
+      "estimated_amount_eur": null
+    }
+  ],
+  "followup": [
+    {
+      "question": "On what date did this happen? Were the police informed, and were there any witnesses?",
+      "asked_for": [
+        "incident_date",
+        "police_report_filed",
+        "witnesses"
+      ]
+    }
+  ],
+  "compose": [
+    {
+      "answer": "In claim_types_policy.pdf, page 2, the fictional wording excludes this own-vehicle event for the selected liability-only test product [P.2]. Page 6 provides no own-vehicle compensation for that product [P.6]. A claims handler must check the case.",
+      "coverage_status": "likely_not_covered",
+      "coverage_uncertainty": null,
+      "cited_clause_ids": [
+        "P.2",
+        "P.6"
+      ],
+      "missing_documents": [
+        "Police report",
+        "Proof of ownership",
+        "Vehicle keys inventory"
+      ],
+      "next_steps": [
+        "Provide the requested claim evidence.",
+        "A human claims handler reviews the case."
+      ]
+    }
+  ]
+}

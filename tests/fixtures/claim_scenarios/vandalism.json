@@ -1,0 +1,57 @@
+{
+  "extract": [
+    {
+      "event_type": "vandalism",
+      "location": "Bremen residential street",
+      "description": "An unidentified person deliberately scratched the parked vehicle doors.",
+      "third_party_involved": true,
+      "third_party_known": false,
+      "injuries": false,
+      "police_report_filed": null,
+      "witnesses": null,
+      "damage_description": "Deep scratches on both doors",
+      "estimated_amount_eur": null,
+      "vehicle_drivable": true,
+      "incident_time": null,
+      "incident_date": null,
+      "photos_attached": false
+    },
+    {
+      "incident_date": "2026-10-25",
+      "incident_time": null,
+      "police_report_filed": true,
+      "witnesses": false,
+      "estimated_amount_eur": 600
+    }
+  ],
+  "followup": [
+    {
+      "question": "On what date did this happen? Were the police informed, and were there any witnesses?",
+      "asked_for": [
+        "incident_date",
+        "police_report_filed",
+        "witnesses"
+      ]
+    }
+  ],
+  "compose": [
+    {
+      "answer": "In claim_types_policy.pdf, page 4, the fictional wording supports possible cover for this event [P.4]. An eligible own-vehicle claim has a EUR 300 deductible on page 6 [P.6]. A claims handler must check the documents before deciding the case.",
+      "coverage_status": "likely_covered",
+      "coverage_uncertainty": null,
+      "cited_clause_ids": [
+        "P.4",
+        "P.6"
+      ],
+      "missing_documents": [
+        "Damage photos",
+        "Police report",
+        "Repair estimate"
+      ],
+      "next_steps": [
+        "Provide the requested claim evidence.",
+        "A human claims handler reviews the case."
+      ]
+    }
+  ]
+}
