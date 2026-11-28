@@ -120,7 +120,9 @@ def test_full_conversation_flow(client: TestClient, tmp_path: Path):
     assert dict(events)["facts"]["facts"]["event_type"] == "hit_and_run"
 
     png = tmp_path / "bumper.png"
-    png.write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 100)
+    from PIL import Image
+
+    Image.new("RGB", (16, 16), "gray").save(png, format="PNG")
     with png.open("rb") as fh:
         r2 = client.post(
             f"/api/conversations/{cid}/messages",
@@ -827,7 +829,13 @@ def test_message_retry_replays_saved_result_without_duplicate_upload_or_model_ca
     path = f"/api/conversations/{cid}/messages"
     operation = str(uuid.uuid4())
     payload = {"text": MSG1, "operation_id": operation}
-    upload = {"file": ("sample.pdf", b"sample", "application/pdf")}
+    upload = {
+        "file": (
+            "sample.pdf",
+            (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes(),
+            "application/pdf",
+        )
+    }
     first = client.post(path, data=payload, files=upload)
     assert parse_sse(first.text)[-1][0] == "done"
     state = client.app.state.claimpilot
@@ -1002,7 +1010,13 @@ def test_reload_can_resume_saved_message_with_attachment_without_uploading_again
         result = client.post(
             f"/api/conversations/{cid}/messages",
             data={"text": MSG1, "operation_id": oid},
-            files={"file": ("saved.pdf", b"sample", "application/pdf")},
+            files={
+                "file": (
+                    "saved.pdf",
+                    (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes(),
+                    "application/pdf",
+                )
+            },
         )
     assert parse_sse(result.text)[-1][0] == "error"
     restored = client.get(f"/api/conversations/{cid}").json()
@@ -1796,3 +1810,124 @@ def test_cached_reply_after_policy_replacement_is_explicitly_out_of_date(client,
     again = dict(parse_sse(client.post(f"/api/conversations/{cid}/messages", data=payload).text))
     assert again["question"] == replay["question"]
     assert len(state.provider.calls) == calls
+
+
+def test_pdf_evidence_metadata_does_not_set_photos_even_if_extraction_guesses_true(
+    client, monkeypatch
+):
+    from api.agent.schemas import ClaimFacts
+    from api.llm.provider import Completion
+
+    state = client.app.state.claimpilot
+    original = state.provider.complete
+
+    def complete(*args, **kwargs):
+        if kwargs.get("tag") == "extract":
+            facts = ClaimFacts(
+                incident_date="2026-10-25",
+                event_type="collision",
+                third_party_involved=False,
+                police_report_filed=False,
+                witnesses=False,
+                damage_description="dent",
+                photos_attached=True,
+            )
+            return Completion(text=facts.model_dump_json(), parsed=facts)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(state.provider, "complete", complete)
+    conv = client.post("/api/conversations", json={}).json()
+    cid = conv["id"]
+    data = (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes()
+    result = client.post(
+        f"/api/conversations/{cid}/messages",
+        data={"text": "Here is my repair estimate.", "document_type": "repair_estimate"},
+        files={"file": ("estimate.pdf", data, "application/pdf")},
+    )
+    assert parse_sse(result.text)[-1][0] == "done"
+    restored = client.get(f"/api/conversations/{cid}").json()
+    assert restored["card"]["facts"]["photos_attached"] is False
+    attachment = restored["attachments"][0]
+    assert attachment["filename"] == "estimate.pdf" and attachment["media_type"] == "pdf"
+    assert (
+        attachment["document_type"] == "repair_estimate"
+        and attachment["processing_state"] == "stored"
+    )
+    assert "path" not in attachment
+    assert (
+        client.get(f"/api/claims/{conv['claim_id']}").json()["attachments"]
+        == restored["attachments"]
+    )
+
+
+def test_misleading_evidence_types_are_rejected_without_saving_messages_or_files(client):
+    state = client.app.state.claimpilot
+    conv = client.post("/api/conversations", json={}).json()
+    url = f"/api/conversations/{conv['id']}/messages"
+    pdf = (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes()
+    assert (
+        client.post(
+            url,
+            data={"text": "Photo", "document_type": "damage_photo"},
+            files={"file": ("photo.pdf", pdf, "application/pdf")},
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            url, data={"text": "Photo"}, files={"file": ("photo.png", pdf, "image/png")}
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            url, data={"text": "Photo"}, files={"file": ("photo.png", b"broken", "image/png")}
+        ).status_code
+        == 422
+    )
+    restored = client.get(f"/api/conversations/{conv['id']}").json()
+    assert len(restored["messages"]) == 1 and restored["attachments"] == []
+    assert not list(state.settings.upload_dir.rglob("*_photo.*"))
+
+
+@pytest.mark.parametrize("document_type", ["police_report", "damage_photo"])
+def test_verified_image_purpose_controls_photo_fact_and_saved_metadata(client, document_type):
+    from io import BytesIO
+
+    from PIL import Image
+
+    image = BytesIO()
+    Image.new("RGB", (16, 16), "gray").save(image, format="PNG")
+    conv = client.post("/api/conversations", json={}).json()
+    result = client.post(
+        f"/api/conversations/{conv['id']}/messages",
+        data={"text": MSG1, "document_type": document_type},
+        files={"file": ("scan.png", image.getvalue(), "image/png")},
+    )
+    facts = dict(parse_sse(result.text))["facts"]["facts"]
+    assert facts["photos_attached"] == (document_type == "damage_photo")
+    restored = client.get(f"/api/conversations/{conv['id']}").json()
+    assert restored["attachments"][0]["document_type"] == document_type
+    assert restored["attachments"][0]["media_type"] == "image"
+
+
+def test_evidence_size_limit_and_long_filename_reject_without_saved_operation(client):
+    from dataclasses import replace
+
+    state = client.app.state.claimpilot
+    conv = client.post("/api/conversations", json={}).json()
+    url = f"/api/conversations/{conv['id']}/messages"
+    pdf = (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes()
+    long_name = "é" * 110 + ".pdf"
+    invalid = client.post(
+        url, data={"text": "Report"}, files={"file": (long_name, pdf, "application/pdf")}
+    )
+    assert invalid.status_code == 422 and invalid.json()["detail"] == "invalid_filename"
+    state.settings = replace(state.settings, max_upload_bytes=100)
+    oversized = client.post(
+        url, data={"text": "Report"}, files={"file": ("report.pdf", pdf, "application/pdf")}
+    )
+    assert oversized.status_code == 413
+    restored = client.get(f"/api/conversations/{conv['id']}").json()
+    assert len(restored["messages"]) == 1 and restored["attachments"] == []
+    assert restored["pending_operation_id"] is None

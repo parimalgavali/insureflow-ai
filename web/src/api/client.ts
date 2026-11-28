@@ -94,6 +94,18 @@ export interface Message {
   created_at: string;
 }
 
+export type DocumentType = "damage_photo" | "repair_estimate" | "police_report" | "other_document";
+export interface EvidenceAttachment {
+  id: string;
+  filename: string;
+  content_type: string;
+  media_type: string;
+  document_type: DocumentType | "unknown";
+  processing_state: string;
+  size_bytes: number;
+  error: string | null;
+}
+
 export interface Conversation {
   pending_operation_id?: string | null;
   id: string;
@@ -103,6 +115,7 @@ export interface Conversation {
   messages: Message[];
   claim_id: string | null;
   card: ClaimCard | null;
+  attachments?: EvidenceAttachment[];
   history?: HistoryEntry[];
   missing?: string[];
 }
@@ -120,6 +133,7 @@ export interface HistoryEntry {
 export interface ClaimActionResult {
   status: ClaimStatus;
   card: ClaimCard;
+  attachments?: EvidenceAttachment[];
   history?: HistoryEntry[];
   missing?: string[];
 }
@@ -144,6 +158,7 @@ export interface ReviewerClaim {
   status: ClaimStatus;
   card: ClaimCard | null;
   submitted_at: string | null;
+  attachments?: EvidenceAttachment[];
   history?: HistoryEntry[];
   missing?: string[];
 }
@@ -267,11 +282,15 @@ export async function sendMessage(
   onEvent: (event: AgentEvent) => void,
   language?: Language,
   operationId?: string,
+  documentType?: DocumentType,
 ): Promise<void> {
   const form = new FormData();
   form.append("text", text);
   if (operationId) form.append("operation_id", operationId);
-  if (file) form.append("file", file);
+  if (file) {
+    form.append("file", file);
+    if (documentType) form.append("document_type", documentType);
+  }
   if (language) form.append("language", language);
   const res = await expectOk(
     await fetch(`${BASE}/api/conversations/${conversationId}/messages`, { method: "POST", headers: headers(false), body: form }),

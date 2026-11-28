@@ -212,5 +212,18 @@
   "policy.revision": "Version {revision}",
   "policy.replacementPending": "Bereiten Sie diesen Ersatzvertrag vor und aktualisieren Sie danach die Schadenbewertung. Die bisherige Einschätzung bleibt veraltet.",
   "policy.sameFile": "Diese Datei hat denselben Inhalt wie der ausgewählte Vertrag. Die aktuelle Auswahl bleibt unverändert.",
-  "policy.replacementConflict": "Der aktuelle Vertrag wurde geändert, wird verarbeitet oder der Schaden ist nicht mehr bearbeitbar. Laden Sie die Auswahl vor einem neuen Versuch erneut."
+  "policy.replacementConflict": "Der aktuelle Vertrag wurde geändert, wird verarbeitet oder der Schaden ist nicht mehr bearbeitbar. Laden Sie die Auswahl vor einem neuen Versuch erneut.",
+  "evidence.title": "Schadenanhänge",
+  "evidence.empty": "Keine Schadenanhänge hochgeladen.",
+  "evidence.purpose": "Was ist das für ein Anhang?",
+  "evidence.type.damage_photo": "Schadenfoto",
+  "evidence.type.repair_estimate": "Kostenvoranschlag",
+  "evidence.type.police_report": "Polizeibericht",
+  "evidence.type.other_document": "Anderes Dokument",
+  "evidence.type.unknown": "Nicht geprüft",
+  "evidence.state.unknown": "Älterer Upload; Typ und Verarbeitung wurden nicht geprüft.",
+  "evidence.state.stored": "Hochgeladen. Noch nicht auf Schadendetails ausgewertet.",
+  "evidence.uploadInvalid": "Dieser Anhang konnte nicht angenommen werden. Wählen Sie eine lesbare PDF-, JPEG-, PNG- oder WebP-Datei mit passender Dateiendung. PDFs können nicht als Schadenfotos markiert werden. Ihre Nachricht steht wieder im Entwurf.",
+  "evidence.uploadTooLarge": "Die Datei ist zu groß. Wählen Sie eine Datei mit höchstens 10 MB. Ihre Nachricht steht wieder im Entwurf.",
+  "evidence.uploadUnsupported": "Dieser Dateityp wird nicht unterstützt. Wählen Sie PDF, JPEG, PNG oder WebP. Ihre Nachricht steht wieder im Entwurf."
 }

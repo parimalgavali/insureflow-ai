@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { locale, setLocale, t } from "./i18n";
-import { createConversation, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type Language, type ReviewerClaim } from "./api/client";
+import { createConversation, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type DocumentType, type Language, type ReviewerClaim } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
 import PolicyUpload from "./components/PolicyUpload.vue";
 import ClaimCard from "./components/ClaimCard.vue";
@@ -21,7 +21,9 @@ const openError = ref(false);
 const accessDraft = ref("");
 let openVersion = 0;
 const messageNeedsRetry = ref(false);
-let pendingMessage: { text: string; file: File | null; language: Language; id: string; before: typeof store.messages } | null = null;
+const restoredDraft = ref<{ text: string; file: File | null; documentType: DocumentType } | null>(null);
+const validationError = ref(false);
+let pendingMessage: { text: string; file: File | null; documentType: DocumentType; language: Language; id: string; before: typeof store.messages; beforeView: Pick<typeof store, "status" | "card" | "citations" | "risk" | "riskStatus" | "riskMissing" | "lastUserText"> } | null = null;
 const retryCorrection = ref<{ patch: Record<string, unknown>; refresh: boolean } | null>(null);
 function navigate() {
   showEval.value = location.hash === "#eval";
@@ -47,6 +49,8 @@ async function start(language: Language, forceNew = false) {
     loadConversation(store, conversation);
     rememberClaim(conversation.id);
     pendingMessage = null;
+    restoredDraft.value = null;
+    validationError.value = false;
     retryCorrection.value = null;
     retrySubmission.value = false;
     messageNeedsRetry.value = !!store.pendingOperationId;
@@ -77,12 +81,14 @@ async function onPolicyChanged(conversationId: string) {
   }
 }
 
-async function send(text: string, file: File | null, retrying = false) {
+async function send(text: string, file: File | null, documentType: DocumentType = "other_document", retrying = false) {
   if (!store.conversationId || store.busy || (pendingMessage && !retrying)) return;
+  validationError.value = false;
+  restoredDraft.value = null;
   retryCorrection.value = null;
   retrySubmission.value = false;
   if (!retrying || !pendingMessage) {
-    pendingMessage = { text, file, language: store.language, id: crypto.randomUUID(), before: store.messages.map((m) => ({ ...m })) };
+    pendingMessage = { text, file, documentType, language: store.language, id: crypto.randomUUID(), before: store.messages.map((m) => ({ ...m })), beforeView: { status: store.status, card: store.card, citations: store.citations, risk: store.risk, riskStatus: store.riskStatus, riskMissing: store.riskMissing, lastUserText: store.lastUserText } };
   } else {
     store.messages = pendingMessage.before.map((m) => ({ ...m }));
   }
@@ -92,16 +98,28 @@ async function send(text: string, file: File | null, retrying = false) {
     await sendMessage(store.conversationId, operation.text, operation.file, (event) => {
       reduce(store, event.type === "error" ? { type: "error", data: { message: t("chat.sendFailed") } } : event);
       store.busy = true; // Keep the turn locked until canonical state has been restored.
-    }, operation.language, operation.id);
+    }, operation.language, operation.id, operation.documentType);
     if (!store.error) {
       loadConversation(store, await getConversation(store.conversationId));
       pendingMessage = null;
       messageNeedsRetry.value = false;
     }
-  } catch {
-    store.error = t("chat.sendFailed");
+  } catch (error) {
+    const status = error instanceof Error ? /^(413|415|422) /.exec(error.message)?.[1] : null;
+    if (status) {
+      store.messages = operation.before.map((m) => ({ ...m }));
+      Object.assign(store, operation.beforeView);
+      restoredDraft.value = { text: operation.text, file: operation.file, documentType: operation.documentType };
+      pendingMessage = null;
+      validationError.value = true;
+      store.error = t(status === "413" ? "evidence.uploadTooLarge" : status === "415" ? "evidence.uploadUnsupported" : "evidence.uploadInvalid");
+    } else store.error = t("chat.sendFailed");
   } finally {
-    messageNeedsRetry.value = !!store.error;
+    if (store.error && !validationError.value) {
+      // A saved upload remains visible even when assessment or streaming failed.
+      try { store.attachments = (await getConversation(store.conversationId)).attachments ?? []; } catch { /* Retry keeps the original operation. */ }
+    }
+    messageNeedsRetry.value = !!store.error && !validationError.value;
     finishTurn(store);
   }
 }
@@ -111,9 +129,10 @@ async function submit() {
   store.busy = true;
   retryCorrection.value = null;
   store.error = null;
+  validationError.value = false;
   try {
     const result = await submitClaim(store.claimId);
-    applyReview(store, result.status, result.card, result.history, result.missing);
+    applyReview(store, result.status, result.card, result.history, result.missing, result.attachments);
     retrySubmission.value = false;
   } catch (e) {
     store.error = (e as Error).message;
@@ -124,18 +143,19 @@ async function submit() {
 }
 
 function onReviewed(claim: ReviewerClaim) {
-  if (claim.id === store.claimId && claim.card) applyReview(store, claim.status, claim.card, claim.history, claim.missing);
+  if (claim.id === store.claimId && claim.card) applyReview(store, claim.status, claim.card, claim.history, claim.missing, claim.attachments);
 }
 
 async function correct(patch: Record<string, unknown> = {}, refresh = false) {
   if (!store.claimId || store.busy) return;
   store.busy = true;
   store.error = null;
+  validationError.value = false;
   retrySubmission.value = false;
   retryCorrection.value = { patch, refresh };
   try {
     const result = refresh ? await refreshClaimAssessment(store.claimId) : await correctClaimFacts(store.claimId, patch);
-    applyReview(store, result.status, result.card, result.history, result.missing);
+    applyReview(store, result.status, result.card, result.history, result.missing, result.attachments);
     if (store.conversationId) loadConversation(store, await getConversation(store.conversationId));
     retryCorrection.value = null;
   } catch (e) {
@@ -149,6 +169,7 @@ async function resumeSavedMessage() {
   if (!store.conversationId || !store.pendingOperationId || store.busy) return;
   store.busy = true;
   store.error = null;
+  validationError.value = false;
   try {
     await retrySavedMessage(store.conversationId, store.pendingOperationId, (event) => {
       reduce(store, event.type === "error" ? { type: "error", data: { message: t("chat.sendFailed") } } : event);
@@ -165,10 +186,11 @@ async function resumeSavedMessage() {
 
 function retry() {
   store.error = null;
+  validationError.value = false;
   if (retrySubmission.value) return submit();
   if (retryCorrection.value) return correct(retryCorrection.value.patch, retryCorrection.value.refresh);
   if (!store.conversationId) return start(store.language);
-  if (pendingMessage) return send(pendingMessage.text, pendingMessage.file, true);
+  if (pendingMessage) return send(pendingMessage.text, pendingMessage.file, pendingMessage.documentType, true);
   if (store.pendingOperationId) return resumeSavedMessage();
 }
 
@@ -223,8 +245,8 @@ onMounted(() => {
       <p>{{ t("session.newNote") }}</p>
     </section>
     <PolicyUpload v-if="store.conversationId && !openError && !opening" :key="store.conversationId" :conversation-id="store.conversationId" :busy="store.busy || messageNeedsRetry" :can-upload="['collecting', 'assessed', 'information_needed'].includes(store.status)" @busy="policyBusy = $event" @changed="onPolicyChanged" />
-    <ChatColumn v-if="!openError && !opening" :key="store.conversationId || 'new'" :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" @send="send" @retry="retry" />
-    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry || policyBusy" :claim-id="store.claimId" :history="store.history" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
+    <ChatColumn v-if="!openError && !opening" :key="store.conversationId || 'new'" :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" :restored-draft="restoredDraft" :retryable="!validationError" @send="send" @retry="retry" />
+    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry || policyBusy" :claim-id="store.claimId" :history="store.history" :attachments="store.attachments" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
     </template>
   </div>
 </template>

@@ -212,5 +212,18 @@
   "policy.revision": "Version {revision}",
   "policy.replacementPending": "Prepare this replacement, then refresh the claim assessment. Previous guidance remains out of date.",
   "policy.sameFile": "This file has the same content as the selected policy. The current selection is unchanged.",
-  "policy.replacementConflict": "The current policy changed, is processing, or the claim is no longer editable. Reload the selection before trying again."
+  "policy.replacementConflict": "The current policy changed, is processing, or the claim is no longer editable. Reload the selection before trying again.",
+  "evidence.title": "Claim attachments",
+  "evidence.empty": "No claim attachments uploaded.",
+  "evidence.purpose": "What is this attachment?",
+  "evidence.type.damage_photo": "Damage photo",
+  "evidence.type.repair_estimate": "Repair estimate",
+  "evidence.type.police_report": "Police report",
+  "evidence.type.other_document": "Other document",
+  "evidence.type.unknown": "Not verified",
+  "evidence.state.unknown": "Older upload; type and processing have not been verified.",
+  "evidence.state.stored": "Uploaded. Not yet analysed for claim details.",
+  "evidence.uploadInvalid": "This attachment could not be accepted. Choose a readable PDF, JPEG, PNG or WebP file with the matching file extension. PDFs cannot be labelled as damage photos. Your message is back in the draft.",
+  "evidence.uploadTooLarge": "This file is too large. Choose a file of 10 MB or less. Your message is back in the draft.",
+  "evidence.uploadUnsupported": "This file type is not supported. Choose a PDF, JPEG, PNG or WebP file. Your message is back in the draft."
 }

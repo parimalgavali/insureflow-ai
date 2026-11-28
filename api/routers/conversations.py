@@ -20,6 +20,8 @@ from api import sse
 from api.agent.graph import thread_config
 from api.agent.required_facts import missing_facts
 from api.agent.schemas import ChatMessage, ClaimCard, Language, PolicyContext
+from api.evidence import AttachmentOut, attachments_out
+from api.evidence_files import DocumentType, EvidenceFileError, validate_upload
 from api.history import HistoryEntry, history_out
 from api.policy_coverage import coverage_source_changed, current_coverage_card
 from api.security import get_state, require_token
@@ -63,6 +65,7 @@ class ConversationOut(BaseModel):
     history: list[HistoryEntry]
     missing: list[str]
     pending_operation_id: uuid.UUID | None = None
+    attachments: list[AttachmentOut] = Field(default_factory=list)
 
 
 def _conversation_out(conv: Conversation) -> ConversationOut:
@@ -79,6 +82,7 @@ def _conversation_out(conv: Conversation) -> ConversationOut:
     )
     return ConversationOut(
         pending_operation_id=pending,
+        attachments=attachments_out(object_session(conv), conv.id),
         id=conv.id,
         language=conv.language,
         status=conv.status,
@@ -129,10 +133,13 @@ def post_message(
     file: Annotated[UploadFile | None, File()] = None,
     language: Annotated[Language | None, Form()] = None,
     operation_id: Annotated[uuid.UUID | None, Form()] = None,
+    document_type: Annotated[DocumentType | None, Form()] = None,
     state=Depends(get_state),
 ) -> StreamingResponse:
     operation_id = operation_id or uuid.uuid4()
     data = b""
+    if file is None and document_type is not None:
+        raise HTTPException(422, "document_type_requires_file")
     if file is not None:
         if file.content_type not in ALLOWED_UPLOAD_TYPES:
             raise HTTPException(415, "unsupported upload type")
@@ -142,12 +149,37 @@ def post_message(
         file.file.seek(0)
     fingerprint = hashlib.sha256(
         json.dumps(
-            [text, language, file.filename if file else None, file.content_type if file else None],
+            [text, language, file.filename if file else None, file.content_type if file else None]
+            + ([document_type] if document_type is not None else []),
             ensure_ascii=False,
         ).encode()
         + b"\0"
         + data
     ).hexdigest()
+    media_type = None
+    safe_name = Path((file.filename or "upload").replace("\\", "/")).name if file else None
+    with state.session() as session:
+        if session.get(Conversation, conversation_id) is None:
+            raise HTTPException(404, "conversation not found")
+        previous = session.get(MessageOperation, (conversation_id, operation_id))
+        if previous is not None and previous.fingerprint != fingerprint:
+            raise HTTPException(409, "retry must use the original message and attachment")
+    if file is not None and previous is None:
+        if (
+            not safe_name
+            or len(safe_name.encode("utf-8")) > 200
+            or any(ord(char) < 32 or ord(char) == 127 for char in safe_name)
+        ):
+            raise HTTPException(422, "invalid_filename")
+        try:
+            media_type = validate_upload(safe_name, file.content_type, data)
+        except EvidenceFileError as exc:
+            raise HTTPException(exc.status, exc.code) from exc
+        document_type = document_type or (
+            "damage_photo" if media_type == "image" else "other_document"
+        )
+        if document_type == "damage_photo" and media_type != "image":
+            raise HTTPException(422, "damage_photo_requires_image")
     attachment = None
     try:
         with state.session() as session:
@@ -176,7 +208,21 @@ def post_message(
                     raise HTTPException(409, "claim assessment is complete; use the claim actions")
                 if language:
                     conv.language = language
-                attachment = _store_upload(state, conv.id, file) if file else None
+                if file is not None and media_type is None:
+                    raise HTTPException(409, "saved upload changed; retry the original operation")
+                attachment = (
+                    _store_upload(
+                        state,
+                        conv.id,
+                        safe_name,
+                        file.content_type,
+                        data,
+                        media_type,
+                        document_type,
+                    )
+                    if file
+                    else None
+                )
                 user_text = (
                     text
                     if attachment is None
@@ -195,6 +241,9 @@ def post_message(
                     user_text=user_text,
                     language=conv.language,
                     has_attachment=attachment is not None,
+                    has_photo=attachment is not None
+                    and attachment.media_type == "image"
+                    and attachment.document_type == "damage_photo",
                     base_message_count=len(snapshot.values.get("messages", [])),
                 )
                 session.add(operation)
@@ -226,23 +275,20 @@ def retry_saved_message(
     )
 
 
-def _store_upload(state, conversation_id: uuid.UUID, file: UploadFile) -> Attachment:
-    if file.content_type not in ALLOWED_UPLOAD_TYPES:
-        raise HTTPException(415, f"unsupported upload type {file.content_type}")
-    data = file.file.read(state.settings.max_upload_bytes + 1)
-    if len(data) > state.settings.max_upload_bytes:
-        raise HTTPException(413, "file too large")
-    safe_name = Path(file.filename or "upload").name
+def _store_upload(state, conversation_id, filename, content_type, data, media_type, document_type):
     target_dir = state.settings.upload_dir / str(conversation_id)
     target_dir.mkdir(parents=True, exist_ok=True)
-    target = target_dir / f"{uuid.uuid4().hex}_{safe_name}"
+    target = target_dir / f"{uuid.uuid4().hex}_{filename}"
     target.write_bytes(data)
     return Attachment(
         conversation_id=conversation_id,
-        filename=safe_name,
-        content_type=file.content_type,
+        filename=filename,
+        content_type=content_type,
         size_bytes=len(data),
         path=str(target),
+        media_type=media_type,
+        document_type=document_type,
+        processing_state="stored",
     )
 
 
@@ -285,6 +331,7 @@ def _stream_operation(state, conversation_id: uuid.UUID, operation_id: uuid.UUID
                     "policy": policy,
                     "language": operation.language,
                     "attachments": int(operation.has_attachment),
+                    "photo_attached_this_turn": operation.has_photo,
                 }
             )
             if not same or (
