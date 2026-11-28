@@ -37,3 +37,17 @@ def test_stuck_worker_returns_a_retryable_processing_timeout(monkeypatch):
     monkeypatch.setattr(subprocess, "run", timeout)
     with pytest.raises(PolicyTextError, match="processing_timeout"):
         prepare_pdf(Path("not-read.pdf"))
+
+
+def test_sample_policy_keeps_body_sentences_starting_with_a_in_their_section():
+    from api.policy_text import extract_passages
+
+    pages, passages = extract_passages(Path(__file__).parent / "fixtures/sample_policy.pdf")
+    assert pages == 3
+    assert [(p.page, p.section_heading) for p in passages] == [
+        (1, "A.1 Collision cover"),
+        (2, "A.2 Deductible"),
+        (3, "E.1 Reporting and cooperation"),
+    ]
+    assert "A claims handler" in passages[0].text
+    assert "A deductible of EUR 300" in passages[1].text

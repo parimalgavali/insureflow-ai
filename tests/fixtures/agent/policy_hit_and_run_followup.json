@@ -1,0 +1,122 @@
+{
+  "extract": [
+    {
+      "incident_date": null,
+      "incident_time": null,
+      "location": "Supermarktparkplatz in Köln",
+      "event_type": "hit_and_run",
+      "description": "Unbekannter hat das geparkte Auto auf einem Supermarktparkplatz angefahren und ist weggefahren.",
+      "third_party_involved": true,
+      "third_party_known": false,
+      "injuries": null,
+      "police_report_filed": null,
+      "witnesses": null,
+      "damage_description": "Hintere Stoßstange eingedrückt",
+      "estimated_amount_eur": null,
+      "vehicle_drivable": null,
+      "photos_attached": false
+    },
+    {
+      "incident_date": "2026-10-25",
+      "incident_time": "19:00",
+      "location": null,
+      "event_type": "unknown",
+      "description": null,
+      "third_party_involved": null,
+      "third_party_known": null,
+      "injuries": null,
+      "police_report_filed": false,
+      "witnesses": false,
+      "damage_description": null,
+      "estimated_amount_eur": null,
+      "vehicle_drivable": null,
+      "photos_attached": false
+    },
+    {
+      "police_report_filed": true,
+      "estimated_amount_eur": 1200
+    }
+  ],
+  "followup": [
+    {
+      "question": "Das tut mir leid. Damit ich den Fall einordnen kann: Wann genau ist das passiert, und wurde die Polizei informiert?",
+      "asked_for": [
+        "incident_date",
+        "police_report_filed"
+      ]
+    }
+  ],
+  "compose": [
+    {
+      "answer": "Laut sample_policy.pdf, Seite 1, besteht für den beschriebenen Unfallschaden vorbehaltlich der Bedingungen Deckung [P.1]. Die Selbstbeteiligung von 300 EUR ist auf Seite 2 beschrieben [P.2]. Melde- und Mitwirkungspflichten stehen auf Seite 3 [P.3]. Ein Sachbearbeiter prüft den Fall.",
+      "coverage_status": "likely_covered",
+      "cited_clause_ids": [
+        "P.1",
+        "P.2",
+        "P.3"
+      ],
+      "missing_documents": [
+        "Fotos der Stoßstange",
+        "Nachträgliche Anzeige bei der Polizei (Unfallflucht)",
+        "Kostenvoranschlag der Werkstatt"
+      ],
+      "next_steps": [
+        "Schadennachweise bereitstellen",
+        "Ein Sachbearbeiter prüft die Deckung"
+      ],
+      "coverage_uncertainty": null
+    },
+    {
+      "answer": "Laut sample_policy.pdf, Seite 1, besteht für den beschriebenen Unfallschaden vorbehaltlich der Bedingungen Deckung [P.1]. Die Selbstbeteiligung von 300 EUR ist auf Seite 2 beschrieben [P.2]. Melde- und Mitwirkungspflichten stehen auf Seite 3 [P.3]. Ein Sachbearbeiter prüft den Fall.",
+      "coverage_status": "likely_covered",
+      "cited_clause_ids": [
+        "P.1",
+        "P.2",
+        "P.3"
+      ],
+      "missing_documents": [
+        "Fotos der Stoßstange"
+      ],
+      "next_steps": [
+        "Schadennachweise bereitstellen",
+        "Ein Sachbearbeiter prüft die Deckung"
+      ],
+      "coverage_uncertainty": null
+    },
+    {
+      "answer": "Laut sample_policy.pdf, Seite 1, besteht für den beschriebenen Unfallschaden vorbehaltlich der Bedingungen Deckung [P.1]. Die Selbstbeteiligung von 300 EUR ist auf Seite 2 beschrieben [P.2]. Melde- und Mitwirkungspflichten stehen auf Seite 3 [P.3]. Ein Sachbearbeiter prüft den Fall.",
+      "coverage_status": "likely_covered",
+      "cited_clause_ids": [
+        "P.1",
+        "P.2",
+        "P.3"
+      ],
+      "missing_documents": [
+        "Fotos der Stoßstange"
+      ],
+      "next_steps": [
+        "Schadennachweise bereitstellen",
+        "Ein Sachbearbeiter prüft die Deckung"
+      ],
+      "coverage_uncertainty": null
+    },
+    {
+      "answer": "Laut sample_policy.pdf, Seite 1, besteht für den beschriebenen Unfallschaden vorbehaltlich der Bedingungen Deckung [P.1]. Die Selbstbeteiligung von 300 EUR ist auf Seite 2 beschrieben [P.2]. Melde- und Mitwirkungspflichten stehen auf Seite 3 [P.3]. Ein Sachbearbeiter prüft den Fall.",
+      "coverage_status": "likely_covered",
+      "cited_clause_ids": [
+        "P.1",
+        "P.2",
+        "P.3"
+      ],
+      "missing_documents": [
+        "Fotos der Stoßstange"
+      ],
+      "next_steps": [
+        "Schadennachweise bereitstellen",
+        "Ein Sachbearbeiter prüft die Deckung"
+      ],
+      "coverage_uncertainty": null
+    }
+  ],
+  "_fixture_note": "Extraction/follow-up replies originate from hit_and_run_followup.json. Selected-policy compositions are synthetic offline test replies tied to sample_policy.pdf, not a live model evaluation."
+}

@@ -1,6 +1,6 @@
 {
   "app.title": "ClaimPilot",
-  "app.tagline": "Kfz-Schaden per Chat melden. Antworten zitieren die GDV-Musterbedingungen AKB 2015; jeden Fall prüft ein Sachbearbeiter.",
+  "app.tagline": "Melden Sie einen Kfz-Schaden per Chat. Antworten verweisen auf Ihren ausgewählten Vertrag oder klar gekennzeichnete Musterbedingungen; ein Mensch prüft jeden Fall.",
   "app.conversation": "Gespräch",
   "app.language": "Sprache",
   "chat.aria": "Gespräch",

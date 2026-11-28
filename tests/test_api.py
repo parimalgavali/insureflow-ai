@@ -1145,7 +1145,9 @@ def test_policy_preparation_saves_page_references_and_scoped_search(client):
         assert len(passages) == doc["passage_count"]
         assert {p.page for p in passages} == {1, 2}
         assert any(p.section_heading for p in passages)
-        word = next(w for w in passages[0].text.split() if w.isalpha() and len(w) > 5)
+        word = next(
+            w for passage in passages for w in passage.text.split() if w.isalpha() and len(w) > 5
+        )
         hits = search_passages(session, uuid.UUID(cid), uuid.UUID(doc["id"]), word)
         assert hits
         assert not search_passages(session, uuid.UUID(other), uuid.UUID(doc["id"]), word)
@@ -1254,7 +1256,10 @@ def test_policy_preparation_commit_failure_is_not_ready_and_can_retry(client, mo
 
 
 def _select_test_policy(
-    state, cid, text="Collision damage is covered subject to the stated conditions."
+    state,
+    cid,
+    text="Collision damage is covered subject to the stated conditions.",
+    heading="A.1 Collision cover",
 ):
     from db.models import PolicyDocument, PolicyPassage
 
@@ -1277,7 +1282,7 @@ def _select_test_policy(
                 conversation_id=uuid.UUID(cid),
                 position=0,
                 page=3,
-                section_heading="A.1 Collision cover",
+                section_heading=heading,
                 text=text,
             )
         )
@@ -1359,3 +1364,57 @@ def test_selecting_policy_marks_old_demo_assessment_stale_and_blocks_submission(
     refreshed = client.post(f"/api/claims/{claim}/facts/refresh").json()["card"]
     assert refreshed["coverage_policy_id"] == document and not refreshed["assessment_stale"]
     assert client.post(f"/api/claims/{claim}/submit").status_code == 200
+
+
+def test_missing_selected_policy_wording_stays_no_evidence_after_corrections(client):
+    state = client.app.state.claimpilot
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim = conv["id"], conv["claim_id"]
+    _select_test_policy(
+        state,
+        cid,
+        text="Annual invoice dates and payment administration details.",
+        heading="Payment schedule",
+    )
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    reply = client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    card = dict(parse_sse(reply.text))["card"]["card"]
+    assert card["coverage_status"] == "no_evidence" and card["citations"] == []
+    assert card["coverage_source"] == "uploaded_policy"
+    assert "Musterbedingungen" not in card["coverage_summary"]
+    assert "Sachbearbeiter" in card["coverage_summary"]
+    corrected = client.patch(
+        f"/api/claims/{claim}/facts", json={"facts_patch": {"witnesses": True}}
+    ).json()["card"]
+    assert corrected["coverage_status"] == "no_evidence" and not corrected["assessment_stale"]
+    assert all(call["tag"] != "compose" for call in state.provider.calls)
+    assert client.post(f"/api/claims/{claim}/submit").status_code == 200
+    assert (
+        client.post(
+            f"/api/claims/{claim}/review", json={"decision": "accept"}, headers=ADJUSTER
+        ).json()["status"]
+        == "reviewed"
+    )
+
+
+@pytest.mark.parametrize("client", [FIXTURE.with_name("hit_and_run_followup.json")], indirect=True)
+def test_review_recheck_cache_does_not_reuse_an_old_policy_source(client, monkeypatch):
+    state = client.app.state.claimpilot
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim = conv["id"], conv["claim_id"]
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    client.post(f"/api/claims/{claim}/submit")
+    url = f"/api/claims/{claim}/review"
+    first = client.post(url, json={"decision": "reassess"}, headers=ADJUSTER).json()["card"]
+    assert not first["assessment_stale"]
+    document = _select_test_policy(state, cid)
+    assert client.post(url, json={"decision": "accept"}, headers=ADJUSTER).status_code == 409
+    seen = _policy_answer_provider(state, monkeypatch)
+    refreshed = client.post(url, json={"decision": "reassess"}, headers=ADJUSTER).json()["card"]
+    assert seen and refreshed["coverage_policy_id"] == document
+    assert not refreshed["assessment_stale"]
+    assert (
+        client.post(url, json={"decision": "accept"}, headers=ADJUSTER).json()["status"]
+        == "reviewed"
+    )

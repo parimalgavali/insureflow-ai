@@ -11,7 +11,9 @@ from pathlib import Path
 
 MAX_TEXT = 2_000_000
 MAX_PASSAGE = 1800
-HEADING = re.compile(r"^(?:[A-Z](?:\.\d+)+|§\s*\d+|\d+(?:\.\d+)*\.?|[A-Z])\s+\S.{2,115}$")
+HEADING = re.compile(
+    r"^(?:[A-Z](?:\.\d+)+|§\s*\d+|\d+(?:\.\d+)*\.?)\s+\S.{2,115}$" r"|^[A-Z]\s+[A-ZÄÖÜ]\S.{2,115}$"
+)
 
 
 class PolicyTextError(Exception):

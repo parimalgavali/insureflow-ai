@@ -1,6 +1,6 @@
 {
   "app.title": "ClaimPilot",
-  "app.tagline": "File a motor claim by chat. Answers cite the GDV AKB 2015 model terms; a human adjuster reviews every case.",
+  "app.tagline": "File a motor claim by chat. Answers cite your selected policy or clearly labelled demo wording; a human adjuster reviews every case.",
   "app.conversation": "conversation",
   "app.language": "Language",
   "chat.aria": "Conversation",

@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { adjusterToken } from "../playwright.config";
 
 // Scripted hit-and-run conversation replayed by the recorded LLM provider
-// (tests/fixtures/agent/hit_and_run.json) through the real API, Postgres and pgvector.
+// (tests/fixtures/agent/policy_hit_and_run_followup.json) through the real API and scoped policy search.
 const MSG1 =
   "Gestern Abend hat jemand mein geparktes Auto auf dem Supermarktparkplatz in Köln angefahren und ist einfach weggefahren. Die hintere Stoßstange ist eingedrückt.";
 const MSG2 = "Das war am 25.10.2026 gegen 19 Uhr. Die Polizei habe ich nicht gerufen, Zeugen gab es keine.";
@@ -34,14 +34,14 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(composer).toBeEnabled();
 
   await expect(page.getByTestId("policy-source")).toContainText("standard GDV");
-  await page.locator('#policy-file').setInputFiles('../tests/fixtures/akb_2015_first2pages.pdf');
+  await page.locator('#policy-file').setInputFiles('../tests/fixtures/sample_policy.pdf');
   await page.getByTestId("upload-policy").click();
-  await expect(page.getByTestId("policy-filename")).toHaveText("akb_2015_first2pages.pdf");
+  await expect(page.getByTestId("policy-filename")).toHaveText("sample_policy.pdf");
   await expect(page.getByTestId("policy-status")).toContainText("awaiting text preparation");
   await page.getByTestId("prepare-policy").click();
   await expect(page.getByTestId("policy-status")).toHaveText("Text prepared for searching", { timeout: 45_000 });
-  await expect(page.getByTestId("policy-counts")).toContainText("2 pages");
-  await expect(page.getByTestId("policy-source")).toContainText("standard GDV");
+  await expect(page.getByTestId("policy-counts")).toContainText("3 pages");
+  await expect(page.getByTestId("policy-source")).toContainText("Selected policy: sample_policy.pdf");
 
   await composer.fill(MSG1);
   await composer.press("Enter");
@@ -57,7 +57,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(composer).toBeEnabled();
   await expect(page.getByRole("log")).toContainText(MSG1);
   await expect(page.getByTestId("policy-status")).toHaveText("Text prepared for searching");
-  await expect(page.getByTestId("policy-filename")).toHaveText("akb_2015_first2pages.pdf");
+  await expect(page.getByTestId("policy-filename")).toHaveText("sample_policy.pdf");
   expect(await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"))).toBe(savedId);
 
   // Lose the terminal response after a message with a file has been saved.
@@ -80,11 +80,13 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   const card = page.getByLabel("Claim card");
   await expect(card.getByTestId("coverage")).toBeVisible({ timeout: 60_000 });
   await expect(card.getByTestId("status")).toHaveText(/ready to submit/i);
-  for (const clause of ["A.2.2.2.2", "E.1.1.3", "E.1.1.1", "A.2.5.8"]) {
-    await expect(card.getByRole("button", { name: `Show clause ${clause}` }).first()).toBeVisible();
+  await expect(card.getByTestId("coverage-source")).toContainText("sample_policy.pdf");
+  for (const passage of ["P.1", "P.2", "P.3"]) {
+    await expect(card.getByRole("button", { name: `Show passage ${passage} from sample_policy.pdf` }).first()).toBeVisible();
   }
-  await card.getByRole("button", { name: "Show clause E.1.1.3" }).first().click();
-  await expect(card.getByTestId("popover")).toContainText(/Aufklärungspflicht/);
+  await card.getByRole("button", { name: "Show passage P.3 from sample_policy.pdf" }).first().click();
+  await expect(card.getByTestId("popover")).toContainText("notify the insurer within one week");
+  await expect(card.getByTestId("popover")).toContainText("page 3");
   await expect(card.getByTestId("risk")).toHaveText(/low|medium|high/);
 
   // The customer can correct facts before submitting and sees simple validation.
@@ -122,7 +124,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await row.click();
   const reviewCard = page.getByLabel("Claim card");
   await expect(reviewCard.getByTestId("risk")).toHaveText(/low|medium|high/);
-  await expect(reviewCard.getByTestId("summary")).toContainText(/A\.2\.2/);
+  await expect(reviewCard.getByTestId("summary")).toContainText(/P\.1/);
   // Ask for more information rather than completing the review.
   await reviewCard.getByLabel("What information does the customer need to provide?").fill("Please provide the police report and repair estimate.");
   await reviewCard.getByTestId("request-info").click();
