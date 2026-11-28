@@ -37,7 +37,8 @@ class PolicyCoverageStore:
         with Session(self.engine) as session:
             document = session.scalar(
                 select(PolicyDocument).where(
-                    PolicyDocument.conversation_id == uuid.UUID(conversation_id)
+                    PolicyDocument.conversation_id == uuid.UUID(conversation_id),
+                    PolicyDocument.is_current.is_(True),
                 )
             )
             if document is None:
@@ -81,10 +82,13 @@ class PolicyCoverageStore:
 
 def coverage_source_changed(session, card: ClaimCard, conversation_id) -> bool:
     document = session.scalar(
-        select(PolicyDocument).where(PolicyDocument.conversation_id == conversation_id)
+        select(PolicyDocument).where(
+            PolicyDocument.conversation_id == conversation_id, PolicyDocument.is_current.is_(True)
+        )
     )
     return document is not None and (
-        card.coverage_source != "uploaded_policy"
+        (document.replaces_document_id is not None and document.status != "ready")
+        or card.coverage_source != "uploaded_policy"
         or card.coverage_policy_id != str(document.id)
         or card.coverage_policy_ready != (document.status == "ready")
     )

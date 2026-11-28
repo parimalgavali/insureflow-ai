@@ -125,7 +125,10 @@ def _require_finished_message(session, claim):
         raise HTTPException(409, "retry the unfinished message before changing this claim")
     policy = session.scalar(
         select(PolicyDocument)
-        .where(PolicyDocument.conversation_id == claim.conversation_id)
+        .where(
+            PolicyDocument.conversation_id == claim.conversation_id,
+            PolicyDocument.is_current.is_(True),
+        )
         .with_for_update()
     )
     if policy is not None and policy.status == "processing":

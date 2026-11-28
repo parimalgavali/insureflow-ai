@@ -139,6 +139,7 @@ def search_passages(session, conversation_id, document_id, query: str, limit: in
                 PolicyPassage.conversation_id == conversation_id,
                 PolicyPassage.document_id == document_id,
                 PolicyDocument.status == "ready",
+                PolicyDocument.is_current.is_(True),
                 PolicyPassage.search_vector.op("@@")(terms),
             )
             .order_by(
