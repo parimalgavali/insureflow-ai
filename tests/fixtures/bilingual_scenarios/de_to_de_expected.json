@@ -1,0 +1,27 @@
+{
+  "languages": [
+    "de",
+    "de",
+    "de"
+  ],
+  "turns": [
+    "Nach einem Anstoß hat meine hintere Stoßstange auf einem Berliner Parkplatz eine Delle. Es war vielleicht am 24. oder 25., und die Kosten könnten 600 oder 1600 Euro sein. Ich bin nicht sicher, ob ein anderes Fahrzeug beteiligt war.",
+    "Ich weiß nicht, welches Datum stimmt oder ob ein anderes Fahrzeug beteiligt war. Die Polizei habe ich nicht informiert. Ob es Zeugen gab, weiß ich nicht.",
+    "Ich kann jetzt den 24.10.2026 bestätigen: Ich bin gegen einen Poller gefahren, ohne Beteiligung anderer Personen oder Fahrzeuge. Der vorliegende Kostenvoranschlag beträgt 1800 Euro. Bei Zeugen bin ich weiter unsicher."
+  ],
+  "questions": [
+    "Welches Datum können Sie bestätigen, und war ein anderes Fahrzeug oder eine Person beteiligt?",
+    "Bitte prüfen Sie das Datum und eine mögliche weitere Beteiligung. Die Schadenhöhe kann bis zur Bestätigung unbekannt bleiben."
+  ],
+  "answers": [
+    "Die Angaben widersprechen sich; deshalb sollte ein Sachbearbeiter sie prüfen. Die fiktive Unfallregel steht in claim_types_policy.pdf auf Seite 1 [P.1], die Selbstbeteiligung auf Seite 6 [P.6].",
+    "Mit dem korrigierten Datum und Betrag ist eine vorläufige Deckung nach der fiktiven Unfallregel in claim_types_policy.pdf auf Seite 1 möglich [P.1]. Seite 6 nennt 300 Euro Selbstbeteiligung [P.6]. Ein Sachbearbeiter prüft den Fall.",
+    "Datum und Betrag bleiben bestätigt. Ohne bekannte Zeugenangabe gibt es kein Risikosignal und keine erfundene Antwort. Die fiktive Unfallregel steht auf Seite 1 [P.1], die Selbstbeteiligung auf Seite 6 von claim_types_policy.pdf [P.6]. Ein Sachbearbeiter prüft den Fall."
+  ],
+  "stable_facts": {
+    "event_type": "collision",
+    "location": "Berliner Parkplatz",
+    "description": "Hintere Stoßstange nach einem Anstoß beschädigt; Details unklar.",
+    "damage_description": "Delle in der hinteren Stoßstange"
+  }
+}

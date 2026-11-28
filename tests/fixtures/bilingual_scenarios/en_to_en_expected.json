@@ -1,0 +1,27 @@
+{
+  "languages": [
+    "en",
+    "en",
+    "en"
+  ],
+  "turns": [
+    "There is a dent in the rear bumper after an impact in a Berlin parking area. It may have been on the 24th or 25th, and the cost might be EUR 600 or EUR 1600. I am not sure whether another vehicle was involved.",
+    "I don't know which date is right or whether another vehicle was involved. I did not inform the police and I don't know about witnesses.",
+    "I can now confirm 2026-10-24: I drove into a bollard, with no other person or vehicle involved. The estimate I have is EUR 1800. I am still unsure about witnesses."
+  ],
+  "questions": [
+    "What date can you confirm, and was another vehicle or person involved?",
+    "Please check the date and whether anyone else was involved. You can leave the estimate unknown until confirmed."
+  ],
+  "answers": [
+    "The account contains conflicting details, so a claims handler should check it. The fictional collision wording is in claim_types_policy.pdf, page 1 [P.1], with the deductible on page 6 [P.6].",
+    "Using your corrected date and amount, the fictional collision wording in claim_types_policy.pdf, page 1, supports possible cover [P.1]. Page 6 describes the EUR 300 deductible [P.6]. A claims handler must review the case.",
+    "The date and amount remain confirmed. Unknown witness information prevents a risk signal, not an invented answer. Fictional collision wording is on page 1 [P.1] and the deductible on page 6 of claim_types_policy.pdf [P.6]. A claims handler reviews the case."
+  ],
+  "stable_facts": {
+    "event_type": "collision",
+    "location": "Berlin parking area",
+    "description": "Rear bumper damaged after an impact; details uncertain.",
+    "damage_description": "Dent in rear bumper"
+  }
+}

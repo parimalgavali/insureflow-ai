@@ -1,0 +1,92 @@
+{
+  "extract": [
+    {
+      "incident_date": null,
+      "event_type": "collision",
+      "location": "Berlin parking area",
+      "description": "Rear bumper damaged after an impact; details uncertain.",
+      "third_party_involved": null,
+      "damage_description": "Dent in rear bumper",
+      "estimated_amount_eur": null,
+      "police_report_filed": null,
+      "witnesses": null
+    },
+    {
+      "police_report_filed": false
+    },
+    {
+      "incident_date": "2026-10-24",
+      "third_party_involved": false,
+      "estimated_amount_eur": 1800
+    }
+  ],
+  "followup": [
+    {
+      "question": "What date can you confirm, and was another vehicle or person involved?",
+      "asked_for": [
+        "incident_date",
+        "third_party_involved"
+      ]
+    },
+    {
+      "question": "Bitte prüfen Sie das Datum und eine mögliche weitere Beteiligung. Die Schadenhöhe kann bis zur Bestätigung unbekannt bleiben.",
+      "asked_for": [
+        "incident_date",
+        "third_party_involved"
+      ]
+    }
+  ],
+  "compose": [
+    {
+      "answer": "Die Angaben widersprechen sich; deshalb sollte ein Sachbearbeiter sie prüfen. Die fiktive Unfallregel steht in claim_types_policy.pdf auf Seite 1 [P.1], die Selbstbeteiligung auf Seite 6 [P.6].",
+      "coverage_status": "likely_covered",
+      "coverage_uncertainty": "conflicting_evidence",
+      "cited_clause_ids": [
+        "P.1",
+        "P.6"
+      ],
+      "missing_documents": [
+        "Schadenfotos",
+        "Kostenvoranschlag"
+      ],
+      "next_steps": [
+        "Prüfen Sie die verbleibenden unsicheren Angaben.",
+        "Ein Sachbearbeiter prüft den Fall."
+      ]
+    },
+    {
+      "answer": "Mit dem korrigierten Datum und Betrag ist eine vorläufige Deckung nach der fiktiven Unfallregel in claim_types_policy.pdf auf Seite 1 möglich [P.1]. Seite 6 nennt 300 Euro Selbstbeteiligung [P.6]. Ein Sachbearbeiter prüft den Fall.",
+      "coverage_status": "likely_covered",
+      "coverage_uncertainty": null,
+      "cited_clause_ids": [
+        "P.1",
+        "P.6"
+      ],
+      "missing_documents": [
+        "Schadenfotos",
+        "Kostenvoranschlag"
+      ],
+      "next_steps": [
+        "Prüfen Sie die verbleibenden unsicheren Angaben.",
+        "Ein Sachbearbeiter prüft den Fall."
+      ]
+    },
+    {
+      "answer": "Datum und Betrag bleiben bestätigt. Ohne bekannte Zeugenangabe gibt es kein Risikosignal und keine erfundene Antwort. Die fiktive Unfallregel steht auf Seite 1 [P.1], die Selbstbeteiligung auf Seite 6 von claim_types_policy.pdf [P.6]. Ein Sachbearbeiter prüft den Fall.",
+      "coverage_status": "likely_covered",
+      "coverage_uncertainty": null,
+      "cited_clause_ids": [
+        "P.1",
+        "P.6"
+      ],
+      "missing_documents": [
+        "Schadenfotos",
+        "Kostenvoranschlag"
+      ],
+      "next_steps": [
+        "Prüfen Sie die verbleibenden unsicheren Angaben.",
+        "Ein Sachbearbeiter prüft den Fall."
+      ]
+    }
+  ]
+}
