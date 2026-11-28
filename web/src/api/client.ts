@@ -164,11 +164,15 @@ export async function fetchReviewerClaim(claimId: string, token: string): Promis
   return (await expectOk(res)).json();
 }
 
+let accessToken: string | null = null;
+export function setAccessToken(token: string): void { accessToken = token.trim() || null; }
+// Discard credentials left by older versions instead of reusing browser storage.
+try { localStorage.removeItem("claimpilot_token"); } catch { /* Storage may be unavailable. */ }
+
 function headers(json = true): HeadersInit {
   const h: Record<string, string> = {};
   if (json) h["content-type"] = "application/json";
-  const token = typeof localStorage !== "undefined" ? localStorage.getItem("claimpilot_token") : null;
-  if (token) h.authorization = `Bearer ${token}`;
+  if (accessToken) h.authorization = `Bearer ${accessToken}`;
   return h;
 }
 
@@ -187,7 +191,7 @@ export async function createConversation(language: Language, policy?: Partial<Po
 }
 
 export async function getConversation(id: string): Promise<Conversation> {
-  return (await expectOk(await fetch(`${BASE}/api/conversations/${id}`, { headers: headers(false) }))).json();
+  return (await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(id)}`, { headers: headers(false) }))).json();
 }
 
 export async function fetchClaimHistory(claimId: string, token?: string): Promise<HistoryEntry[]> {
