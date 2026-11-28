@@ -48,7 +48,7 @@ describe("ClaimCard", () => {
   });
 
   it("emits review with an accept decision, and a patch when facts were edited", async () => {
-    const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false } });
+    const w = mount(ClaimCard, { props: { reviewer: true, facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false } });
     await w.get('[data-testid="review"]').trigger("click");
     expect(w.emitted("review")?.[0]).toEqual([{}]);
     await w.get("button.btn:not(.primary)").trigger("click"); // Edit facts
@@ -82,5 +82,63 @@ it("submits a ready claim without emitting a review or asking for credentials", 
   await w.setProps({ busy: false, status: "awaiting_review", card });
   expect(w.find('[data-testid="submit"]').exists()).toBe(false);
   expect(w.text()).toContain("waiting for an adjuster");
+  expect(w.find('[data-testid="review"]').exists()).toBe(false);
+  await w.setProps({ reviewer: true });
   expect(w.get('[data-testid="review"]').text()).toBe("Record adjuster review");
+});
+
+it("requires a clear information request and keeps it separate from a final review", async () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false, reviewer: true } });
+  expect((w.get('[data-testid="request-info"]').element as HTMLButtonElement).disabled).toBe(true);
+  await w.get("textarea").setValue("   ");
+  expect((w.get('[data-testid="request-info"]').element as HTMLButtonElement).disabled).toBe(true);
+  await w.get("textarea").setValue("  Please provide the police report.  ");
+  await w.get("form.request-info").trigger("submit");
+  expect(w.emitted("requestInfo")?.[0]).toEqual(["Please provide the police report."]);
+  expect(w.emitted("review")).toBeUndefined();
+  await w.setProps({ status: "information_needed", reviewer: false, card: { ...card, status: "information_needed", review: { decision: "request_info", note: "Please provide the police report." } } });
+  expect(w.get('[data-testid="status"]').text()).toBe("Information needed");
+  expect(w.get('[data-testid="information-request"]').text()).toContain("police report");
+  expect(w.text()).toContain("Reply in the chat");
+  expect(w.find('[data-testid="review"]').exists()).toBe(false);
+  expect(w.find('[data-testid="submit"]').exists()).toBe(false);
+  expect(w.find("form.request-info").exists()).toBe(false);
+});
+
+it("labels failed guidance as out of date and blocks completion until it is refreshed", async () => {
+  const stale = { ...card, assessment_stale: true, assessment_error: "The assessment could not be refreshed.", corrections: [{ field: "witnesses", before: false, after: true }] };
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card: stale, status: "awaiting_review", busy: false, reviewer: true } });
+  expect(w.get('[data-testid="assessment-stale"]').text()).toContain("Out of date");
+  expect(w.get('[data-testid="coverage"]').text()).toBe("Out of date");
+  expect(w.get('[data-testid="risk"]').text()).toBe("Out of date");
+  expect(w.get('[data-testid="correction-witnesses"]').text()).toContain("no → yes");
+  expect((w.get('[data-testid="review"]').element as HTMLButtonElement).disabled).toBe(true);
+  await w.get('[data-testid="reassess"]').trigger("click");
+  expect(w.emitted("reassess")).toHaveLength(1);
+  expect(w.emitted("review")).toBeUndefined();
+  await w.setProps({ card: { ...stale, assessment_stale: false, assessment_error: null } });
+  expect(w.find('[data-testid="assessment-stale"]').exists()).toBe(false);
+  expect((w.get('[data-testid="review"]').element as HTMLButtonElement).disabled).toBe(false);
+});
+
+it("keeps correction drafts until saved and does not turn invalid amounts into null", async () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false, reviewer: true } });
+  await w.findAll("button").find((b) => b.text() === "Edit facts")!.trigger("click");
+  expect(w.get('[data-testid="review"]').text()).toBe("Save corrections and refresh");
+  await w.get('input[aria-label="Estimated amount (EUR)"]').setValue("not an amount");
+  await w.get('[data-testid="review"]').trigger("click");
+  expect(w.emitted("review")?.[0]).toEqual([{ estimated_amount_eur: "not an amount" }]);
+  expect(w.find('input[aria-label="Estimated amount (EUR)"]').exists()).toBe(true);
+  expect(w.find("form.request-info").exists()).toBe(false);
+  await w.findAll("button").find((b) => b.text() === "Cancel edits")!.trigger("click");
+  expect(w.get('[data-testid="review"]').text()).toBe("Record adjuster review");
+  expect(w.find("form.request-info").exists()).toBe(true);
+});
+
+it("lets a reviewer attach an optional note to a completed review", async () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card, status: "awaiting_review", busy: false, reviewer: true, claimId: "claim-1", history: [] } });
+  await w.get("#review-note").setValue("  Checked the updated details.  ");
+  await w.get('[data-testid="review"]').trigger("click");
+  expect(w.emitted("review")?.[0]).toEqual([{}, "Checked the updated details."]);
+  expect(w.get('[data-testid="saved-history-link"]').attributes("href")).toBe("#history/claim-1");
 });

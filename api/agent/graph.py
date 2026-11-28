@@ -10,8 +10,10 @@ risk scoring are injected (``AgentDeps``) so the graph can run with an in-memory
 from __future__ import annotations
 
 import json
+import logging
 import operator
 import re
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
@@ -31,10 +33,12 @@ from api.agent.schemas import (
     ClaimStatus,
     ComposeOutput,
     CostContext,
+    FactChange,
     FollowupOutput,
     Language,
     PolicyContext,
     ReviewDecision,
+    ReviewRequest,
     RiskSignal,
 )
 from api.llm.provider import Provider, ProviderError
@@ -124,6 +128,10 @@ class AgentState(TypedDict, total=False):
     card: ClaimCard | None
     status: ClaimStatus
     review: ReviewDecision | None
+    reassessment_needed: bool
+    submission_id: str
+    review_action_id: str
+    review_changes: list[FactChange]
 
 
 def _conversation(state: AgentState) -> list[ChatMessage]:
@@ -172,7 +180,14 @@ def build_graph(deps: AgentDeps, checkpointer=None):
             "facts": facts,
             "policy": state.get("policy") or PolicyContext(),
             "extract_failed": failed,
-            "status": state.get("status") or "collecting",
+            "status": "collecting",
+            "card": None,
+            "review": None,
+            "followups_asked": (
+                0
+                if state.get("status") == "information_needed"
+                else state.get("followups_asked", 0)
+            ),
         }
 
     def check_missing(state: AgentState) -> dict:
@@ -294,19 +309,121 @@ def build_graph(deps: AgentDeps, checkpointer=None):
         if confirmed is not True:
             raise ValueError("submission requires customer confirmation")
         card = state["card"].model_copy(update={"status": "awaiting_review"})
-        return {"card": card, "status": "awaiting_review"}
+        return {"card": card, "status": "awaiting_review", "submission_id": uuid.uuid4().hex}
 
     def human_review(state: AgentState) -> dict:
         card: ClaimCard = state["card"]
         decision_raw = interrupt({"card": card.model_dump(), "language": state["language"]})
         decision = ReviewDecision.model_validate(decision_raw)
+        ReviewRequest(**decision.model_dump(exclude={"reviewer"}))
         facts = state["facts"]
-        if decision.facts_patch:
-            facts = facts.merge(ClaimFacts(**{**facts.model_dump(), **decision.facts_patch}))
+        if decision.decision == "accept" and card.assessment_stale:
+            raise ValueError("refresh the out-of-date assessment before completing the review")
+        action_id = uuid.uuid4().hex
+        if decision.decision in ("edit", "reassess"):
+            updated = ClaimFacts(**{**facts.model_dump(), **decision.facts_patch})
+            changes = [
+                FactChange(field=key, before=getattr(facts, key), after=getattr(updated, key))
+                for key in decision.facts_patch
+                if getattr(facts, key) != getattr(updated, key)
+            ]
+            corrected = card.model_copy(
+                update={
+                    "facts": updated,
+                    "assessment_stale": True,
+                    "assessment_error": None,
+                    "corrections": changes or card.corrections,
+                    "review": None,
+                }
+            )
+            return {
+                "facts": updated,
+                "card": corrected,
+                "status": "awaiting_review",
+                "review": decision,
+                "reassessment_needed": True,
+                "review_action_id": action_id,
+                "review_changes": changes,
+            }
+        if decision.decision == "request_info":
+            request = ReviewRequest(**decision.model_dump(exclude={"reviewer"}))
+            label = (
+                "Rückfrage des Sachbearbeiters" if state["language"] == "de" else "Reviewer request"
+            )
+            card = card.model_copy(update={"status": "information_needed", "review": decision})
+            return {
+                "card": card,
+                "review": decision,
+                "status": "information_needed",
+                "messages": [ChatMessage(role="assistant", content=f"{label}: {request.note}")],
+                "review_action_id": action_id,
+                "reassessment_needed": False,
+                "review_changes": [],
+            }
         reviewed = card.model_copy(
             update={"facts": facts, "status": "reviewed", "review": decision}
         )
-        return {"facts": facts, "card": reviewed, "review": decision, "status": "reviewed"}
+        return {
+            "facts": facts,
+            "card": reviewed,
+            "review": decision,
+            "status": "reviewed",
+            "review_action_id": action_id,
+            "reassessment_needed": False,
+            "review_changes": [],
+        }
+
+    def reassess(state: AgentState) -> dict:
+        """Refresh authoritative corrected facts without extracting them again from old chat."""
+        card = state["card"]
+        try:
+            if missing_facts(state["facts"]):
+                raise ValueError("missing claim facts")
+            refreshed = {**state, **retrieve(state)}
+            if not refreshed.get("retrieved"):
+                raise ValueError("coverage evidence unavailable")
+            refreshed.update(score_risk(refreshed))
+            if refreshed.get("risk") is None:
+                raise ValueError("risk assessment unavailable")
+            composed = compose(refreshed)["card"]
+            if composed.coverage_status == "no_evidence":
+                raise ValueError("coverage assessment unavailable")
+            fresh_card = composed.model_copy(
+                update={
+                    "status": "awaiting_review",
+                    "corrections": card.corrections,
+                }
+            )
+            return {
+                "card": fresh_card,
+                "retrieved": refreshed["retrieved"],
+                "risk": refreshed["risk"],
+                "cost": refreshed.get("cost"),
+                "status": "awaiting_review",
+                "reassessment_needed": False,
+            }
+        except Exception as exc:  # noqa: BLE001
+            logging.getLogger("claimpilot.agent").warning(
+                "reassessment failed: %s", type(exc).__name__
+            )
+            message = (
+                "Die Angaben wurden gespeichert, aber die Bewertung konnte nicht aktualisiert "
+                "werden. Die bisherige Einschätzung ist veraltet. Erneut prüfen oder weitere "
+                "Angaben anfordern."
+                if state["language"] == "de"
+                else "Corrections were saved, but the assessment could not be refreshed. Previous "
+                "guidance is out of date. Retry the assessment or request more information."
+            )
+            return {
+                "card": card.model_copy(
+                    update={"assessment_stale": True, "assessment_error": message}
+                ),
+                "status": "awaiting_review",
+                "reassessment_needed": False,
+            }
+
+    def route_after_review(state: AgentState) -> Literal["reassess", "__end__"]:
+        return "reassess" if state.get("reassessment_needed") else END
 
     graph = StateGraph(AgentState)
     graph.add_node("extract", extract)
@@ -317,6 +434,7 @@ def build_graph(deps: AgentDeps, checkpointer=None):
     graph.add_node("compose", compose)
     graph.add_node("submit", submit)
     graph.add_node("human_review", human_review)
+    graph.add_node("reassess", reassess)
     graph.add_edge(START, "extract")
     graph.add_edge("extract", "check_missing")
     graph.add_conditional_edges("check_missing", route_after_missing)
@@ -325,7 +443,8 @@ def build_graph(deps: AgentDeps, checkpointer=None):
     graph.add_edge("score_risk", "compose")
     graph.add_edge("compose", "submit")
     graph.add_edge("submit", "human_review")
-    graph.add_edge("human_review", END)
+    graph.add_conditional_edges("human_review", route_after_review)
+    graph.add_edge("reassess", "human_review")
     return graph.compile(checkpointer=checkpointer)
 
 
@@ -403,8 +522,12 @@ def run_turn(graph, thread_id: str, user_text: str, policy: PolicyContext | None
 
 
 def resume_review(graph, thread_id: str, decision: ReviewDecision) -> dict:
-    if graph.get_state(thread_config(thread_id)).next != ("human_review",):
+    snapshot = graph.get_state(thread_config(thread_id))
+    if snapshot.next != ("human_review",):
         raise ValueError("claim must be submitted before review")
+    ReviewRequest(**decision.model_dump(exclude={"reviewer"}))
+    if decision.decision == "accept" and snapshot.values["card"].assessment_stale:
+        raise ValueError("refresh the out-of-date assessment before completing the review")
     return graph.invoke(Command(resume=decision.model_dump()), thread_config(thread_id))
 
 

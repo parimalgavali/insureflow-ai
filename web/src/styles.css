@@ -47,7 +47,7 @@ button { font: inherit; }
 .facts input { font: inherit; width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; background: var(--bg); color: var(--text); }
 .badge { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; color: #fff; background: var(--neutral); }
 .badge.likely_covered, .badge.low, .badge.reviewed { background: var(--ok); }
-.badge.unclear, .badge.medium, .badge.awaiting_review { background: var(--warn); }
+.badge.unclear, .badge.medium, .badge.awaiting_review, .badge.information_needed { background: var(--warn); }
 .badge.likely_not_covered, .badge.high { background: var(--bad); }
 .summary { font-size: 14px; line-height: 1.5; margin: 8px 0 0; }
 .pill { display: inline-block; border: 1px solid var(--accent); color: var(--accent); background: transparent; border-radius: 6px; padding: 0 6px; font-size: 12px; font-family: ui-monospace, monospace; cursor: pointer; }
@@ -60,8 +60,28 @@ button { font: inherit; }
 .empty { color: var(--muted); font-size: 14px; margin: 0; }
 .review { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.reviewer-workspace { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; }
+.queue-list { padding: 16px; gap: 12px; align-self: start; }
+.queue-list h2, .queue-list p { margin: 0; }
+.queue-list form { display: grid; gap: 10px; }
+.queue-list input { font: inherit; padding: 10px; min-width: 0; }
+.request-info { display: grid; gap: 8px; }
+.request-info textarea { width: 100%; min-height: 80px; font: inherit; padding: 10px; }
+.review-note { display: grid; gap: 6px; }
+.review-note input { font: inherit; padding: 8px; min-width: 0; }
+.history-page { grid-column: 1 / -1; padding: 20px; gap: 14px; }
+.history-access { display: grid; gap: 8px; max-width: 420px; }
+.history-access input { font: inherit; padding: 8px; }
+.claim-history > ol { padding-left: 24px; margin-bottom: 0; }
+.claim-history > ol > li { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.claim-history time { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.claim-history p { margin: 5px 0; font-size: 13px; }
+.history-note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.queue-items { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.queue-items button { width: 100%; text-align: left; display: grid; gap: 4px; overflow-wrap: anywhere; }
+.queue-items button[aria-pressed="true"] { border-color: var(--accent); }
 @media (max-width: 860px) {
-  .app { grid-template-columns: 1fr; }
+  .app, .reviewer-workspace { grid-template-columns: 1fr; }
   .chat, .card { height: auto; }
   .chat .log { max-height: 55vh; }
 }

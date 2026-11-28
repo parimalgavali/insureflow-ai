@@ -40,20 +40,70 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
 
   // Customer submission never prompts for adjuster credentials or completes a review.
   await expect(card.getByTestId("review")).toHaveCount(0);
+  const submission = page.waitForResponse((r) => r.url().endsWith("/submit") && r.request().method() === "POST");
   await card.getByTestId("submit").click();
+  const submitted = await (await submission).json();
   await expect(card.getByTestId("status")).toHaveText(/awaiting adjuster/i);
   await expect(card.getByTestId("submit")).toHaveCount(0);
   await expect(composer).toBeDisabled();
 
-  // the policyholder session has no adjuster token: the review is refused and the prompt is dismissed
-  page.once("dialog", (d) => d.dismiss());
-  await card.getByTestId("review").click();
-  await expect(page.getByRole("alert")).toContainText(/40[13]/);
-  await expect(card.getByTestId("status")).toHaveText(/awaiting adjuster/i);
-
-  // the adjuster enters their token when prompted
-  page.once("dialog", (d) => d.accept(adjusterToken));
-  await card.getByTestId("review").click();
-  await expect(card.getByTestId("status")).toHaveText(/reviewed/i);
-  await expect(composer).toBeDisabled();
+  // Reviewer actions live on a separate protected screen.
+  await expect(card.getByTestId("review")).toHaveCount(0);
+  await page.getByTestId("reviewer-link").click();
+  await page.getByLabel("Reviewer token").fill("wrong-token");
+  await page.getByRole("button", { name: "Open queue" }).click();
+  await expect(page.getByRole("alert")).toContainText(/403/);
+  await page.getByLabel("Reviewer token").fill(adjusterToken);
+  await page.getByRole("button", { name: "Open queue" }).click();
+  const row = page.getByTestId(`review-claim-${submitted.id}`);
+  await expect(row).toContainText("Submitted:");
+  await row.click();
+  const reviewCard = page.getByLabel("Claim card");
+  await expect(reviewCard.getByTestId("risk")).toHaveText(/low|medium|high/);
+  await expect(reviewCard.getByTestId("summary")).toContainText(/A\.2\.2/);
+  // Ask for more information rather than completing the review.
+  await reviewCard.getByLabel("What information does the customer need to provide?").fill("Please provide the police report and repair estimate.");
+  await reviewCard.getByTestId("request-info").click();
+  await expect(reviewCard.getByTestId("status")).toHaveText("Information needed");
+  await expect(row).toHaveCount(0);
+  await page.getByRole("button", { name: "Lock queue" }).click();
+  await page.getByTestId("reviewer-link").click();
+  await expect(page.getByTestId("information-request")).toContainText("police report and repair estimate");
+  await expect(composer).toBeEnabled();
+  await composer.fill("The police have now been informed. The repair estimate is 1200 Euro.");
+  await composer.press("Enter");
+  await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText("Ready to submit");
+  await page.getByTestId("submit").click();
+  await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/awaiting adjuster/i);
+  await page.getByTestId("reviewer-link").click();
+  await page.getByLabel("Reviewer token").fill(adjusterToken);
+  await page.getByRole("button", { name: "Open queue" }).click();
+  await page.getByTestId(`review-claim-${submitted.id}`).click();
+  await expect(page.getByTestId("fact-estimated_amount_eur")).toHaveText("1200");
+  await page.getByRole("button", { name: "Edit facts", exact: true }).click();
+  await page.getByLabel("Witnesses", { exact: true }).fill("maybe");
+  await page.getByRole("button", { name: "Save corrections and refresh" }).click();
+  await expect(page.getByRole("alert")).toContainText("correction is not valid");
+  await page.getByLabel("Witnesses", { exact: true }).fill("yes");
+  await page.getByRole("button", { name: "Save corrections and refresh" }).click();
+  await expect(page.getByTestId("correction-witnesses")).toContainText("no → yes");
+  await expect(reviewCard.getByTestId("status")).toHaveText(/awaiting adjuster/i);
+  await expect(page.getByTestId("fact-witnesses")).toHaveText("yes");
+  await expect(page.getByTestId("assessment-stale")).toHaveCount(0);
+  await page.getByLabel("Review note (optional)").fill("Checked the updated claim details.");
+  await page.getByLabel("Claim card").getByTestId("review").click();
+  await expect(reviewCard.getByTestId("status")).toHaveText(/reviewed/i);
+  await expect(row).toHaveCount(0);
+  await page.getByRole("button", { name: "Lock queue" }).click();
+  await expect(page.getByLabel("Reviewer token")).toBeVisible();
+  await expect(page.getByLabel("Claim card")).toHaveCount(0);
+  await page.getByTestId("reviewer-link").click();
+  await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
+  await expect(page.getByTestId("history-event")).toHaveCount(6);
+  await page.getByTestId("saved-history-link").click();
+  await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
+  await expect(page.getByTestId("claim-history")).toContainText("Reviewer (shared demo access)");
+  await page.reload();
+  await expect(page.getByTestId("history-event")).toHaveCount(6);
+  await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
 });

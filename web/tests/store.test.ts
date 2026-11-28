@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseSse } from "../src/api/client";
-import { beginTurn, initialState, reduce } from "../src/store";
+import { applyReview, beginTurn, initialState, reduce } from "../src/store";
 
 const card = {
   facts: { event_type: "hit_and_run", incident_date: "2026-10-25", photos_attached: false } as any,
@@ -24,6 +24,33 @@ describe("parseSse", () => {
 });
 
 describe("reduce", () => {
+  it("updates the displayed risk and citations after a reviewer refresh", () => {
+    const s = initialState();
+    const refreshed = { ...card, risk: { ...card.risk, band: "low", reasons: ["New evidence"] }, citations: [] };
+    applyReview(s, "awaiting_review", refreshed as any);
+    expect(s.risk?.band).toBe("low");
+    expect(s.risk?.reasons).toEqual(["New evidence"]);
+    expect(s.citations).toEqual([]);
+  });
+
+  it("keeps server history when applying a claim action", () => {
+    const s = initialState();
+    const history = [{ id: 1, kind: "submitted" as const, actor: "customer", decision: null, note: null, changes: [], created_at: "2026-11-27T10:00:00Z" }];
+    applyReview(s, "awaiting_review", card as any, history);
+    expect(s.history).toEqual(history);
+  });
+  it("clears old guidance when replying to a reviewer request", () => {
+    const s = initialState();
+    s.status = "information_needed";
+    s.card = card as any;
+    s.citations = [...card.citations];
+    s.risk = { ...card.risk, reasons: [...card.risk.reasons] };
+    beginTurn(s, "Here is the requested information");
+    expect(s.status).toBe("collecting");
+    expect(s.card).toBeNull();
+    expect(s.citations).toEqual([]);
+    expect(s.risk).toBeNull();
+  });
   it("streams tokens into the pending assistant bubble and finishes on done", () => {
     const s = initialState();
     beginTurn(s, "hi");

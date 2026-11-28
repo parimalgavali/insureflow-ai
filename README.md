@@ -122,8 +122,23 @@ uv run python -m api.agent.demo             # live Anthropic run of the hit-and-
 Demo auth: the API requires a bearer token from `DEMO_API_TOKEN` and refuses to start without one, unless
 `ALLOW_OPEN_API=1` is set (local dev only; `make dev`, pytest and the e2e set it). Claim review
 (`POST /api/claims/{id}/review`) needs the separate `ADJUSTER_API_TOKEN` and is off when it is unset;
-the UI asks for it on every "Record adjuster review" and never stores it (`make dev` uses `local-adjuster`). Uploads are
+open **Reviewer queue** and enter it there (`make dev` uses `local-adjuster`). The queue keeps the
+credential only in memory until you lock it or leave that screen; it never writes it to browser
+storage. Customer submission never asks for a reviewer credential. Uploads are
 limited to JPEG/PNG/WebP/PDF ≤ `MAX_UPLOAD_MB` (10). `.env` is git-ignored; only `.env.example` is committed.
+
+Reviewers can also **Request information** with a note. The customer sees **Information needed**,
+replies in chat, and submits the refreshed claim again. Recorded demo mode uses the original
+hit-and-run replies plus a labeled synthetic follow-up turn for this request/reply path.
+
+Reviewer fact edits use **Save corrections and refresh** before a separate final review.
+If coverage or risk cannot be refreshed, corrections stay saved, guidance is labeled
+**Out of date**, and completion is blocked until **Retry assessment** succeeds.
+
+The claim card also shows a saved history of submissions, reviewer requests, corrections and
+completed reviews. **Open saved history** provides a link that survives a reload. Entries show
+server-recorded times and the available demo access role; they do not identify a named reviewer
+when a shared credential was used. Earlier activity may not be available.
 
 ### Measured numbers
 

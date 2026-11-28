@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Integer, String, Text
+from sqlalchemy import Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -34,7 +34,7 @@ class PolicyChunk(Base):
 import uuid  # noqa: E402
 from datetime import UTC, datetime  # noqa: E402
 
-from sqlalchemy import DateTime, ForeignKey  # noqa: E402
+from sqlalchemy import DateTime, ForeignKey, UniqueConstraint  # noqa: E402
 from sqlalchemy.dialects.postgresql import JSONB, UUID  # noqa: E402
 from sqlalchemy.orm import relationship  # noqa: E402
 
@@ -82,6 +82,7 @@ class Message(Base):
 
 class Claim(Base):
     __tablename__ = "claims"
+    __table_args__ = (Index("ix_claims_status_submitted_at", "status", "submitted_at"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     conversation_id: Mapped[uuid.UUID] = mapped_column(
@@ -89,6 +90,7 @@ class Claim(Base):
     )
     status: Mapped[str] = mapped_column(String(32), default="collecting", nullable=False)
     card: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, nullable=False
     )
@@ -97,6 +99,32 @@ class Claim(Base):
     )
 
     conversation: Mapped[Conversation] = relationship(back_populates="claim")
+    events: Mapped[list[ClaimEvent]] = relationship(
+        back_populates="claim", order_by="ClaimEvent.id", cascade="all, delete-orphan"
+    )
+
+
+class ClaimEvent(Base):
+    __tablename__ = "claim_events"
+    __table_args__ = (
+        UniqueConstraint("claim_id", "operation_id", "kind", name="uq_claim_event_operation"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    claim_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("claims.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    operation_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor: Mapped[str] = mapped_column(String(32), nullable=False)
+    decision: Mapped[str | None] = mapped_column(String(32))
+    note: Mapped[str | None] = mapped_column(Text)
+    changes: Mapped[list[dict]] = mapped_column(JSONB, default=list, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
+    )
+
+    claim: Mapped[Claim] = relationship(back_populates="events")
 
 
 class Attachment(Base):

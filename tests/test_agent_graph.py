@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,7 @@ from api.agent.graph import (
 )
 from api.agent.language import detect_language
 from api.agent.required_facts import describe, missing_facts
-from api.agent.schemas import ChatMessage, ClaimFacts, PolicyContext, ReviewDecision
+from api.agent.schemas import ChatMessage, ClaimFacts, PolicyContext, ReviewDecision, RiskSignal
 from api.llm.provider import ProviderError, RecordedProvider
 
 FIXTURE = Path(__file__).parent / "fixtures" / "agent" / "hit_and_run.json"
@@ -27,7 +28,7 @@ from tests.agent_corpus import FakeScorer, make_retriever  # noqa: E402
 
 @pytest.fixture
 def graph_and_provider():
-    provider = RecordedProvider(FIXTURE)
+    provider = RecordedProvider(FIXTURE.with_name("hit_and_run_followup.json"))
     deps = AgentDeps(
         provider=provider,
         retriever=make_retriever(),
@@ -105,8 +106,17 @@ def test_scripted_hit_and_run_conversation(graph_and_provider):
         graph,
         thread,
         ReviewDecision(
-            decision="edit", facts_patch={"witnesses": True}, note="caller mentioned a witness"
+            decision="edit",
+            facts_patch={"witnesses": True, "photos_attached": False},
+            note="caller mentioned a witness",
         ),
+    )
+    assert final["status"] == "awaiting_review" and final["card"].review is None
+    assert final["card"].assessment_stale is False
+    assert final["facts"].photos_attached is False
+    assert final["card"].corrections[0].field == "witnesses"
+    final = resume_review(
+        graph, thread, ReviewDecision(decision="accept", note="caller mentioned a witness")
     )
     assert final["status"] == "reviewed" and final["card"].status == "reviewed"
     assert (
@@ -114,7 +124,13 @@ def test_scripted_hit_and_run_conversation(graph_and_provider):
         and final["card"].review.note == "caller mentioned a witness"
     )
     assert graph.get_state(thread_config(thread)).next == ()
-    assert [c["tag"] for c in provider.calls] == ["extract", "followup", "extract", "compose"]
+    assert [c["tag"] for c in provider.calls] == [
+        "extract",
+        "followup",
+        "extract",
+        "compose",
+        "compose",
+    ]
 
 
 def test_compose_without_evidence_cites_nothing_and_skips_llm():
@@ -134,6 +150,61 @@ def test_compose_without_evidence_cites_nothing_and_skips_llm():
     assert "[" not in card.coverage_summary
     assert "claims handler" in card.coverage_summary  # detected English
     assert "compose" not in [c["tag"] for c in provider.calls]
+
+
+def test_information_request_reopens_the_claim_and_requires_resubmission():
+    provider = RecordedProvider(FIXTURE.with_name("hit_and_run_followup.json"))
+    graph = build_graph(
+        AgentDeps(provider=provider, retriever=make_retriever(), risk_scorer=FakeScorer()),
+        checkpointer=MemorySaver(),
+    )
+    thread = "request-info"
+    run_turn(graph, thread, "Mein geparktes Auto wurde angefahren.")
+    run_turn(graph, thread, "Am 25.10.2026, keine Polizei.")
+    submit_for_review(graph, thread)
+    requested = resume_review(
+        graph,
+        thread,
+        ReviewDecision(
+            decision="request_info", note="Please provide the police report and repair estimate."
+        ),
+    )
+    assert requested["status"] == requested["card"].status == "information_needed"
+    assert "Please provide" in requested["messages"][-1].content
+    assert graph.get_state(thread_config(thread)).next == ()
+    with pytest.raises(ValueError, match="not ready"):
+        submit_for_review(graph, thread)
+    updated = run_turn(
+        graph,
+        thread,
+        "Die Polizei wurde inzwischen informiert. Der Kostenvoranschlag beträgt 1200 Euro.",
+    )
+    assert updated["status"] == "assessed"
+    assert updated["facts"].police_report_filed is True
+    assert updated["facts"].estimated_amount_eur == 1200
+    assert updated["card"].review is None
+    assert any("Please provide" in m["content"] for m in provider.calls[-2]["messages"])
+    assert submit_for_review(graph, thread)["status"] == "awaiting_review"
+    assert resume_review(graph, thread, ReviewDecision(decision="accept"))["status"] == "reviewed"
+
+
+def test_information_request_needs_a_clear_note_and_cannot_change_facts():
+    from pydantic import ValidationError
+
+    from api.agent.schemas import ReviewRequest
+
+    for body in (
+        {"decision": "request_info"},
+        {"decision": "request_info", "note": "   "},
+        {"decision": "request_info", "note": "x" * 2001},
+        {"decision": "request_info", "note": "Details please", "facts_patch": {"witnesses": True}},
+    ):
+        with pytest.raises(ValidationError):
+            ReviewRequest(**body)
+    assert (
+        ReviewRequest(decision="request_info", note="  Police report please  ").note
+        == "Police report please"
+    )
 
 
 def test_extract_failure_degrades_to_rephrase_request(tmp_path: Path):
@@ -167,6 +238,160 @@ def test_followup_budget_moves_on_after_three_rounds(tmp_path: Path):
         assert result["status"] == "collecting" and result["followups_asked"] == i + 1
     result = run_turn(graph, "t4", "immer noch keine Ahnung")
     assert result["status"] == "assessed" and result["card"].coverage_status == "no_evidence"
+
+
+@pytest.fixture
+def correction_context():
+    provider = RecordedProvider(FIXTURE.with_name("hit_and_run_followup.json"))
+    deps = AgentDeps(provider=provider, retriever=make_retriever(), risk_scorer=FakeScorer())
+    graph = build_graph(deps, checkpointer=MemorySaver())
+    run_turn(graph, "corrections", "Mein geparktes Auto wurde angefahren.")
+    run_turn(graph, "corrections", "Am 25.10.2026, keine Polizei.")
+    submit_for_review(graph, "corrections")
+    return graph, deps, provider
+
+
+def test_corrections_refresh_coverage_and_risk_using_the_corrected_facts(tmp_path):
+    fixture = json.loads(FIXTURE.with_name("hit_and_run_followup.json").read_text())
+    fixture["compose"][1].update(
+        {
+            "answer": "Wild animal cover [A.2.2.1.4].",
+            "cited_clause_ids": ["A.2.2.1.4"],
+        }
+    )
+    path = tmp_path / "corrected.json"
+    path.write_text(json.dumps(fixture))
+    provider = RecordedProvider(path)
+
+    class Scorer:
+        def __init__(self):
+            self.inputs = []
+
+        def score(self, facts, policy):
+            self.inputs.append(facts.model_copy())
+            return RiskSignal(
+                score=0.1 if facts.police_report_filed else 0.8,
+                band="low" if facts.police_report_filed else "high",
+                reasons=[
+                    "police report present" if facts.police_report_filed else "no police report"
+                ],
+            )
+
+    scorer = Scorer()
+    graph = build_graph(
+        AgentDeps(provider=provider, retriever=make_retriever(), risk_scorer=scorer),
+        checkpointer=MemorySaver(),
+    )
+    run_turn(graph, "fresh", "Mein geparktes Auto wurde angefahren.")
+    run_turn(graph, "fresh", "Am 25.10.2026, keine Polizei.")
+    initial = submit_for_review(graph, "fresh")
+    assert initial["card"].risk.band == "high"
+    corrected = resume_review(
+        graph,
+        "fresh",
+        ReviewDecision(
+            decision="edit",
+            facts_patch={
+                "event_type": "wild_animal",
+                "police_report_filed": True,
+                "photos_attached": False,
+            },
+        ),
+    )
+    assert corrected["status"] == "awaiting_review" and corrected["card"].review is None
+    assert corrected["card"].assessment_stale is False
+    assert corrected["card"].risk.band == "low"
+    assert corrected["card"].citations[0].clause_id == "A.2.2.1.4"
+    assert scorer.inputs[-1].event_type == "wild_animal"
+    assert scorer.inputs[-1].police_report_filed is True
+    assert {c.field for c in corrected["card"].corrections} == {"event_type", "police_report_filed"}
+    assert [c["tag"] for c in provider.calls].count("extract") == 2
+    assert graph.get_state(thread_config("fresh")).next == ("human_review",)
+    assert resume_review(graph, "fresh", ReviewDecision(decision="accept"))["status"] == "reviewed"
+
+
+@pytest.mark.parametrize("failure", ["retrieval", "risk", "composition"])
+def test_failed_reassessment_saves_facts_and_blocks_completion_until_retry(
+    correction_context, monkeypatch, failure
+):
+    graph, deps, provider = correction_context
+    original = graph.get_state(thread_config("corrections")).values["card"]
+    if failure == "retrieval":
+        monkeypatch.setattr(deps, "retriever", None)
+    elif failure == "risk":
+        monkeypatch.setattr(deps, "risk_scorer", None)
+    else:
+        complete = provider.complete
+
+        def fail_compose(*args, **kwargs):
+            if kwargs.get("tag") == "compose":
+                raise ProviderError("simulated answer failure")
+            return complete(*args, **kwargs)
+
+        monkeypatch.setattr(provider, "complete", fail_compose)
+    failed = resume_review(
+        graph, "corrections", ReviewDecision(decision="edit", facts_patch={"witnesses": True})
+    )
+    assert failed["facts"].witnesses is True
+    assert failed["card"].assessment_stale is True
+    assert failed["card"].assessment_error
+    assert failed["card"].coverage_summary == original.coverage_summary
+    assert failed["card"].review is None
+    with pytest.raises(ValueError, match="out-of-date"):
+        resume_review(graph, "corrections", ReviewDecision(decision="accept"))
+    monkeypatch.undo()
+    refreshed = resume_review(graph, "corrections", ReviewDecision(decision="reassess"))
+    assert refreshed["card"].assessment_stale is False
+    assert refreshed["card"].assessment_error is None
+    assert refreshed["facts"].witnesses is True
+    assert refreshed["card"].corrections[0].field == "witnesses"
+    assert (
+        resume_review(graph, "corrections", ReviewDecision(decision="accept"))["status"]
+        == "reviewed"
+    )
+
+
+def test_clearing_a_required_fact_keeps_the_correction_and_allows_an_information_request(
+    correction_context,
+):
+    graph, _, _ = correction_context
+    corrected = resume_review(
+        graph, "corrections", ReviewDecision(decision="edit", facts_patch={"incident_date": None})
+    )
+    assert corrected["facts"].incident_date is None
+    assert corrected["card"].assessment_stale is True
+    assert corrected["card"].corrections[0].after is None
+    requested = resume_review(
+        graph,
+        "corrections",
+        ReviewDecision(decision="request_info", note="Please confirm the incident date."),
+    )
+    assert requested["status"] == "information_needed"
+    assert requested["card"].review.decision == "request_info"
+
+
+def test_invalid_corrections_and_combined_completion_are_rejected():
+    from pydantic import ValidationError
+
+    from api.agent.schemas import ReviewRequest
+
+    for patch in (
+        {"incident_date": "2026-02-30"},
+        {"incident_date": "yesterday"},
+        {"incident_time": "25:00"},
+        {"estimated_amount_eur": -1},
+        {"estimated_amount_eur": float("inf")},
+        {"witnesses": "maybe"},
+    ):
+        with pytest.raises(ValidationError):
+            ReviewRequest(decision="edit", facts_patch=patch)
+    for body in (
+        {"decision": "edit"},
+        {"decision": "accept", "facts_patch": {"witnesses": True}},
+        {"decision": "reassess", "facts_patch": {"witnesses": True}},
+    ):
+        with pytest.raises(ValidationError):
+            ReviewRequest(**body)
 
 
 def test_enforce_citations_strips_unknown_ids():

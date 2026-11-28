@@ -2,7 +2,7 @@
 
 export type Language = "de" | "en";
 export type CoverageStatus = "likely_covered" | "likely_not_covered" | "unclear" | "no_evidence";
-export type ClaimStatus = "collecting" | "assessed" | "awaiting_review" | "reviewed";
+export type ClaimStatus = "collecting" | "assessed" | "awaiting_review" | "information_needed" | "reviewed";
 
 export interface ClaimFacts {
   incident_date: string | null;
@@ -50,7 +50,7 @@ export interface RiskSignal {
 }
 
 export interface ReviewDecision {
-  decision: "accept" | "edit" | "request_info";
+  decision: "accept" | "edit" | "request_info" | "reassess";
   facts_patch?: Record<string, unknown>;
   note?: string | null;
   reviewer?: string;
@@ -68,6 +68,9 @@ export interface ClaimCard {
   next_steps: string[];
   status: ClaimStatus;
   review: ReviewDecision | null;
+  assessment_stale?: boolean;
+  assessment_error?: string | null;
+  corrections?: { field: string; before: string | number | boolean | null; after: string | number | boolean | null }[];
 }
 
 export interface Message {
@@ -85,6 +88,23 @@ export interface Conversation {
   messages: Message[];
   claim_id: string | null;
   card: ClaimCard | null;
+  history?: HistoryEntry[];
+}
+
+export interface HistoryEntry {
+  id: number;
+  kind: "submitted" | "information_requested" | "corrected" | "assessment_refreshed" | "assessment_refresh_failed" | "review_completed";
+  actor: string;
+  decision: string | null;
+  note: string | null;
+  changes: { field: string; before: string | number | boolean | null; after: string | number | boolean | null }[];
+  created_at: string;
+}
+
+export interface ClaimActionResult {
+  status: ClaimStatus;
+  card: ClaimCard;
+  history?: HistoryEntry[];
 }
 
 export type AgentEvent =
@@ -99,6 +119,41 @@ export type AgentEvent =
   | { type: "error"; data: { message: string } };
 
 const BASE = import.meta.env.VITE_API_BASE ?? "";
+
+export interface ReviewerClaim {
+  id: string;
+  conversation_id: string;
+  status: ClaimStatus;
+  card: ClaimCard | null;
+  submitted_at: string | null;
+  history?: HistoryEntry[];
+}
+
+export interface QueueItem {
+  id: string;
+  submitted_at: string | null;
+  event_type: string;
+  location: string | null;
+}
+
+export interface ReviewQueue {
+  items: QueueItem[];
+  has_more: boolean;
+}
+
+export async function fetchReviewQueue(token: string, offset = 0): Promise<ReviewQueue> {
+  const res = await fetch(`${BASE}/api/claims/review-queue?offset=${offset}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return (await expectOk(res)).json();
+}
+
+export async function fetchReviewerClaim(claimId: string, token: string): Promise<ReviewerClaim> {
+  const res = await fetch(`${BASE}/api/claims/review-queue/${claimId}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return (await expectOk(res)).json();
+}
 
 function headers(json = true): HeadersInit {
   const h: Record<string, string> = {};
@@ -126,8 +181,15 @@ export async function getConversation(id: string): Promise<Conversation> {
   return (await expectOk(await fetch(`${BASE}/api/conversations/${id}`, { headers: headers(false) }))).json();
 }
 
+export async function fetchClaimHistory(claimId: string, token?: string): Promise<HistoryEntry[]> {
+  const res = await fetch(`${BASE}/api/claims/${encodeURIComponent(claimId)}/history`, {
+    headers: token ? { authorization: `Bearer ${token}` } : headers(false),
+  });
+  return (await expectOk(res)).json();
+}
+
 /** Submit using customer access; this never records an adjuster decision. */
-export async function submitClaim(claimId: string): Promise<{ status: ClaimStatus; card: ClaimCard }> {
+export async function submitClaim(claimId: string): Promise<ClaimActionResult> {
   const res = await fetch(`${BASE}/api/claims/${claimId}/submit`, { method: "POST", headers: headers() });
   return (await expectOk(res)).json();
 }
@@ -137,7 +199,7 @@ export async function reviewClaim(
   claimId: string,
   decision: ReviewDecision,
   askToken: () => string | null = () => null,
-): Promise<{ status: ClaimStatus; card: ClaimCard }> {
+): Promise<ClaimActionResult> {
   const token = askToken();
   const h: Record<string, string> = { "content-type": "application/json" };
   if (token) h.authorization = `Bearer ${token}`;

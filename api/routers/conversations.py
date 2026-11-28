@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 from api import sse
 from api.agent.graph import thread_config
 from api.agent.schemas import ChatMessage, ClaimCard, Language, PolicyContext
+from api.history import HistoryEntry, history_out
 from api.security import get_state, require_token
 from db.models import Attachment, Claim, Conversation, Message
 
@@ -53,6 +54,7 @@ class ConversationOut(BaseModel):
     messages: list[MessageOut]
     claim_id: uuid.UUID | None = None
     card: ClaimCard | None = None
+    history: list[HistoryEntry]
 
 
 def _conversation_out(conv: Conversation) -> ConversationOut:
@@ -68,6 +70,7 @@ def _conversation_out(conv: Conversation) -> ConversationOut:
         ],
         claim_id=conv.claim.id if conv.claim else None,
         card=card,
+        history=history_out(conv.claim) if conv.claim else [],
     )
 
 
@@ -109,7 +112,7 @@ def post_message(
 ) -> StreamingResponse:
     with state.session() as session:
         conv = _load(session, conversation_id)
-        if conv.status != "collecting":
+        if conv.status not in ("collecting", "information_needed"):
             raise HTTPException(409, "claim assessment is complete; use the claim actions")
         if language and language != conv.language:
             conv.language = language  # UI toggle: the agent answers in the new language from now on
@@ -187,10 +190,13 @@ def _stream_turn(
                 conv.claim.status = card.status
             else:
                 conv.claim.status = conv.status
+                # A fresh collection round must not retain an old assessment or review.
                 conv.claim.card = (
-                    {**(conv.claim.card or {}), "facts": final["facts"].model_dump(mode="json")}
+                    ClaimCard(facts=final["facts"], policy=policy, status=conv.status).model_dump(
+                        mode="json"
+                    )
                     if final.get("facts")
-                    else conv.claim.card
+                    else {}
                 )
             session.commit()
             claim_id = str(conv.claim.id)

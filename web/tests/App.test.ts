@@ -1,6 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App.vue";
+import HistoryPage from "../src/components/HistoryPage.vue";
 import { createConversation, reviewClaim, sendMessage, submitClaim } from "../src/api/client";
 import { initialState, store } from "../src/store";
 
@@ -10,6 +11,7 @@ vi.mock("../src/api/client", () => ({
   reviewClaim: vi.fn(),
   sendMessage: vi.fn(),
   fetchEval: vi.fn(),
+  fetchClaimHistory: vi.fn(),
 }));
 
 const card = {
@@ -21,10 +23,13 @@ function mountApp() {
     ClaimCard: { emits: ["submit", "review"], template: '<button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button>' },
     ChatColumn: { emits: ["retry"], template: '<button data-testid="retry-action" @click="$emit(\'retry\')">Retry</button>' },
     EvalPage: true,
+    ReviewerQueue: true,
+    HistoryPage: true,
   } } });
 }
 
 beforeEach(() => {
+  window.history.replaceState(null, "", "/");
   vi.resetAllMocks();
   Object.assign(store, initialState());
   vi.mocked(createConversation).mockResolvedValue({
@@ -34,6 +39,15 @@ beforeEach(() => {
 });
 
 describe("customer submission", () => {
+  it("opens a saved history URL without creating a new conversation", async () => {
+    window.history.replaceState(null, "", "/#history/claim-1");
+    const w = mountApp();
+    await flushPromises();
+    expect(createConversation).not.toHaveBeenCalled();
+    expect(w.getComponent(HistoryPage).props("claimId")).toBe("claim-1");
+    w.unmount();
+    window.history.replaceState(null, "", "/");
+  });
   it("submits with customer access without recording a review", async () => {
     vi.mocked(submitClaim).mockResolvedValue({ status: "awaiting_review", card } as never);
     const w = mountApp();
