@@ -167,5 +167,22 @@
   "session.memory": "The token stays in memory and must be entered again after a page refresh.",
   "session.new": "Start new claim",
   "session.newNote": "Starting a new claim keeps the previous claim saved. This browser will return to the new claim.",
-  "session.pending": "Your last message is unfinished. Retry to continue with the saved message and attachment."
+  "session.pending": "Your last message is unfinished. Retry to continue with the saved message and attachment.",
+  "policy.title": "Policy document",
+  "policy.demo": "Answers currently use standard GDV AKB 2015 demo wording.",
+  "policy.sample": "Use a sample policy in this shared demo. Policy uploads are separate from claim evidence.",
+  "policy.loading": "Loading policy details…",
+  "policy.choose": "Choose policy PDF",
+  "policy.limit": "PDF only, up to {mb} MB; at most 300 pages.",
+  "policy.upload": "Upload policy",
+  "policy.uploading": "Uploading and checking PDF…",
+  "policy.notUsed": "Your file is saved. Its text is not yet prepared for coverage searches; answers still use demo wording.",
+  "policy.locked": "Policy uploads are available before submission.",
+  "policy.loadFailed": "Could not load policy details. Please retry.",
+  "policy.tooLarge": "The PDF exceeds the upload size limit.",
+  "policy.pdfRequired": "Please choose a PDF file.",
+  "policy.invalid": "This PDF could not be accepted. Use an unencrypted, valid PDF with 1–300 pages.",
+  "policy.conflict": "A policy is already attached, a message is unfinished, or this claim has been submitted.",
+  "policy.failed": "The upload could not be completed. Your current policy selection is unchanged. Please retry.",
+  "policy.status.uploaded": "Uploaded; awaiting text preparation"
 }

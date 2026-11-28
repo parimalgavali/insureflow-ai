@@ -33,6 +33,13 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   const composer = page.getByLabel("Your message");
   await expect(composer).toBeEnabled();
 
+  await expect(page.getByTestId("policy-source")).toContainText("standard GDV");
+  await page.locator('#policy-file').setInputFiles('../tests/fixtures/akb_2015_first2pages.pdf');
+  await page.getByTestId("upload-policy").click();
+  await expect(page.getByTestId("policy-filename")).toHaveText("akb_2015_first2pages.pdf");
+  await expect(page.getByTestId("policy-status")).toContainText("awaiting text preparation");
+  await expect(page.getByTestId("policy-source")).toContainText("standard GDV");
+
   await composer.fill(MSG1);
   await composer.press("Enter");
   // agent asks a follow-up and offers chips for the missing facts
@@ -46,6 +53,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await page.reload();
   await expect(composer).toBeEnabled();
   await expect(page.getByRole("log")).toContainText(MSG1);
+  await expect(page.getByTestId("policy-filename")).toHaveText("akb_2015_first2pages.pdf");
   expect(await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"))).toBe(savedId);
 
   // Lose the terminal response after a message with a file has been saved.
@@ -56,7 +64,7 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
     const body = await response.text();
     await route.fulfill({ response, body: body.slice(0, body.lastIndexOf("event: done")) });
   }, { times: 1 });
-  await page.locator('input[type="file"]').setInputFiles({ name: "claim.pdf", mimeType: "application/pdf", buffer: Buffer.from("Sample claim document") });
+  await page.locator('.chat input[type="file"]').setInputFiles({ name: "claim.pdf", mimeType: "application/pdf", buffer: Buffer.from("Sample claim document") });
   await composer.fill(MSG2);
   await composer.press("Enter");
   await expect(page.getByRole("alert")).toContainText("same text and attachment", { timeout: 60_000 });

@@ -163,3 +163,21 @@ class MessageOperation(Base):
     has_attachment: Mapped[bool] = mapped_column(nullable=False)
     base_message_count: Mapped[int] = mapped_column(Integer, nullable=False)
     response: Mapped[list[str] | None] = mapped_column(JSONB)
+
+
+class PolicyDocument(Base):
+    __tablename__ = "policy_documents"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    path: Mapped[str] = mapped_column(Text, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="uploaded")
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
+    )

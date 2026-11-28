@@ -167,5 +167,22 @@
   "session.memory": "Das Token bleibt nur im Arbeitsspeicher und muss nach einem Neuladen erneut eingegeben werden.",
   "session.new": "Neuen Schaden beginnen",
   "session.newNote": "Der bisherige Schaden bleibt gespeichert. Dieser Browser kehrt künftig zum neuen Schaden zurück.",
-  "session.pending": "Ihre letzte Nachricht ist noch nicht abgeschlossen. Versuchen Sie es mit der gespeicherten Nachricht und dem Anhang erneut."
+  "session.pending": "Ihre letzte Nachricht ist noch nicht abgeschlossen. Versuchen Sie es mit der gespeicherten Nachricht und dem Anhang erneut.",
+  "policy.title": "Versicherungsdokument",
+  "policy.demo": "Antworten verwenden derzeit die Standard-Musterbedingungen GDV AKB 2015.",
+  "policy.sample": "Verwenden Sie in dieser gemeinsamen Demo einen Mustervertrag. Versicherungsdokumente sind von Schadennachweisen getrennt.",
+  "policy.loading": "Versicherungsdaten werden geladen…",
+  "policy.choose": "Versicherungs-PDF auswählen",
+  "policy.limit": "Nur PDF, bis {mb} MB; höchstens 300 Seiten.",
+  "policy.upload": "Versicherung hochladen",
+  "policy.uploading": "PDF wird hochgeladen und geprüft…",
+  "policy.notUsed": "Ihre Datei ist gespeichert. Ihr Text ist noch nicht für die Deckungssuche vorbereitet; Antworten verwenden weiterhin Musterbedingungen.",
+  "policy.locked": "Versicherungsdokumente können vor dem Einreichen hochgeladen werden.",
+  "policy.loadFailed": "Die Versicherungsdaten konnten nicht geladen werden. Bitte erneut versuchen.",
+  "policy.tooLarge": "Das PDF überschreitet die zulässige Dateigröße.",
+  "policy.pdfRequired": "Bitte wählen Sie eine PDF-Datei.",
+  "policy.invalid": "Dieses PDF konnte nicht angenommen werden. Verwenden Sie ein gültiges, unverschlüsseltes PDF mit 1–300 Seiten.",
+  "policy.conflict": "Ein Vertrag ist bereits angehängt, eine Nachricht ist unvollständig oder der Schaden wurde eingereicht.",
+  "policy.failed": "Das Hochladen konnte nicht abgeschlossen werden. Die bisherige Auswahl bleibt bestehen. Bitte erneut versuchen.",
+  "policy.status.uploaded": "Hochgeladen; Textvorbereitung steht aus"
 }
