@@ -308,6 +308,7 @@ def _stream_operation(state, conversation_id: uuid.UUID, operation_id: uuid.UUID
                 card = final.get("card") or ClaimCard(
                     facts=final["facts"], policy=policy, status=conv.status
                 )
+                card = current_coverage_card(session, card, conv.id, conv.language)
                 conv.claim.card = card.model_dump(mode="json")
                 conv.claim.status = conv.status
                 response = [

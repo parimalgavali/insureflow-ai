@@ -125,7 +125,10 @@ def _require_finished_message(session, claim):
         raise HTTPException(409, "retry the unfinished message before changing this claim")
     policy = session.scalar(
         select(PolicyDocument)
-        .where(PolicyDocument.conversation_id == claim.conversation_id)
+        .where(
+            PolicyDocument.conversation_id == claim.conversation_id,
+            PolicyDocument.is_current.is_(True),
+        )
         .with_for_update()
     )
     if policy is not None and policy.status == "processing":
@@ -183,6 +186,9 @@ def _customer_action(claim_id: uuid.UUID, patch: dict, state, *, refresh: bool =
             raise HTTPException(409, str(exc)) from exc
         card = result.get("card") or ClaimCard(
             facts=result["facts"], policy=result["policy"], status=result["status"]
+        )
+        card = current_coverage_card(
+            session, card, claim.conversation_id, claim.conversation.language
         )
         claim.card = card.model_dump(mode="json")
         claim.status = card.status

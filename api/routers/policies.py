@@ -6,7 +6,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from pypdf import PdfReader
 from sqlalchemy import delete, select
@@ -23,6 +23,7 @@ router = APIRouter(
 
 class PolicyDocumentOut(BaseModel):
     id: uuid.UUID
+    revision: int
     filename: str
     size_bytes: int
     status: str
@@ -53,7 +54,10 @@ def get_policy(conversation_id: uuid.UUID, state=Depends(get_state)):
         if session.get(Conversation, conversation_id) is None:
             raise HTTPException(404, "conversation not found")
         document = session.scalar(
-            select(PolicyDocument).where(PolicyDocument.conversation_id == conversation_id)
+            select(PolicyDocument).where(
+                PolicyDocument.conversation_id == conversation_id,
+                PolicyDocument.is_current.is_(True),
+            )
         )
         return _selection(document, state)
 
@@ -77,6 +81,20 @@ def _validate_pdf(data: bytes):
 def upload_policy(
     conversation_id: uuid.UUID, file: Annotated[UploadFile, File()], state=Depends(get_state)
 ):
+    return _save_policy(conversation_id, file, state)
+
+
+@router.put("/{conversation_id}/policy", response_model=PolicySelection)
+def replace_policy(
+    conversation_id: uuid.UUID,
+    file: Annotated[UploadFile, File()],
+    replaces_document_id: Annotated[uuid.UUID, Form()],
+    state=Depends(get_state),
+):
+    return _save_policy(conversation_id, file, state, replaces_document_id)
+
+
+def _save_policy(conversation_id, file, state, replaces_document_id=None):
     filename = Path((file.filename or "policy.pdf").replace("\\", "/")).name
     if file.content_type != "application/pdf" or not filename.lower().endswith(".pdf"):
         raise HTTPException(415, "pdf_required")
@@ -96,9 +114,26 @@ def upload_policy(
             if conv is None:
                 raise HTTPException(404, "conversation not found")
             existing = session.scalar(
-                select(PolicyDocument).where(PolicyDocument.conversation_id == conversation_id)
+                select(PolicyDocument)
+                .where(
+                    PolicyDocument.conversation_id == conversation_id,
+                    PolicyDocument.is_current.is_(True),
+                )
+                .with_for_update()
             )
-            if existing:
+            if replaces_document_id is not None:
+                if existing is None:
+                    raise HTTPException(404, "policy not found")
+                if existing.id != replaces_document_id:
+                    if (
+                        existing.replaces_document_id == replaces_document_id
+                        and existing.content_hash == digest
+                    ):
+                        return _selection(existing, state)
+                    raise HTTPException(409, "policy_selection_changed")
+                if existing.content_hash == digest:
+                    return _selection(existing, state)
+            elif existing:
                 if existing.content_hash == digest:
                     return _selection(existing, state)
                 raise HTTPException(409, "policy_already_uploaded")
@@ -113,12 +148,20 @@ def upload_policy(
                 .limit(1)
             ):
                 raise HTTPException(409, "message_unfinished")
+            if existing is not None and existing.status == "processing":
+                raise HTTPException(409, "policy_processing")
+            if existing is not None:
+                existing.is_current = False
+                session.flush()
             directory = state.settings.upload_dir / "policies" / str(conversation_id)
             directory.mkdir(parents=True, exist_ok=True)
             target = directory / f"{uuid.uuid4().hex}.pdf"
             target.write_bytes(data)
             document = PolicyDocument(
                 conversation_id=conversation_id,
+                is_current=True,
+                revision=existing.revision + 1 if existing else 1,
+                replaces_document_id=existing.id if existing else None,
                 filename=filename,
                 content_hash=digest,
                 path=str(target),
@@ -138,7 +181,10 @@ def upload_policy(
 def prepare_policy(conversation_id: uuid.UUID, state=Depends(get_state)):
     with state.session() as session:
         document = session.scalar(
-            select(PolicyDocument).where(PolicyDocument.conversation_id == conversation_id)
+            select(PolicyDocument).where(
+                PolicyDocument.conversation_id == conversation_id,
+                PolicyDocument.is_current.is_(True),
+            )
         )
         if document is None:
             raise HTTPException(404, "policy not found")
@@ -156,11 +202,14 @@ def prepare_policy(conversation_id: uuid.UUID, state=Depends(get_state)):
         try:
             with state.session() as session:
                 document = session.get(PolicyDocument, document_id)
-                if document.status == "ready":
-                    return _selection(document, state)
                 conv = session.scalar(
                     select(Conversation).where(Conversation.id == conversation_id).with_for_update()
                 )
+                session.refresh(document)
+                if not document.is_current:
+                    raise HTTPException(409, "policy_selection_changed")
+                if document.status == "ready":
+                    return _selection(document, state)
                 if conv.status not in ("collecting", "assessed", "information_needed"):
                     raise HTTPException(409, "claim_already_submitted")
                 if session.scalar(

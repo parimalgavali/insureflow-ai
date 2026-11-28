@@ -1290,7 +1290,7 @@ def _select_test_policy(
         return str(document.id)
 
 
-def _policy_answer_provider(state, monkeypatch):
+def _policy_answer_provider(state, monkeypatch, filename="selected.pdf", page=3):
     from api.agent.schemas import ComposeOutput
     from api.llm.provider import Completion
 
@@ -1301,7 +1301,7 @@ def _policy_answer_provider(state, monkeypatch):
         if kwargs.get("tag") == "compose" and "Never supplement" in (kwargs.get("system") or ""):
             seen.append(args[0][-1].content)
             output = ComposeOutput(
-                answer="Selected policy selected.pdf, page 3: collision cover [P.1]. A claims handler reviews the case.",
+                answer=f"Selected policy {filename}, page {page}: collision cover [P.1]. A claims handler reviews the case.",
                 coverage_status="likely_covered",
                 cited_clause_ids=["P.1"],
                 next_steps=["Human review"],
@@ -1418,3 +1418,225 @@ def test_review_recheck_cache_does_not_reuse_an_old_policy_source(client, monkey
         client.post(url, json={"decision": "accept"}, headers=ADJUSTER).json()["status"]
         == "reviewed"
     )
+
+
+def test_policy_replacement_versions_are_atomic_scoped_and_idempotent(client):
+    from sqlalchemy import select
+
+    from api.policy_text import search_passages
+    from db.models import PolicyDocument
+
+    state = client.app.state.claimpilot
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    url = f"/api/conversations/{cid}/policy"
+    old_data = (Path(__file__).parent / "fixtures/akb_2015_first2pages.pdf").read_bytes()
+    new_data = (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes()
+    old = client.post(url, files={"file": ("old.pdf", old_data, "application/pdf")}).json()[
+        "document"
+    ]
+    assert client.post(url + "/prepare").json()["document"]["status"] == "ready"
+    payload = {"replaces_document_id": old["id"]}
+    files = {"file": ("replacement.pdf", new_data, "application/pdf")}
+    replaced = client.put(url, data=payload, files=files)
+    assert replaced.status_code == 200
+    selected = replaced.json()
+    current = selected["document"]
+    assert current["id"] != old["id"] and current["revision"] == 2
+    assert current["filename"] == "replacement.pdf" and current["status"] == "uploaded"
+    assert client.get(url).json() == selected
+    assert client.put(url, data=payload, files=files).json() == selected
+    assert (
+        client.put(
+            url, data=payload, files={"file": ("different.pdf", old_data, "application/pdf")}
+        ).status_code
+        == 409
+    )
+    with state.session() as session:
+        versions = list(
+            session.scalars(
+                select(PolicyDocument).where(PolicyDocument.conversation_id == uuid.UUID(cid))
+            )
+        )
+        assert len(versions) == 2 and sum(d.is_current for d in versions) == 1
+        assert not search_passages(session, uuid.UUID(cid), uuid.UUID(old["id"]), "Versicherung")
+    assert len(list((state.settings.upload_dir / "policies").rglob("*.pdf"))) == 2
+    assert client.post(url + "/prepare").json()["document"]["status"] == "ready"
+
+
+def test_failed_replacement_preserves_current_policy_and_files(client, monkeypatch):
+    from sqlalchemy.orm import Session
+
+    state = client.app.state.claimpilot
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    url = f"/api/conversations/{cid}/policy"
+    data = (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes()
+    old = client.post(url, files={"file": ("original.pdf", data, "application/pdf")}).json()
+    payload = {"replaces_document_id": old["document"]["id"]}
+    assert (
+        client.put(
+            url, data=payload, files={"file": ("broken.pdf", b"broken", "application/pdf")}
+        ).status_code
+        == 422
+    )
+    replacement = (Path(__file__).parent / "fixtures/akb_2015_first2pages.pdf").read_bytes()
+
+    def fail(session):
+        raise RuntimeError("replacement commit interrupted")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Session, "commit", fail)
+        with pytest.raises(RuntimeError, match="replacement commit"):
+            client.put(
+                url,
+                data=payload,
+                files={"file": ("replacement.pdf", replacement, "application/pdf")},
+            )
+    assert client.get(url).json() == old
+    assert len(list((state.settings.upload_dir / "policies").rglob("*.pdf"))) == 1
+
+
+def test_failed_replacement_keeps_guidance_stale_until_new_policy_is_prepared_and_checked(
+    client, monkeypatch
+):
+    from io import BytesIO
+
+    from pypdf import PdfWriter
+
+    state = client.app.state.claimpilot
+    conv = client.post("/api/conversations", json={}).json()
+    cid, claim = conv["id"], conv["claim_id"]
+    old = _select_test_policy(state, cid)
+    _policy_answer_provider(state, monkeypatch)
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG1})
+    client.post(f"/api/conversations/{cid}/messages", data={"text": MSG2})
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    buffer = BytesIO()
+    writer.write(buffer)
+    url = f"/api/conversations/{cid}/policy"
+    replacement = client.put(
+        url,
+        data={"replaces_document_id": old},
+        files={"file": ("blank.pdf", buffer.getvalue(), "application/pdf")},
+    ).json()["document"]
+    assert client.get(f"/api/claims/{claim}").json()["card"]["assessment_stale"]
+    assert client.post(f"/api/claims/{claim}/submit").status_code == 409
+    assert client.post(url + "/prepare").json()["document"]["status"] == "failed"
+    refreshed = client.post(f"/api/claims/{claim}/facts/refresh").json()["card"]
+    assert refreshed["assessment_stale"] and refreshed["coverage_status"] == "no_evidence"
+    assert refreshed["coverage_policy_id"] == replacement["id"] and refreshed["citations"] == []
+    history = client.get(f"/api/claims/{claim}/history").json()
+    assert history[-1]["kind"] == "assessment_refresh_failed"
+    assert client.post(f"/api/claims/{claim}/submit").status_code == 409
+    valid = (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes()
+    current = client.put(
+        url,
+        data={"replaces_document_id": replacement["id"]},
+        files={"file": ("correct.pdf", valid, "application/pdf")},
+    ).json()["document"]
+    assert current["revision"] == 3
+    assert client.post(url + "/prepare").json()["document"]["status"] == "ready"
+    assert client.post(f"/api/claims/{claim}/submit").status_code == 409
+    _policy_answer_provider(state, monkeypatch, filename="correct.pdf", page=1)
+    refreshed = client.post(f"/api/claims/{claim}/facts/refresh").json()["card"]
+    assert not refreshed["assessment_stale"] and refreshed["coverage_policy_id"] == current["id"]
+    assert all(
+        c["document_id"] == current["id"] and c["source_name"] == "correct.pdf"
+        for c in refreshed["citations"]
+    )
+    assert "correct.pdf" in refreshed["coverage_summary"]
+    assert client.post(f"/api/claims/{claim}/submit").status_code == 200
+    assert (
+        client.put(
+            url,
+            data={"replaces_document_id": current["id"]},
+            files={"file": ("late.pdf", buffer.getvalue(), "application/pdf")},
+        ).status_code
+        == 409
+    )
+
+
+def test_competing_policy_replacements_cannot_both_change_the_same_selection(client):
+    from io import BytesIO
+    from threading import Barrier
+
+    from pypdf import PdfWriter
+    from sqlalchemy import select
+
+    from db.models import PolicyDocument
+
+    state = client.app.state.claimpilot
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    url = f"/api/conversations/{cid}/policy"
+    old_data = (Path(__file__).parent / "fixtures/akb_2015_first2pages.pdf").read_bytes()
+    old = client.post(url, files={"file": ("old.pdf", old_data, "application/pdf")}).json()[
+        "document"
+    ]
+    first_data = (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes()
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    buffer = BytesIO()
+    writer.write(buffer)
+    barrier = Barrier(2)
+
+    def replace(name, content):
+        barrier.wait(timeout=10)
+        return client.put(
+            url,
+            data={"replaces_document_id": old["id"]},
+            files={"file": (name, content, "application/pdf")},
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(replace, "first.pdf", first_data)
+        second = pool.submit(replace, "second.pdf", buffer.getvalue())
+        results = [first.result(timeout=15), second.result(timeout=15)]
+    assert sorted(r.status_code for r in results) == [200, 409]
+    winner = next(r.json() for r in results if r.status_code == 200)
+    assert client.get(url).json() == winner
+    with state.session() as session:
+        versions = list(
+            session.scalars(
+                select(PolicyDocument).where(PolicyDocument.conversation_id == uuid.UUID(cid))
+            )
+        )
+        assert len(versions) == 2 and sum(d.is_current for d in versions) == 1
+
+
+def test_policy_cannot_be_replaced_while_its_preparation_is_running(client, monkeypatch):
+    from threading import Event
+
+    from api.policy_text import Passage
+    from api.routers import policies
+
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    url = f"/api/conversations/{cid}/policy"
+    old_data = (Path(__file__).parent / "fixtures/akb_2015_first2pages.pdf").read_bytes()
+    old = client.post(url, files={"file": ("old.pdf", old_data, "application/pdf")}).json()[
+        "document"
+    ]
+    new_data = (Path(__file__).parent / "fixtures/sample_policy.pdf").read_bytes()
+    entered, release = Event(), Event()
+
+    def pause(path):
+        entered.set()
+        assert release.wait(10)
+        return 1, [Passage(1, "Coverage", "Collision coverage subject to policy conditions.")]
+
+    with monkeypatch.context() as patch, ThreadPoolExecutor(max_workers=2) as pool:
+        patch.setattr(policies, "prepare_pdf", pause)
+        job = pool.submit(client.post, url + "/prepare")
+        try:
+            assert entered.wait(10)
+            assert (
+                client.put(
+                    url,
+                    data={"replaces_document_id": old["id"]},
+                    files={"file": ("new.pdf", new_data, "application/pdf")},
+                ).status_code
+                == 409
+            )
+        finally:
+            release.set()
+        assert job.result(timeout=15).json()["document"]["id"] == old["id"]
+    assert client.get(url).json()["document"]["id"] == old["id"]

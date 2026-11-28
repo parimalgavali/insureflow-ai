@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Computed, ForeignKeyConstraint, Index, Integer, String, Text
+from sqlalchemy import Computed, ForeignKeyConstraint, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import ARRAY, TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -169,11 +169,22 @@ class PolicyDocument(Base):
     __tablename__ = "policy_documents"
     __table_args__ = (
         UniqueConstraint("id", "conversation_id", name="uq_policy_document_conversation"),
+        Index(
+            "uq_policy_current_conversation",
+            "conversation_id",
+            unique=True,
+            postgresql_where=text("is_current"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     conversation_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, unique=True
+        ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False
+    )
+    is_current: Mapped[bool] = mapped_column(default=True, nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    replaces_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("policy_documents.id", ondelete="SET NULL")
     )
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
