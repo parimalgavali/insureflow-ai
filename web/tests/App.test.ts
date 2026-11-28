@@ -3,12 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App.vue";
 import ChatColumn from "../src/components/ChatColumn.vue";
 import HistoryPage from "../src/components/HistoryPage.vue";
-import { createConversation, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken } from "../src/api/client";
+import { createConversation, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
 import { initialState, store } from "../src/store";
 
 vi.mock("../src/api/client", () => ({
   createConversation: vi.fn(),
   setAccessToken: vi.fn(),
+  retrySavedMessage: vi.fn(),
   submitClaim: vi.fn(),
   reviewClaim: vi.fn(),
   sendMessage: vi.fn(),
@@ -191,5 +192,25 @@ it("creates a new claim only after an explicit action and keeps the saved one in
   expect(store.conversationId).toBe("conversation-1");
   expect(localStorage.getItem("claimpilot_conversation_id")).toBe("conversation-1");
   expect(getConversation).toHaveBeenCalledTimes(1);
+  w.unmount();
+});
+
+it("restores and retries an unfinished saved message without its old in-memory file", async () => {
+  localStorage.setItem("claimpilot_conversation_id", "saved-conversation");
+  const conversation = { id: "saved-conversation", claim_id: "claim-1", language: "en", status: "collecting", card: null, policy: {}, messages: [{ id: "saved", role: "user", content: "Original message [Attachment: saved.pdf]" }] };
+  vi.mocked(getConversation).mockResolvedValueOnce({ ...conversation, pending_operation_id: "saved-operation" } as never)
+    .mockResolvedValueOnce({ ...conversation, pending_operation_id: null } as never);
+  vi.mocked(retrySavedMessage).mockResolvedValue(undefined);
+  const w = mountApp();
+  await flushPromises();
+  expect(store.error).toContain("unfinished");
+  expect(w.findComponent(ChatColumn).props("canSend")).toBe(false);
+  await w.get('[data-testid="retry-action"]').trigger("click");
+  await flushPromises();
+  expect(retrySavedMessage).toHaveBeenCalledWith("saved-conversation", "saved-operation", expect.any(Function));
+  expect(sendMessage).not.toHaveBeenCalled();
+  expect(store.pendingOperationId).toBeNull();
+  expect(store.error).toBeNull();
+  expect(w.findComponent(ChatColumn).props("canSend")).toBe(true);
   w.unmount();
 });

@@ -166,5 +166,6 @@
   "session.access": "Access token (if required)",
   "session.memory": "The token stays in memory and must be entered again after a page refresh.",
   "session.new": "Start new claim",
-  "session.newNote": "Starting a new claim keeps the previous claim saved. This browser will return to the new claim."
+  "session.newNote": "Starting a new claim keeps the previous claim saved. This browser will return to the new claim.",
+  "session.pending": "Your last message is unfinished. Retry to continue with the saved message and attachment."
 }

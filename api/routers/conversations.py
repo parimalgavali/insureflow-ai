@@ -14,7 +14,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy import text as sql_text
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import object_session, selectinload
 
 from api import sse
 from api.agent.graph import thread_config
@@ -61,11 +61,21 @@ class ConversationOut(BaseModel):
     card: ClaimCard | None = None
     history: list[HistoryEntry]
     missing: list[str]
+    pending_operation_id: uuid.UUID | None = None
 
 
 def _conversation_out(conv: Conversation) -> ConversationOut:
     card = ClaimCard.model_validate(conv.claim.card) if conv.claim and conv.claim.card else None
+    pending = object_session(conv).scalar(
+        select(MessageOperation.id)
+        .where(
+            MessageOperation.conversation_id == conv.id,
+            MessageOperation.response.is_(None),
+        )
+        .limit(1)
+    )
     return ConversationOut(
+        pending_operation_id=pending,
         id=conv.id,
         language=conv.language,
         status=conv.status,
@@ -190,6 +200,22 @@ def post_message(
         if attachment is not None:
             Path(attachment.path).unlink(missing_ok=True)
         raise
+    return StreamingResponse(
+        _stream_operation(state, conversation_id, operation_id),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/{conversation_id}/messages/{operation_id}/retry")
+def retry_saved_message(
+    conversation_id: uuid.UUID, operation_id: uuid.UUID, state=Depends(get_state)
+):
+    """Resume saved input after reload without asking for the upload again."""
+    with state.session() as session:
+        _load(session, conversation_id)
+        if session.get(MessageOperation, (conversation_id, operation_id)) is None:
+            raise HTTPException(404, "saved message not found")
     return StreamingResponse(
         _stream_operation(state, conversation_id, operation_id),
         media_type="text/event-stream",

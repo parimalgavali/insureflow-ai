@@ -86,6 +86,7 @@ export interface Message {
 }
 
 export interface Conversation {
+  pending_operation_id?: string | null;
   id: string;
   language: Language;
   status: ClaimStatus;
@@ -266,6 +267,15 @@ export async function sendMessage(
   const res = await expectOk(
     await fetch(`${BASE}/api/conversations/${conversationId}/messages`, { method: "POST", headers: headers(false), body: form }),
   );
+  return receiveEvents(res, onEvent);
+}
+
+export async function retrySavedMessage(conversationId: string, operationId: string, onEvent: (event: AgentEvent) => void): Promise<void> {
+  const res = await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(operationId)}/retry`, { method: "POST", headers: headers(false) }));
+  return receiveEvents(res, onEvent);
+}
+
+async function receiveEvents(res: Response, onEvent: (event: AgentEvent) => void): Promise<void> {
   if (!res.body) throw new Error("streaming not supported by this browser");
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

@@ -166,5 +166,6 @@
   "session.access": "Zugangstoken (falls erforderlich)",
   "session.memory": "Das Token bleibt nur im Arbeitsspeicher und muss nach einem Neuladen erneut eingegeben werden.",
   "session.new": "Neuen Schaden beginnen",
-  "session.newNote": "Der bisherige Schaden bleibt gespeichert. Dieser Browser kehrt künftig zum neuen Schaden zurück."
+  "session.newNote": "Der bisherige Schaden bleibt gespeichert. Dieser Browser kehrt künftig zum neuen Schaden zurück.",
+  "session.pending": "Ihre letzte Nachricht ist noch nicht abgeschlossen. Versuchen Sie es mit der gespeicherten Nachricht und dem Anhang erneut."
 }

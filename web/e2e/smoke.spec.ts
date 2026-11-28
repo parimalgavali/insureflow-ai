@@ -42,6 +42,12 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByTestId("risk-missing")).toContainText("Police informed");
   await expect(page.getByTestId("risk")).toHaveCount(0);
 
+  const savedId = await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"));
+  await page.reload();
+  await expect(composer).toBeEnabled();
+  await expect(page.getByRole("log")).toContainText(MSG1);
+  expect(await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"))).toBe(savedId);
+
   // Lose the terminal response after a message with a file has been saved.
   let savedConversationUrl = "";
   await page.route("**/api/conversations/*/messages", async (route) => {
@@ -113,6 +119,8 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await page.getByRole("button", { name: "Lock queue" }).click();
   await page.getByTestId("reviewer-link").click();
   await expect(page.getByTestId("information-request")).toContainText("police report and repair estimate");
+  await page.reload();
+  await expect(page.getByTestId("information-request")).toContainText("police report and repair estimate");
   await expect(composer).toBeEnabled();
   await composer.fill("The police have now been informed. The repair estimate is 1200 Euro.");
   await composer.press("Enter");
@@ -150,4 +158,13 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await page.reload();
   await expect(page.getByTestId("history-event")).toHaveCount(8);
   await expect(page.getByTestId("claim-history")).toContainText("Checked the updated claim details.");
+  await page.goto("/");
+  await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText(/reviewed/i);
+  await page.getByTestId("new-claim").click();
+  await expect(page.getByLabel("Claim card").getByTestId("status")).toHaveText("Collecting facts");
+  expect(await page.evaluate(() => localStorage.getItem("claimpilot_conversation_id"))).not.toBe(savedId);
+  const oldClaim = await (await page.request.get(savedConversationUrl)).json();
+  expect(oldClaim.status).toBe("reviewed");
+  expect(oldClaim.history).toHaveLength(8);
+
 });

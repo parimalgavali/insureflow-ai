@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { locale, setLocale, t } from "./i18n";
-import { createConversation, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, type Language, type ReviewerClaim } from "./api/client";
+import { createConversation, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type Language, type ReviewerClaim } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
 import ClaimCard from "./components/ClaimCard.vue";
 import EvalPage from "./components/EvalPage.vue";
@@ -47,7 +47,8 @@ async function start(language: Language, forceNew = false) {
     pendingMessage = null;
     retryCorrection.value = null;
     retrySubmission.value = false;
-    messageNeedsRetry.value = false;
+    messageNeedsRetry.value = !!store.pendingOperationId;
+    if (store.pendingOperationId) store.error = t("session.pending");
   } catch {
     if (version === openVersion) openError.value = true;
   } finally {
@@ -56,7 +57,7 @@ async function start(language: Language, forceNew = false) {
 }
 
 function retryOpen() {
-  setAccessToken(accessDraft.value);
+  if (accessDraft.value.trim()) setAccessToken(accessDraft.value);
   accessDraft.value = "";
   return start(locale.value);
 }
@@ -129,12 +130,31 @@ async function correct(patch: Record<string, unknown> = {}, refresh = false) {
   }
 }
 
+async function resumeSavedMessage() {
+  if (!store.conversationId || !store.pendingOperationId || store.busy) return;
+  store.busy = true;
+  store.error = null;
+  try {
+    await retrySavedMessage(store.conversationId, store.pendingOperationId, (event) => {
+      reduce(store, event.type === "error" ? { type: "error", data: { message: t("chat.sendFailed") } } : event);
+      store.busy = true;
+    });
+    if (!store.error) loadConversation(store, await getConversation(store.conversationId));
+  } catch {
+    store.error = t("chat.sendFailed");
+  } finally {
+    messageNeedsRetry.value = !!store.pendingOperationId || !!store.error;
+    finishTurn(store);
+  }
+}
+
 function retry() {
   store.error = null;
   if (retrySubmission.value) return submit();
   if (retryCorrection.value) return correct(retryCorrection.value.patch, retryCorrection.value.refresh);
   if (!store.conversationId) return start(store.language);
   if (pendingMessage) return send(pendingMessage.text, pendingMessage.file, true);
+  if (store.pendingOperationId) return resumeSavedMessage();
 }
 
 async function switchLanguage(lang: Language) {
