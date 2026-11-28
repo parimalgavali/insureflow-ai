@@ -11,6 +11,7 @@ export interface ChatItem {
 
 export interface State {
   conversationId: string | null;
+  pendingOperationId: string | null;
   claimId: string | null;
   language: Language;
   messages: ChatItem[];
@@ -31,6 +32,7 @@ export interface State {
 export function initialState(): State {
   return {
     conversationId: null,
+    pendingOperationId: null,
     claimId: null,
     language: "de",
     messages: [],
@@ -54,6 +56,7 @@ const nextId = () => `m${++counter}`;
 
 export function loadConversation(state: State, conv: Conversation): void {
   state.conversationId = conv.id;
+  state.pendingOperationId = conv.pending_operation_id ?? null;
   state.claimId = conv.claim_id;
   state.language = conv.language;
   state.status = conv.status;

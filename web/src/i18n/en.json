@@ -160,5 +160,12 @@
   "uncertainty.next.conflicting_evidence": "Ask a claims handler to compare the conflicting information before deciding.",
   "uncertainty.next.human_review": "Send the claim for review or respond to the reviewer’s request for details.",
   "uncertainty.preliminary": "This is preliminary guidance using model terms. A cited clause is a reference, not proof of cover or a payment decision.",
-  "chat.sendFailed": "Your message could not be completed. Retry to continue with the same text and attachment."
+  "chat.sendFailed": "Your message could not be completed. Retry to continue with the same text and attachment.",
+  "session.loading": "Opening your saved claim…",
+  "session.unavailable": "We could not open your saved claim. It may be missing, access may be required, or the service may be unavailable. Retry or start a new claim.",
+  "session.access": "Access token (if required)",
+  "session.memory": "The token stays in memory and must be entered again after a page refresh.",
+  "session.new": "Start new claim",
+  "session.newNote": "Starting a new claim keeps the previous claim saved. This browser will return to the new claim.",
+  "session.pending": "Your last message is unfinished. Retry to continue with the saved message and attachment."
 }

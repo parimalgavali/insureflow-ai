@@ -702,6 +702,13 @@ def test_bearer_token_required_when_configured(tmp_path: Path):
     with TestClient(create_app(lambda: make_state(tmp_path, token="s3cret"))) as c:
         assert c.get("/api/health").status_code == 200  # health stays open
         assert c.post("/api/conversations", json={}).status_code == 401
+        assert c.get("/api/conversations/00000000-0000-0000-0000-000000000000").status_code == 401
+        assert (
+            c.post(
+                "/api/conversations/00000000-0000-0000-0000-000000000000/messages/00000000-0000-0000-0000-000000000000/retry"
+            ).status_code
+            == 401
+        )
         assert (
             c.patch(
                 "/api/claims/00000000-0000-0000-0000-000000000000/facts",
@@ -956,3 +963,37 @@ def test_disconnected_stream_releases_execution_lock_and_can_resume(client, monk
     assert [c["tag"] for c in state.provider.calls] == ["extract", "followup"]
     messages = client.get(f"/api/conversations/{cid}").json()["messages"]
     assert [m["role"] for m in messages] == ["assistant", "user", "assistant"]
+
+
+def test_reload_can_resume_saved_message_with_attachment_without_uploading_again(
+    client, monkeypatch
+):
+    state = client.app.state.claimpilot
+    cid = client.post("/api/conversations", json={}).json()["id"]
+    oid = str(uuid.uuid4())
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("service interruption")
+        yield
+
+    with monkeypatch.context() as patch:
+        patch.setattr(state.graph, "stream", fail)
+        result = client.post(
+            f"/api/conversations/{cid}/messages",
+            data={"text": MSG1, "operation_id": oid},
+            files={"file": ("saved.pdf", b"sample", "application/pdf")},
+        )
+    assert parse_sse(result.text)[-1][0] == "error"
+    restored = client.get(f"/api/conversations/{cid}").json()
+    assert restored["pending_operation_id"] == oid
+    retry_url = f"/api/conversations/{cid}/messages/{oid}/retry"
+    assert parse_sse(client.post(retry_url).text)[-1][0] == "done"
+    calls = len(state.provider.calls)
+    assert parse_sse(client.post(retry_url).text)[-1][0] == "done"
+    assert len(state.provider.calls) == calls
+    restored = client.get(f"/api/conversations/{cid}").json()
+    assert restored["pending_operation_id"] is None
+    assert [m["role"] for m in restored["messages"]] == ["assistant", "user", "assistant"]
+    assert len(list(state.settings.upload_dir.rglob("*_saved.pdf"))) == 1
+    other = client.post("/api/conversations", json={}).json()["id"]
+    assert client.post(f"/api/conversations/{other}/messages/{oid}/retry").status_code == 404

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sendMessage } from "../src/api/client";
+import { sendMessage, setAccessToken } from "../src/api/client";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { setAccessToken(""); vi.unstubAllGlobals(); });
 function respond(body: string) {
   const fetch = vi.fn().mockResolvedValue(new Response(body, { status: 200 }));
   vi.stubGlobal("fetch", fetch);
@@ -32,4 +32,14 @@ describe("message stream", () => {
     await sendMessage("conversation", "Hello", null, receive);
     expect(receive).toHaveBeenCalledWith({ type: "error", data: { message: "Please retry" } });
   });
+});
+
+
+it("uses an in-memory credential without persisting it", async () => {
+  const fetch = respond('event: done\ndata: {"status":"collecting","claim_id":"claim"}\n\n');
+  setAccessToken("sample-access");
+  await sendMessage("conversation", "Hello", null, vi.fn());
+  expect(fetch.mock.calls[0][1].headers.authorization).toBe("Bearer sample-access");
+  expect(localStorage.getItem("claimpilot_token")).toBeNull();
+  expect(sessionStorage.getItem("claimpilot_token")).toBeNull();
 });

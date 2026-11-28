@@ -86,6 +86,7 @@ export interface Message {
 }
 
 export interface Conversation {
+  pending_operation_id?: string | null;
   id: string;
   language: Language;
   status: ClaimStatus;
@@ -164,11 +165,15 @@ export async function fetchReviewerClaim(claimId: string, token: string): Promis
   return (await expectOk(res)).json();
 }
 
+let accessToken: string | null = null;
+export function setAccessToken(token: string): void { accessToken = token.trim() || null; }
+// Discard credentials left by older versions instead of reusing browser storage.
+try { localStorage.removeItem("claimpilot_token"); } catch { /* Storage may be unavailable. */ }
+
 function headers(json = true): HeadersInit {
   const h: Record<string, string> = {};
   if (json) h["content-type"] = "application/json";
-  const token = typeof localStorage !== "undefined" ? localStorage.getItem("claimpilot_token") : null;
-  if (token) h.authorization = `Bearer ${token}`;
+  if (accessToken) h.authorization = `Bearer ${accessToken}`;
   return h;
 }
 
@@ -187,7 +192,7 @@ export async function createConversation(language: Language, policy?: Partial<Po
 }
 
 export async function getConversation(id: string): Promise<Conversation> {
-  return (await expectOk(await fetch(`${BASE}/api/conversations/${id}`, { headers: headers(false) }))).json();
+  return (await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(id)}`, { headers: headers(false) }))).json();
 }
 
 export async function fetchClaimHistory(claimId: string, token?: string): Promise<HistoryEntry[]> {
@@ -262,6 +267,15 @@ export async function sendMessage(
   const res = await expectOk(
     await fetch(`${BASE}/api/conversations/${conversationId}/messages`, { method: "POST", headers: headers(false), body: form }),
   );
+  return receiveEvents(res, onEvent);
+}
+
+export async function retrySavedMessage(conversationId: string, operationId: string, onEvent: (event: AgentEvent) => void): Promise<void> {
+  const res = await expectOk(await fetch(`${BASE}/api/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(operationId)}/retry`, { method: "POST", headers: headers(false) }));
+  return receiveEvents(res, onEvent);
+}
+
+async function receiveEvents(res: Response, onEvent: (event: AgentEvent) => void): Promise<void> {
   if (!res.body) throw new Error("streaming not supported by this browser");
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

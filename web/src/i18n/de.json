@@ -160,5 +160,12 @@
   "uncertainty.next.conflicting_evidence": "Bitten Sie einen Sachbearbeiter, die widersprüchlichen Angaben vor einer Entscheidung zu vergleichen.",
   "uncertainty.next.human_review": "Reichen Sie den Schaden zur Prüfung ein oder beantworten Sie die Rückfrage des Sachbearbeiters.",
   "uncertainty.preliminary": "Dies ist eine vorläufige Einschätzung anhand von Musterbedingungen. Ein Klauselverweis ist kein Deckungsnachweis und keine Zahlungszusage.",
-  "chat.sendFailed": "Ihre Nachricht konnte nicht abgeschlossen werden. Versuchen Sie es mit demselben Text und Anhang erneut."
+  "chat.sendFailed": "Ihre Nachricht konnte nicht abgeschlossen werden. Versuchen Sie es mit demselben Text und Anhang erneut.",
+  "session.loading": "Ihr gespeicherter Schaden wird geöffnet…",
+  "session.unavailable": "Ihr gespeicherter Schaden konnte nicht geöffnet werden. Er fehlt möglicherweise, erfordert einen Zugang oder der Dienst ist nicht verfügbar. Versuchen Sie es erneut oder beginnen Sie einen neuen Schaden.",
+  "session.access": "Zugangstoken (falls erforderlich)",
+  "session.memory": "Das Token bleibt nur im Arbeitsspeicher und muss nach einem Neuladen erneut eingegeben werden.",
+  "session.new": "Neuen Schaden beginnen",
+  "session.newNote": "Der bisherige Schaden bleibt gespeichert. Dieser Browser kehrt künftig zum neuen Schaden zurück.",
+  "session.pending": "Ihre letzte Nachricht ist noch nicht abgeschlossen. Versuchen Sie es mit der gespeicherten Nachricht und dem Anhang erneut."
 }

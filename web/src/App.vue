@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { locale, setLocale, t } from "./i18n";
-import { createConversation, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, type Language, type ReviewerClaim } from "./api/client";
+import { createConversation, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage, type Language, type ReviewerClaim } from "./api/client";
 import ChatColumn from "./components/ChatColumn.vue";
 import ClaimCard from "./components/ClaimCard.vue";
 import EvalPage from "./components/EvalPage.vue";
 import ReviewerQueue from "./components/ReviewerQueue.vue";
 import HistoryPage from "./components/HistoryPage.vue";
-import { applyReview, beginTurn, finishTurn, loadConversation, reduce, store } from "./store";
+import { currentClaim, rememberClaim } from "./currentClaim";
+import { applyReview, beginTurn, finishTurn, loadConversation, initialState, reduce, store } from "./store";
 
 const showEval = ref(location.hash === "#eval");
 const showReviewer = ref(location.hash === "#review");
 const historyId = ref(location.hash.startsWith("#history/") ? location.hash.slice(9) : null);
 const retrySubmission = ref(false);
+const opening = ref(false);
+const openError = ref(false);
+const accessDraft = ref("");
+let openVersion = 0;
 const messageNeedsRetry = ref(false);
 let pendingMessage: { text: string; file: File | null; language: Language; id: string; before: typeof store.messages } | null = null;
 const retryCorrection = ref<{ patch: Record<string, unknown>; refresh: boolean } | null>(null);
@@ -23,16 +28,38 @@ function navigate() {
   if (!showEval.value && !showReviewer.value && !historyId.value && !store.conversationId) start(locale.value);
 }
 window.addEventListener("hashchange", navigate);
-onUnmounted(() => window.removeEventListener("hashchange", navigate));
+onUnmounted(() => { window.removeEventListener("hashchange", navigate); openVersion++; accessDraft.value = ""; setAccessToken(""); });
 
-const canSend = computed(() => store.conversationId !== null && !messageNeedsRetry.value && ["collecting", "information_needed"].includes(store.status));
+const canSend = computed(() => store.conversationId !== null && !opening.value && !openError.value && !messageNeedsRetry.value && ["collecting", "information_needed"].includes(store.status));
 
-async function start(language: Language) {
+async function start(language: Language, forceNew = false) {
+  if (opening.value || store.busy) return;
+  const version = ++openVersion;
+  opening.value = true;
+  openError.value = false;
   try {
-    loadConversation(store, await createConversation(language));
-  } catch (e) {
-    store.error = (e as Error).message;
+    const saved = forceNew ? null : currentClaim();
+    const conversation = saved ? await getConversation(saved) : await createConversation(language);
+    if (version !== openVersion) return;
+    Object.assign(store, initialState());
+    loadConversation(store, conversation);
+    rememberClaim(conversation.id);
+    pendingMessage = null;
+    retryCorrection.value = null;
+    retrySubmission.value = false;
+    messageNeedsRetry.value = !!store.pendingOperationId;
+    if (store.pendingOperationId) store.error = t("session.pending");
+  } catch {
+    if (version === openVersion) openError.value = true;
+  } finally {
+    if (version === openVersion) opening.value = false;
   }
+}
+
+function retryOpen() {
+  if (accessDraft.value.trim()) setAccessToken(accessDraft.value);
+  accessDraft.value = "";
+  return start(locale.value);
 }
 
 async function send(text: string, file: File | null, retrying = false) {
@@ -103,19 +130,38 @@ async function correct(patch: Record<string, unknown> = {}, refresh = false) {
   }
 }
 
+async function resumeSavedMessage() {
+  if (!store.conversationId || !store.pendingOperationId || store.busy) return;
+  store.busy = true;
+  store.error = null;
+  try {
+    await retrySavedMessage(store.conversationId, store.pendingOperationId, (event) => {
+      reduce(store, event.type === "error" ? { type: "error", data: { message: t("chat.sendFailed") } } : event);
+      store.busy = true;
+    });
+    if (!store.error) loadConversation(store, await getConversation(store.conversationId));
+  } catch {
+    store.error = t("chat.sendFailed");
+  } finally {
+    messageNeedsRetry.value = !!store.pendingOperationId || !!store.error;
+    finishTurn(store);
+  }
+}
+
 function retry() {
   store.error = null;
   if (retrySubmission.value) return submit();
   if (retryCorrection.value) return correct(retryCorrection.value.patch, retryCorrection.value.refresh);
   if (!store.conversationId) return start(store.language);
   if (pendingMessage) return send(pendingMessage.text, pendingMessage.file, true);
+  if (store.pendingOperationId) return resumeSavedMessage();
 }
 
 async function switchLanguage(lang: Language) {
   setLocale(lang);
   if (showReviewer.value || showEval.value || historyId.value) return;
   const hasUserMessages = store.messages.some((m) => m.role === "user");
-  if (!hasUserMessages) return start(lang); // fresh greeting in the new language
+  if (!hasUserMessages && !openError.value) return start(lang, true); // fresh greeting in the new language
   store.language = lang; // agent follows the toggle from the next message on
 }
 
@@ -147,8 +193,22 @@ onMounted(() => {
     <EvalPage v-else-if="showEval" />
     <HistoryPage v-else-if="historyId" :claim-id="historyId" />
     <template v-else>
-    <ChatColumn :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" @send="send" @retry="retry" />
-    <ClaimCard :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry" :claim-id="store.claimId" :history="store.history" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
+    <section class="panel" data-testid="claim-session">
+      <p v-if="opening" role="status">{{ t("session.loading") }}</p>
+      <div v-if="openError" role="alert">
+        <p>{{ t("session.unavailable") }}</p>
+        <form @submit.prevent="retryOpen">
+          <label for="claim-access">{{ t("session.access") }}</label>
+          <input id="claim-access" v-model="accessDraft" type="password" autocomplete="off" :disabled="opening" />
+          <p>{{ t("session.memory") }}</p>
+          <button class="btn" :disabled="opening">{{ t("chat.retry") }}</button>
+        </form>
+      </div>
+      <button class="btn" data-testid="new-claim" :disabled="opening || store.busy" @click="start(locale, true)">{{ t("session.new") }}</button>
+      <p>{{ t("session.newNote") }}</p>
+    </section>
+    <ChatColumn v-if="!openError && !opening" :key="store.conversationId || 'new'" :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" @send="send" @retry="retry" />
+    <ClaimCard v-if="!openError && !opening" :key="store.conversationId || 'new'" :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry" :claim-id="store.claimId" :history="store.history" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
     </template>
   </div>
 </template>
