@@ -13,6 +13,7 @@ const showEval = ref(location.hash === "#eval");
 const showReviewer = ref(location.hash === "#review");
 const historyId = ref(location.hash.startsWith("#history/") ? location.hash.slice(9) : null);
 const retrySubmission = ref(false);
+let pendingMessage: { text: string; file: File | null; language: Language; id: string; before: typeof store.messages } | null = null;
 const retryCorrection = ref<{ patch: Record<string, unknown>; refresh: boolean } | null>(null);
 function navigate() {
   showEval.value = location.hash === "#eval";
@@ -33,15 +34,29 @@ async function start(language: Language) {
   }
 }
 
-async function send(text: string, file: File | null) {
-  if (!store.conversationId) return;
+async function send(text: string, file: File | null, retrying = false) {
+  if (!store.conversationId || store.busy) return;
   retryCorrection.value = null;
   retrySubmission.value = false;
-  beginTurn(store, text);
+  if (!retrying || !pendingMessage) {
+    pendingMessage = { text, file, language: store.language, id: crypto.randomUUID(), before: store.messages.map((m) => ({ ...m })) };
+  } else {
+    store.messages = pendingMessage.before.map((m) => ({ ...m }));
+  }
+  const operation = pendingMessage;
+  beginTurn(store, operation.text);
   try {
-    await sendMessage(store.conversationId, text, file, (event) => reduce(store, event), store.language);
-  } catch (e) {
-    store.error = (e as Error).message;
+    await sendMessage(store.conversationId, operation.text, operation.file, (event) => {
+      reduce(store, event.type === "error" ? { type: "error", data: { message: t("chat.sendFailed") } } : event);
+      store.busy = true; // Keep the turn locked until canonical state has been restored.
+    }, operation.language, operation.id);
+    if (!store.error) {
+      loadConversation(store, await getConversation(store.conversationId));
+      pendingMessage = null;
+    }
+  } catch {
+    store.error = t("chat.sendFailed");
+  } finally {
     finishTurn(store);
   }
 }
@@ -90,9 +105,7 @@ function retry() {
   if (retrySubmission.value) return submit();
   if (retryCorrection.value) return correct(retryCorrection.value.patch, retryCorrection.value.refresh);
   if (!store.conversationId) return start(store.language);
-  const last = store.lastUserText;
-  store.messages = store.messages.filter((m) => !(m.role === "user" && m.content === last && m === store.messages.at(-1)));
-  if (last) return send(last, null);
+  if (pendingMessage) return send(pendingMessage.text, pendingMessage.file, true);
 }
 
 async function switchLanguage(lang: Language) {

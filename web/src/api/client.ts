@@ -252,9 +252,11 @@ export async function sendMessage(
   file: File | null,
   onEvent: (event: AgentEvent) => void,
   language?: Language,
+  operationId?: string,
 ): Promise<void> {
   const form = new FormData();
   form.append("text", text);
+  if (operationId) form.append("operation_id", operationId);
   if (file) form.append("file", file);
   if (language) form.append("language", language);
   const res = await expectOk(
@@ -264,16 +266,22 @@ export async function sendMessage(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let terminal = false;
+  const dispatch = (event: AgentEvent) => {
+    if (event.type === "done" || event.type === "error") terminal = true;
+    onEvent(event);
+  };
   for (;;) {
     const { value, done } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const parsed = parseSse(buffer);
     buffer = parsed.rest;
-    parsed.events.forEach(onEvent);
+    parsed.events.forEach(dispatch);
   }
   const tail = parseSse(buffer + "\n\n");
-  tail.events.forEach(onEvent);
+  tail.events.forEach(dispatch);
+  if (!terminal) throw new Error("Response interrupted. Please retry.");
 }
 
 export interface EvalRow {

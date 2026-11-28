@@ -159,5 +159,6 @@
   "uncertainty.next.missing_policy_wording": "Stellen Sie die passende Klausel aus Ihrem tatsächlichen Vertrag zur Prüfung bereit.",
   "uncertainty.next.conflicting_evidence": "Bitten Sie einen Sachbearbeiter, die widersprüchlichen Angaben vor einer Entscheidung zu vergleichen.",
   "uncertainty.next.human_review": "Reichen Sie den Schaden zur Prüfung ein oder beantworten Sie die Rückfrage des Sachbearbeiters.",
-  "uncertainty.preliminary": "Dies ist eine vorläufige Einschätzung anhand von Musterbedingungen. Ein Klauselverweis ist kein Deckungsnachweis und keine Zahlungszusage."
+  "uncertainty.preliminary": "Dies ist eine vorläufige Einschätzung anhand von Musterbedingungen. Ein Klauselverweis ist kein Deckungsnachweis und keine Zahlungszusage.",
+  "chat.sendFailed": "Ihre Nachricht konnte nicht abgeschlossen werden. Versuchen Sie es mit demselben Text und Anhang erneut."
 }

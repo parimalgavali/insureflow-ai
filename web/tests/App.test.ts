@@ -1,6 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App.vue";
+import ChatColumn from "../src/components/ChatColumn.vue";
 import HistoryPage from "../src/components/HistoryPage.vue";
 import { createConversation, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation } from "../src/api/client";
 import { initialState, store } from "../src/store";
@@ -24,7 +25,7 @@ const card = {
 function mountApp() {
   return mount(App, { global: { stubs: {
     ClaimCard: { emits: ["submit", "review", "customerCorrect", "customerRefresh"], template: '<div><button data-testid="send-claim" @click="$emit(\'submit\')">Submit</button><button data-testid="correct-facts" @click="$emit(\'customerCorrect\', { location: \'Berlin\' })">Correct</button><button data-testid="refresh-facts" @click="$emit(\'customerRefresh\')">Refresh</button></div>' },
-    ChatColumn: { emits: ["retry"], template: '<button data-testid="retry-action" @click="$emit(\'retry\')">Retry</button>' },
+    ChatColumn: { emits: ["retry", "send"], template: '<button data-testid="retry-action" @click="$emit(\'retry\')">Retry</button>' },
     EvalPage: true,
     ReviewerQueue: true,
     HistoryPage: true,
@@ -113,4 +114,32 @@ describe("customer submission", () => {
     expect(store.error).toBeNull();
     w.unmount();
   });
+});
+
+
+it("retries the original file and operation without duplicating the optimistic message", async () => {
+  const w = mountApp();
+  await flushPromises();
+  store.status = "collecting";
+  const file = new File(["sample"], "claim.pdf", { type: "application/pdf" });
+  vi.mocked(sendMessage).mockRejectedValueOnce(new Error("Network lost"));
+  w.findComponent(ChatColumn).vm.$emit("send", "Original text", file);
+  await flushPromises();
+  expect(store.busy).toBe(false);
+  expect(store.error).toContain("Retry");
+  const first = vi.mocked(sendMessage).mock.calls[0];
+  expect(first[2]).toBe(file);
+  vi.mocked(sendMessage).mockResolvedValueOnce(undefined);
+  vi.mocked(getConversation).mockResolvedValueOnce({ id: "conversation-1", claim_id: "claim-1", language: "en", status: "collecting", card: null, policy: {}, messages: [{ id: "saved", role: "user", content: "Original text" }] } as never);
+  await w.get('[data-testid="retry-action"]').trigger("click");
+  await flushPromises();
+  const second = vi.mocked(sendMessage).mock.calls[1];
+  expect(second[1]).toBe(first[1]);
+  expect(second[2]).toBe(file);
+  expect(second[5]).toBe(first[5]);
+  expect(first[5]).toBeTruthy();
+  expect(store.messages.filter((m) => m.role === "user")).toHaveLength(1);
+  expect(store.busy).toBe(false);
+  expect(store.error).toBeNull();
+  w.unmount();
 });
