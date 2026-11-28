@@ -677,3 +677,82 @@ def test_uncited_conclusion_is_replaced_with_no_evidence_answer(tmp_path):
     assert card.coverage_uncertainty == "missing_policy_wording"
     assert "Guaranteed payment" not in card.coverage_summary
     assert card.next_steps == ["Fall wird an einen Sachbearbeiter übergeben"]
+
+
+def test_selected_policy_uses_its_own_passages_and_never_the_demo_retriever(tmp_path):
+    from api.agent.schemas import Citation, CoverageEvidence
+
+    fixture = json.loads(FIXTURE.read_text())
+    fixture["extract"][0]["incident_date"] = "2026-10-25"
+    fixture["compose"][0].update(
+        answer="Selected policy, page 3: collision cover [P.1].", cited_clause_ids=["P.1"]
+    )
+    path = tmp_path / "policy.json"
+    path.write_text(json.dumps(fixture))
+
+    class SelectedPolicy:
+        def retrieve(self, conversation_id, facts, policy):
+            return CoverageEvidence(
+                coverage_source="uploaded_policy",
+                coverage_policy_id="document-1",
+                coverage_policy_name="selected.pdf",
+                coverage_policy_ready=True,
+                retrieved=[
+                    Citation(
+                        clause_id="P.1",
+                        title="Collision",
+                        excerpt="Collision damage is covered subject to the stated conditions.",
+                        page=3,
+                        source="uploaded_policy",
+                        document_id="document-1",
+                        source_name="selected.pdf",
+                    )
+                ],
+            )
+
+    class NoDemo:
+        def retrieve_many(self, *args, **kwargs):
+            pytest.fail("Selected policies must not search demo wording")
+
+    provider = RecordedProvider(path)
+    graph = build_graph(
+        AgentDeps(provider=provider, retriever=NoDemo(), policy_retriever=SelectedPolicy()),
+        checkpointer=MemorySaver(),
+    )
+    card = run_turn(graph, "selected-policy", "Mein geparktes Auto wurde angefahren.")["card"]
+    assert card.coverage_source == "uploaded_policy"
+    assert card.coverage_policy_name == "selected.pdf" and card.coverage_policy_id == "document-1"
+    assert card.coverage_status == "likely_covered"
+    assert card.citations[0].document_id == "document-1" and card.citations[0].page == 3
+    assert "Never supplement" in provider.calls[-1]["system"]
+
+
+@pytest.mark.parametrize("ready", [False, True])
+def test_selected_policy_without_supporting_wording_never_assumes_demo_coverage(tmp_path, ready):
+    from api.agent.schemas import CoverageEvidence
+
+    fixture = json.loads(FIXTURE.read_text())
+    fixture["extract"][0]["incident_date"] = "2026-10-25"
+    path = tmp_path / "policy-gap.json"
+    path.write_text(json.dumps(fixture))
+
+    class SelectedPolicy:
+        def retrieve(self, *args):
+            return CoverageEvidence(
+                coverage_source="uploaded_policy",
+                coverage_policy_id="policy",
+                coverage_policy_name="selected.pdf",
+                coverage_policy_ready=ready,
+            )
+
+    provider = RecordedProvider(path)
+    graph = build_graph(
+        AgentDeps(provider=provider, retriever=make_retriever(), policy_retriever=SelectedPolicy()),
+        checkpointer=MemorySaver(),
+    )
+    card = run_turn(graph, "policy-gap", "Mein geparktes Auto wurde angefahren.")["card"]
+    assert card.coverage_status == "no_evidence"
+    assert card.coverage_source == "uploaded_policy" and card.citations == []
+    assert "Musterbedingungen" not in card.coverage_summary
+    assert "Sachbearbeiter" in card.coverage_summary
+    assert [c["tag"] for c in provider.calls] == ["extract"]

@@ -76,16 +76,30 @@ class PolicyContext(BaseModel):
     region: str | None = None
 
 
+CoverageSource = Literal["standard_demo", "uploaded_policy"]
+
+
 class Citation(BaseModel):
     clause_id: str
     title: str = ""
     excerpt: str
     page: int | None = None
     score: float | None = None
+    source: CoverageSource = "standard_demo"
+    document_id: str | None = None
+    source_name: str | None = None
 
     @property
     def label(self) -> str:
-        return f"AKB 2015 {self.clause_id}"
+        return f"{self.source_name or 'AKB 2015'} {self.clause_id}"
+
+
+class CoverageEvidence(BaseModel):
+    coverage_source: CoverageSource = "standard_demo"
+    coverage_policy_id: str | None = None
+    coverage_policy_name: str | None = None
+    coverage_policy_ready: bool | None = None
+    retrieved: list[Citation] = Field(default_factory=list)
 
 
 class RiskSignal(BaseModel):
@@ -191,6 +205,10 @@ class ClaimCard(BaseModel):
     policy: PolicyContext
     coverage_status: CoverageStatus = "no_evidence"
     coverage_summary: str = ""
+    coverage_source: CoverageSource = "standard_demo"
+    coverage_policy_id: str | None = None
+    coverage_policy_name: str | None = None
+    coverage_policy_ready: bool | None = None
     coverage_uncertainty: CoverageUncertainty | None = None
     citations: list[Citation] = Field(default_factory=list)
     risk: RiskSignal | None = None
