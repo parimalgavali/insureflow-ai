@@ -136,7 +136,7 @@ def test_full_conversation_flow(client: TestClient, tmp_path: Path):
     by_kind = dict(events)
     assert by_kind["risk"]["risk"]["band"] == "medium"
     assert {c["clause_id"] for c in by_kind["citations"]["citations"]} & {"A.2.2.2.2", "E.1.1.1"}
-    assert by_kind["card"]["card"]["coverage_status"] == "likely_covered"
+    assert by_kind["card"]["card"]["coverage_status"] == "unclear"
     assert by_kind["done"] == {
         "status": "assessed",
         "claim_id": claim_id,

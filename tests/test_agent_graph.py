@@ -85,7 +85,7 @@ def test_scripted_hit_and_run_conversation(graph_and_provider):
     cited = {c.clause_id for c in card.citations}
     assert {"A.2.2.2.2", "A.2.5.8", "E.1.1.1", "E.1.1.3"} <= cited
     assert card.risk is not None and card.risk.band == "medium" and len(card.risk.reasons) == 3
-    assert card.coverage_status == "likely_covered"
+    assert card.coverage_status == "unclear"
     assert "[Z.9.9]" not in card.coverage_summary and "[A.2.2.2.2]" in card.coverage_summary
     assert "nicht belegte Klauselangabe" in card.coverage_summary
     assert card.missing_documents and card.next_steps
@@ -634,9 +634,46 @@ def test_initial_incomplete_risk_inputs_skip_custom_scorer_and_allow_submission(
     assert ready["card"].risk is None
     assert ready["card"].risk_status == "insufficient_information"
     assert ready["card"].risk_missing == ["police_report_filed", "witnesses"]
-    assert ready["card"].coverage_status == "likely_covered"
+    assert ready["card"].coverage_status == "unclear"
     assert submit_for_review(graph, "missing-risk")["status"] == "awaiting_review"
     assert (
         resume_review(graph, "missing-risk", ReviewDecision(decision="accept"))["status"]
         == "reviewed"
     )
+
+
+@pytest.mark.parametrize(
+    "reason", ["missing_facts", "missing_policy_wording", "conflicting_evidence", "human_review"]
+)
+def test_reported_uncertainty_prevents_a_definite_coverage_badge(tmp_path, reason):
+    fixture = json.loads(FIXTURE.read_text())
+    fixture["extract"][0]["incident_date"] = "2026-10-25"
+    fixture["compose"][0].update(coverage_uncertainty=reason)
+    fixture["compose"][0]["answer"] = "Needs review [A.2.2.2.2]."
+    fixture["compose"][0]["cited_clause_ids"] = ["A.2.2.2.2"]
+    path = tmp_path / "uncertain.json"
+    path.write_text(json.dumps(fixture))
+    graph = build_graph(
+        AgentDeps(provider=RecordedProvider(path), retriever=make_retriever()),
+        checkpointer=MemorySaver(),
+    )
+    card = run_turn(graph, reason, "Mein Auto wurde angefahren.")["card"]
+    assert card.coverage_status == "unclear"
+    assert card.coverage_uncertainty == reason
+
+
+def test_uncited_conclusion_is_replaced_with_no_evidence_answer(tmp_path):
+    fixture = json.loads(FIXTURE.read_text())
+    fixture["extract"][0]["incident_date"] = "2026-10-25"
+    fixture["compose"][0].update(answer="Guaranteed payment.", cited_clause_ids=[])
+    path = tmp_path / "unsupported.json"
+    path.write_text(json.dumps(fixture))
+    graph = build_graph(
+        AgentDeps(provider=RecordedProvider(path), retriever=make_retriever()),
+        checkpointer=MemorySaver(),
+    )
+    card = run_turn(graph, "unsupported", "Mein Auto wurde angefahren.")["card"]
+    assert card.coverage_status == "no_evidence"
+    assert card.coverage_uncertainty == "missing_policy_wording"
+    assert "Guaranteed payment" not in card.coverage_summary
+    assert card.next_steps == ["Fall wird an einen Sachbearbeiter übergeben"]

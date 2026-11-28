@@ -384,10 +384,26 @@ def build_graph(deps: AgentDeps, checkpointer=None):
                 else " (Note: an unsupported clause reference was removed.)"
             )
             answer += note
+        uncertainty = output.coverage_uncertainty
+        coverage_status = output.coverage_status if retrieved else "no_evidence"
+        if not retrieved or not cited:
+            fallback = _no_evidence_output(language)
+            answer = fallback.answer
+            output = fallback
+            coverage_status = "no_evidence"
+            uncertainty = "missing_policy_wording"
+        elif dropped:
+            coverage_status = "unclear"
+            uncertainty = "human_review"
+        elif uncertainty:
+            coverage_status = "unclear"
+        elif coverage_status == "unclear":
+            uncertainty = "human_review"
         card = ClaimCard(
             facts=facts,
             policy=policy,
-            coverage_status=output.coverage_status if retrieved else "no_evidence",
+            coverage_status=coverage_status,
+            coverage_uncertainty=uncertainty,
             coverage_summary=answer,
             citations=[c for c in retrieved if c.clause_id in cited] or retrieved[:3],
             risk=state.get("risk"),

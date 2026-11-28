@@ -188,3 +188,14 @@ it("shows needed inputs instead of an old risk band and retains the human guidan
   expect(w.find('[data-testid="risk-insufficient"]').exists()).toBe(false);
   expect(w.get('[data-testid="risk-unavailable"]').text()).toContain("temporarily unavailable");
 });
+
+it("explains coverage uncertainty with a next step and labels citations as references", async () => {
+  const w = mount(ClaimCard, { props: { facts: card.facts, missing: [], citations: card.citations, risk: card.risk, card: { ...card, coverage_status: "unclear", coverage_uncertainty: "conflicting_evidence" }, status: "assessed", busy: false } });
+  expect(w.get('[data-testid="coverage-uncertainty"]').text()).toContain("information conflicts");
+  expect(w.get('[data-testid="coverage-uncertainty"]').text()).toContain("compare the conflicting information");
+  expect(w.text()).toContain("not proof of cover");
+  await w.setProps({ missing: ["incident_date"] });
+  expect(w.get('[data-testid="coverage-uncertainty"]').text()).toContain("claim details are missing");
+  await w.setProps({ missing: [], card: { ...card, coverage_status: "no_evidence" } });
+  expect(w.get('[data-testid="coverage-uncertainty"]').text()).toContain("actual policy");
+});

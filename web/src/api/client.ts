@@ -63,6 +63,7 @@ export interface ClaimCard {
   policy: PolicyContext;
   coverage_status: CoverageStatus;
   coverage_summary: string;
+  coverage_uncertainty?: "missing_facts" | "missing_policy_wording" | "conflicting_evidence" | "human_review" | null;
   citations: Citation[];
   risk: RiskSignal | null;
   risk_status?: RiskStatus;

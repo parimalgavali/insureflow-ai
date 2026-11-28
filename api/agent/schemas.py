@@ -25,6 +25,9 @@ EventType = Literal[
 ]
 CoverageStatus = Literal["likely_covered", "likely_not_covered", "unclear", "no_evidence"]
 ClaimStatus = Literal["collecting", "assessed", "awaiting_review", "information_needed", "reviewed"]
+CoverageUncertainty = Literal[
+    "missing_facts", "missing_policy_wording", "conflicting_evidence", "human_review"
+]
 RiskBand = Literal["low", "medium", "high"]
 RiskStatus = Literal["pending", "available", "insufficient_information", "unavailable"]
 
@@ -188,6 +191,7 @@ class ClaimCard(BaseModel):
     policy: PolicyContext
     coverage_status: CoverageStatus = "no_evidence"
     coverage_summary: str = ""
+    coverage_uncertainty: CoverageUncertainty | None = None
     citations: list[Citation] = Field(default_factory=list)
     risk: RiskSignal | None = None
     risk_status: RiskStatus = "pending"
@@ -223,6 +227,7 @@ class ComposeOutput(BaseModel):
         description="Reply to the policyholder in their language, with [A.2.2.1.4]-style citations"
     )
     coverage_status: CoverageStatus
+    coverage_uncertainty: CoverageUncertainty | None = None
     cited_clause_ids: list[str] = Field(default_factory=list)
     missing_documents: list[str] = Field(default_factory=list)
     next_steps: list[str] = Field(default_factory=list)

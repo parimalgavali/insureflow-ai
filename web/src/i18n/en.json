@@ -150,5 +150,14 @@
   "risk.needed": "To calculate a risk signal, provide:",
   "risk.unavailable": "Risk signal temporarily unavailable. A human can still review this claim.",
   "risk.policy_product": "Policy product",
-  "risk.policy_deductible": "Policy deductible"
+  "risk.policy_deductible": "Policy deductible",
+  "uncertainty.missing_facts": "Some claim details are missing.",
+  "uncertainty.missing_policy_wording": "The available policy wording does not establish coverage for this claim.",
+  "uncertainty.conflicting_evidence": "The available information conflicts, so coverage needs human review.",
+  "uncertainty.human_review": "Coverage needs a claims handler’s review.",
+  "uncertainty.next.missing_facts": "Check and complete the missing details listed above.",
+  "uncertainty.next.missing_policy_wording": "Provide the relevant wording from your actual policy for a claims handler to check.",
+  "uncertainty.next.conflicting_evidence": "Ask a claims handler to compare the conflicting information before deciding.",
+  "uncertainty.next.human_review": "Send the claim for review or respond to the reviewer’s request for details.",
+  "uncertainty.preliminary": "This is preliminary guidance using model terms. A cited clause is a reference, not proof of cover or a payment decision."
 }
