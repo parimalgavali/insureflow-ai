@@ -6,6 +6,7 @@ import ClaimCard from "../src/components/ClaimCard.vue";
 import ChatColumn from "../src/components/ChatColumn.vue";
 import HistoryPage from "../src/components/HistoryPage.vue";
 import { createConversation, decideEvidenceSuggestion, extractEvidence, replaceEvidencePdf, linkChecklistFile, reviewClaim, sendMessage, submitClaim, correctClaimFacts, refreshClaimAssessment, getConversation, setAccessToken, retrySavedMessage } from "../src/api/client";
+import { setLocale } from "../src/i18n";
 import { initialState, store } from "../src/store";
 
 vi.mock("../src/api/client", () => ({
@@ -381,4 +382,31 @@ it("retries a checklist link without sending another message or marking it confi
   expect(sendMessage).not.toHaveBeenCalled();
   expect(store.error).toBeNull();
   w.unmount();
+});
+
+
+it.each([["en", "de"], ["de", "en"]] as const)("switches an existing %s claim to %s without creating or erasing it", async (source, target) => {
+  setLocale(source);
+  localStorage.setItem("claimpilot_conversation_id", `saved-${source}`);
+  vi.mocked(getConversation).mockResolvedValueOnce({ id: `saved-${source}`, claim_id: "claim-1", language: source, status: "collecting", card: null, policy: {}, messages: [{ id: "original", role: "user", content: "Original saved details" }] } as never);
+  const w = mountApp();
+  await flushPromises();
+  const savedId = store.conversationId;
+  await w.get(`[data-testid="lang-${target}"]`).trigger("click");
+  await flushPromises();
+  expect(createConversation).not.toHaveBeenCalled();
+  expect(store.conversationId).toBe(savedId);
+  expect(store.messages[0].content).toBe("Original saved details");
+  expect(store.language).toBe(target);
+  vi.mocked(sendMessage).mockResolvedValueOnce(undefined);
+  vi.mocked(getConversation).mockResolvedValueOnce({ id: savedId, claim_id: "claim-1", language: target, status: "collecting", card: null, policy: {}, messages: [{ id: "original", role: "user", content: "Original saved details" }, { id: "next", role: "user", content: "Follow-up" }] } as never);
+  w.findComponent(ChatColumn).vm.$emit("send", "Follow-up", null);
+  await flushPromises();
+  expect(vi.mocked(sendMessage).mock.calls[0][0]).toBe(savedId);
+  expect(vi.mocked(sendMessage).mock.calls[0][4]).toBe(target);
+  expect(store.language).toBe(target);
+  expect(store.messages[0].content).toBe("Original saved details");
+  expect(localStorage.getItem("claimpilot_conversation_id")).toBe(savedId);
+  w.unmount();
+  setLocale("en");
 });

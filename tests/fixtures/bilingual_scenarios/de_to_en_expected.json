@@ -1,0 +1,27 @@
+{
+  "languages": [
+    "de",
+    "en",
+    "en"
+  ],
+  "turns": [
+    "Nach einem Anstoß hat meine hintere Stoßstange auf einem Berliner Parkplatz eine Delle. Es war vielleicht am 24. oder 25., und die Kosten könnten 600 oder 1600 Euro sein. Ich bin nicht sicher, ob ein anderes Fahrzeug beteiligt war.",
+    "I don't know which date is right or whether another vehicle was involved. I did not inform the police and I don't know about witnesses.",
+    "I can now confirm 2026-10-24: I drove into a bollard, with no other person or vehicle involved. The estimate I have is EUR 1800. I am still unsure about witnesses."
+  ],
+  "questions": [
+    "Welches Datum können Sie bestätigen, und war ein anderes Fahrzeug oder eine Person beteiligt?",
+    "Please check the date and whether anyone else was involved. You can leave the estimate unknown until confirmed."
+  ],
+  "answers": [
+    "The account contains conflicting details, so a claims handler should check it. The fictional collision wording is in claim_types_policy.pdf, page 1 [P.1], with the deductible on page 6 [P.6].",
+    "Using your corrected date and amount, the fictional collision wording in claim_types_policy.pdf, page 1, supports possible cover [P.1]. Page 6 describes the EUR 300 deductible [P.6]. A claims handler must review the case.",
+    "The date and amount remain confirmed. Unknown witness information prevents a risk signal, not an invented answer. Fictional collision wording is on page 1 [P.1] and the deductible on page 6 of claim_types_policy.pdf [P.6]. A claims handler reviews the case."
+  ],
+  "stable_facts": {
+    "event_type": "collision",
+    "location": "Berliner Parkplatz",
+    "description": "Hintere Stoßstange nach einem Anstoß beschädigt; Details unklar.",
+    "damage_description": "Delle in der hinteren Stoßstange"
+  }
+}

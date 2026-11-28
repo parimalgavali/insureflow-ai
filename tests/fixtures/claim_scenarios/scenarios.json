@@ -1,0 +1,156 @@
+[
+  {
+    "id": "collision",
+    "product": "vollkasko",
+    "turns": [
+      "I bumped into another car at a roundabout in Hamburg. My front bumper is dented, but the car is drivable. We exchanged driver details. Nobody was hurt.",
+      "It happened on 2026-10-25 at 17:30. We did not call the police. A passer-by saw it. The workshop estimate is EUR 1800."
+    ],
+    "expected_facts": {
+      "event_type": "collision",
+      "location": "Hamburg roundabout",
+      "description": "Low-speed collision with another car at a roundabout.",
+      "third_party_involved": true,
+      "third_party_known": true,
+      "injuries": false,
+      "police_report_filed": false,
+      "witnesses": true,
+      "damage_description": "Dented front bumper",
+      "estimated_amount_eur": 1800,
+      "vehicle_drivable": true,
+      "incident_time": "17:30",
+      "incident_date": "2026-10-25",
+      "photos_attached": false
+    },
+    "expected_documents": [
+      "Damage photos",
+      "Repair estimate",
+      "Other driver's contact and registration details"
+    ],
+    "policy_clause": "P.1",
+    "policy_page": 1
+  },
+  {
+    "id": "theft",
+    "product": "teilkasko",
+    "turns": [
+      "My locked car was stolen from a parking garage in Berlin by someone I cannot identify. The whole vehicle is missing. Nobody was hurt.",
+      "On 2026-10-25 I parked it at 01:00 and found it missing at 02:00, so I do not know the exact theft time. I filed a police report. There were no witnesses."
+    ],
+    "expected_facts": {
+      "event_type": "theft",
+      "location": "Berlin parking garage",
+      "description": "Locked car stolen by an unidentified person from a parking garage.",
+      "third_party_involved": true,
+      "third_party_known": false,
+      "injuries": false,
+      "police_report_filed": true,
+      "witnesses": false,
+      "damage_description": "Entire vehicle missing",
+      "estimated_amount_eur": null,
+      "vehicle_drivable": false,
+      "incident_time": null,
+      "incident_date": "2026-10-25",
+      "photos_attached": false
+    },
+    "expected_documents": [
+      "Police report",
+      "Proof of ownership",
+      "Vehicle keys inventory"
+    ],
+    "policy_clause": "P.2",
+    "policy_page": 2
+  },
+  {
+    "id": "glass",
+    "product": "teilkasko",
+    "turns": [
+      "A stone chipped my windscreen while I was driving on the Munich ring road. No other vehicle or person was involved. It is a small chip and the car is still drivable. Nobody was hurt.",
+      "It happened on 2026-10-25 at 10:00. The police were not informed and there were no witnesses. A repair estimate is EUR 350."
+    ],
+    "expected_facts": {
+      "event_type": "glass",
+      "location": "Munich ring road",
+      "description": "A stone chipped the windscreen while driving.",
+      "third_party_involved": false,
+      "third_party_known": null,
+      "injuries": false,
+      "police_report_filed": false,
+      "witnesses": false,
+      "damage_description": "Small windscreen chip",
+      "estimated_amount_eur": 350,
+      "vehicle_drivable": true,
+      "incident_time": "10:00",
+      "incident_date": "2026-10-25",
+      "photos_attached": false
+    },
+    "expected_documents": [
+      "Damage photos",
+      "Repair estimate"
+    ],
+    "policy_clause": "P.3",
+    "policy_page": 3
+  },
+  {
+    "id": "vandalism",
+    "product": "vollkasko",
+    "turns": [
+      "Someone deliberately scratched both doors of my parked car on a residential street in Bremen. I do not know who did it. There are deep scratches, but the car still drives. Nobody was hurt.",
+      "It happened on 2026-10-25, but I do not know the time. I reported it to the police. Nobody witnessed it. The repair estimate is EUR 600."
+    ],
+    "expected_facts": {
+      "event_type": "vandalism",
+      "location": "Bremen residential street",
+      "description": "An unidentified person deliberately scratched the parked vehicle doors.",
+      "third_party_involved": true,
+      "third_party_known": false,
+      "injuries": false,
+      "police_report_filed": true,
+      "witnesses": false,
+      "damage_description": "Deep scratches on both doors",
+      "estimated_amount_eur": 600,
+      "vehicle_drivable": true,
+      "incident_time": null,
+      "incident_date": "2026-10-25",
+      "photos_attached": false
+    },
+    "expected_documents": [
+      "Damage photos",
+      "Police report",
+      "Repair estimate"
+    ],
+    "policy_clause": "P.4",
+    "policy_page": 4
+  },
+  {
+    "id": "storm_hail",
+    "product": "teilkasko",
+    "turns": [
+      "Hail dented the roof of my car while it was parked in my driveway in Leipzig. No other person or vehicle was involved. It is still drivable and nobody was injured.",
+      "The hail happened on 2026-10-25 at 16:00. My neighbour saw it. I did not call the police. The repair estimate is EUR 2200."
+    ],
+    "expected_facts": {
+      "event_type": "storm_hail",
+      "location": "Leipzig driveway",
+      "description": "Hail dented the roof of the parked vehicle.",
+      "third_party_involved": false,
+      "third_party_known": null,
+      "injuries": false,
+      "police_report_filed": false,
+      "witnesses": true,
+      "damage_description": "Multiple roof dents from hail",
+      "estimated_amount_eur": 2200,
+      "vehicle_drivable": true,
+      "incident_time": "16:00",
+      "incident_date": "2026-10-25",
+      "photos_attached": false
+    },
+    "expected_documents": [
+      "Damage photos",
+      "Repair estimate",
+      "Weather report confirming hail"
+    ],
+    "policy_clause": "P.5",
+    "policy_page": 5
+  }
+]

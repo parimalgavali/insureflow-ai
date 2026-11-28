@@ -1,0 +1,242 @@
+%PDF-1.3
+%‚„œ”
+1 0 obj
+<<
+/Producer (pypdf)
+/Title (Fictional motor policy for repeatable scenario tests)
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Count 6
+/Kids [ 5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R ]
+>>
+endobj
+3 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+4 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+5 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 4 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 842 595 ]
+/Parent 2 0 R
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 447
+>>
+stream
+BT /F1 13 Tf 45 540 Td
+(A.1 Collision cover - fictional test wording) Tj
+0 -34 Td
+(Synthetic policy for automated tests only. Not a real insurer contract.) Tj
+0 -34 Td
+(The vollkasko test product covers accidental collision damage to the insured vehicle.) Tj
+0 -34 Td
+(The haftpflicht test product excludes damage to the insured vehicle itself.) Tj
+0 -34 Td
+(Reporting: provide damage photos, a repair estimate and the other driver details.) Tj
+ET
+endstream
+endobj
+7 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 4 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 842 595 ]
+/Parent 2 0 R
+/Contents 8 0 R
+>>
+endobj
+8 0 obj
+<<
+/Length 443
+>>
+stream
+BT /F1 13 Tf 45 540 Td
+(A.2 Theft cover - fictional test wording) Tj
+0 -34 Td
+(Synthetic policy for automated tests only. Not a real insurer contract.) Tj
+0 -34 Td
+(The teilkasko and vollkasko test products cover theft of the insured vehicle.) Tj
+0 -34 Td
+(The haftpflicht test product excludes loss of the insured vehicle through theft.) Tj
+0 -34 Td
+(Reporting: provide a police report, proof of ownership and a vehicle keys inventory.) Tj
+ET
+endstream
+endobj
+9 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 4 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 842 595 ]
+/Parent 2 0 R
+/Contents 10 0 R
+>>
+endobj
+10 0 obj
+<<
+/Length 421
+>>
+stream
+BT /F1 13 Tf 45 540 Td
+(A.3 Glass cover - fictional test wording) Tj
+0 -34 Td
+(Synthetic policy for automated tests only. Not a real insurer contract.) Tj
+0 -34 Td
+(The teilkasko and vollkasko test products cover accidental windscreen glass damage.) Tj
+0 -34 Td
+(The haftpflicht test product excludes glass damage to the insured vehicle itself.) Tj
+0 -34 Td
+(Reporting: provide damage photos and a repair estimate.) Tj
+ET
+endstream
+endobj
+11 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 4 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 842 595 ]
+/Parent 2 0 R
+/Contents 12 0 R
+>>
+endobj
+12 0 obj
+<<
+/Length 448
+>>
+stream
+BT /F1 13 Tf 45 540 Td
+(A.4 Vandalism cover - fictional test wording) Tj
+0 -34 Td
+(Synthetic policy for automated tests only. Not a real insurer contract.) Tj
+0 -34 Td
+(The vollkasko test product covers deliberate vandalism damage to the insured vehicle.) Tj
+0 -34 Td
+(The haftpflicht test product excludes vandalism damage to the insured vehicle itself.) Tj
+0 -34 Td
+(Reporting: provide damage photos, a police report and a repair estimate.) Tj
+ET
+endstream
+endobj
+13 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 4 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 842 595 ]
+/Parent 2 0 R
+/Contents 14 0 R
+>>
+endobj
+14 0 obj
+<<
+/Length 450
+>>
+stream
+BT /F1 13 Tf 45 540 Td
+(A.5 Storm and hail cover - fictional test wording) Tj
+0 -34 Td
+(Synthetic policy for automated tests only. Not a real insurer contract.) Tj
+0 -34 Td
+(The teilkasko and vollkasko test products cover direct storm or hail damage.) Tj
+0 -34 Td
+(The haftpflicht test product excludes storm and hail damage to the insured vehicle itself.) Tj
+0 -34 Td
+(Reporting: provide damage photos, a repair estimate and a weather report.) Tj
+ET
+endstream
+endobj
+15 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 4 0 R
+>>
+>>
+/MediaBox [ 0.0 0.0 842 595 ]
+/Parent 2 0 R
+/Contents 16 0 R
+>>
+endobj
+16 0 obj
+<<
+/Length 470
+>>
+stream
+BT /F1 13 Tf 45 540 Td
+(A.6 Deductible and human review - fictional test wording) Tj
+0 -34 Td
+(Synthetic policy for automated tests only. Not a real insurer contract.) Tj
+0 -34 Td
+(A deductible of EUR 300 applies to an eligible own-vehicle claim in this test policy.) Tj
+0 -34 Td
+(The haftpflicht test product has no own-vehicle compensation under these sections.) Tj
+0 -34 Td
+(A claims handler checks evidence and decides the case. An assessment is not approval.) Tj
+ET
+endstream
+endobj
+xref
+0 17
+0000000000 65535 f 
+0000000015 00000 n 
+0000000116 00000 n 
+0000000208 00000 n 
+0000000257 00000 n 
+0000000327 00000 n 
+0000000459 00000 n 
+0000000957 00000 n 
+0000001089 00000 n 
+0000001583 00000 n 
+0000001716 00000 n 
+0000002189 00000 n 
+0000002323 00000 n 
+0000002823 00000 n 
+0000002957 00000 n 
+0000003459 00000 n 
+0000003593 00000 n 
+trailer
+<<
+/Size 17
+/Root 3 0 R
+/Info 1 0 R
+>>
+startxref
+4115
+%%EOF

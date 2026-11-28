@@ -1,0 +1,57 @@
+{
+  "extract": [
+    {
+      "event_type": "collision",
+      "location": "Hamburg roundabout",
+      "description": "Low-speed collision with another car at a roundabout.",
+      "third_party_involved": true,
+      "third_party_known": true,
+      "injuries": false,
+      "police_report_filed": null,
+      "witnesses": null,
+      "damage_description": "Dented front bumper",
+      "estimated_amount_eur": null,
+      "vehicle_drivable": true,
+      "incident_time": null,
+      "incident_date": null,
+      "photos_attached": false
+    },
+    {
+      "incident_date": "2026-10-25",
+      "incident_time": "17:30",
+      "police_report_filed": false,
+      "witnesses": true,
+      "estimated_amount_eur": 1800
+    }
+  ],
+  "followup": [
+    {
+      "question": "On what date did this happen? Were the police informed, and were there any witnesses?",
+      "asked_for": [
+        "incident_date",
+        "police_report_filed",
+        "witnesses"
+      ]
+    }
+  ],
+  "compose": [
+    {
+      "answer": "In claim_types_policy.pdf, page 1, the fictional wording supports possible cover for this event [P.1]. An eligible own-vehicle claim has a EUR 300 deductible on page 6 [P.6]. A claims handler must check the documents before deciding the case.",
+      "coverage_status": "likely_covered",
+      "coverage_uncertainty": null,
+      "cited_clause_ids": [
+        "P.1",
+        "P.6"
+      ],
+      "missing_documents": [
+        "Damage photos",
+        "Repair estimate",
+        "Other driver's contact and registration details"
+      ],
+      "next_steps": [
+        "Provide the requested claim evidence.",
+        "A human claims handler reviews the case."
+      ]
+    }
+  ]
+}
