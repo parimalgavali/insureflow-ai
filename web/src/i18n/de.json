@@ -184,5 +184,19 @@
   "policy.invalid": "Dieses PDF konnte nicht angenommen werden. Verwenden Sie ein gültiges, unverschlüsseltes PDF mit 1–300 Seiten.",
   "policy.conflict": "Ein Vertrag ist bereits angehängt, eine Nachricht ist unvollständig oder der Schaden wurde eingereicht.",
   "policy.failed": "Das Hochladen konnte nicht abgeschlossen werden. Die bisherige Auswahl bleibt bestehen. Bitte erneut versuchen.",
-  "policy.status.uploaded": "Hochgeladen; Textvorbereitung steht aus"
+  "policy.status.uploaded": "Hochgeladen; Textvorbereitung steht aus",
+  "policy.prepare": "Vertragstext vorbereiten",
+  "policy.retryPreparation": "Vorbereitung erneut versuchen",
+  "policy.checkPreparation": "Vorbereitung prüfen",
+  "policy.status.processing": "Vertragstext wird vorbereitet…",
+  "policy.status.ready": "Text für die Suche vorbereitet",
+  "policy.status.failed": "Textvorbereitung fehlgeschlagen",
+  "policy.preparedNotUsed": "Der Vertragstext ist vorbereitet. Deckungsantworten verwenden weiterhin Musterbedingungen, bis Antworten aus Ihrem Vertrag aktiviert sind.",
+  "policy.preparedCounts": "{pages} Seiten; {passages} durchsuchbare Textabschnitte.",
+  "policy.prepareEncrypted": "Dieser Vertrag ist passwortgeschützt. Verwenden Sie ein unverschlüsseltes PDF.",
+  "policy.prepareUnreadable": "Nicht jede nichtleere Seite lieferte lesbaren Text. Verwenden Sie ein textbasiertes PDF; gescannte Bilder benötigen OCR.",
+  "policy.prepareLimit": "Dieser Vertrag überschreitet die Verarbeitungsgrenzen. Verwenden Sie ein kleineres Vertrags-PDF.",
+  "policy.prepareTimeout": "Die Vorbereitung dauerte zu lange. Versuchen Sie es erneut oder verwenden Sie ein kleineres textbasiertes PDF.",
+  "policy.prepareFailed": "Die Vertragsvorbereitung konnte nicht abgeschlossen werden. Versuchen Sie es erneut, wenn der Dienst verfügbar ist.",
+  "policy.processingElsewhere": "Dieser Vertrag wird noch vorbereitet. Prüfen Sie den Status in Kürze erneut."
 }

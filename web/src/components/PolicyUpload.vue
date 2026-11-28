@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onUnmounted, ref, watch } from "vue";
-import { fetchPolicy, uploadPolicy, type PolicySelection } from "../api/client";
+import { fetchPolicy, uploadPolicy, preparePolicy, type PolicySelection } from "../api/client";
 import { t } from "../i18n";
 
 const props = defineProps<{ conversationId: string; busy: boolean; canUpload: boolean }>();
@@ -9,6 +9,7 @@ const selection = ref<PolicySelection | null>(null);
 const file = ref<File | null>(null);
 const loading = ref(false);
 const uploading = ref(false);
+const preparing = ref(false);
 const error = ref("");
 let version = 0;
 async function load() {
@@ -50,6 +51,29 @@ async function upload() {
     if (current === version) { uploading.value = false; emit("busy", false); }
   }
 }
+function preparationError(code: string | null): string {
+  const key = code === "encrypted_pdf" ? "policy.prepareEncrypted"
+    : ["unreadable_pdf", "unreadable_page", "no_readable_text"].includes(code || "") ? "policy.prepareUnreadable"
+    : ["unsupported_page_count", "text_too_large"].includes(code || "") ? "policy.prepareLimit"
+    : code === "processing_timeout" ? "policy.prepareTimeout" : "policy.prepareFailed";
+  return t(key);
+}
+async function prepare() {
+  if (!selection.value?.document || props.busy || uploading.value || preparing.value) return;
+  const current = version;
+  preparing.value = true;
+  emit("busy", true);
+  error.value = "";
+  try {
+    const result = await preparePolicy(props.conversationId);
+    if (current === version) selection.value = result;
+  } catch (e) {
+    if (current === version) error.value = t((e as Error).message.startsWith("409 ") ? "policy.processingElsewhere" : "policy.prepareFailed");
+  } finally {
+    if (current === version) { preparing.value = false; emit("busy", false); }
+  }
+}
+
 watch(() => props.conversationId, () => { selection.value = null; file.value = null; load(); }, { immediate: true });
 onUnmounted(() => { version++; emit("busy", false); });
 </script>
@@ -62,8 +86,11 @@ onUnmounted(() => { version++; emit("busy", false); });
     <p v-if="loading" role="status">{{ t("policy.loading") }}</p>
     <template v-else-if="selection?.document">
       <p data-testid="policy-filename">{{ selection.document.filename }}</p>
-      <p role="status" data-testid="policy-status">{{ t(`policy.status.${selection.document.status}`) }}</p>
-      <p>{{ t("policy.notUsed") }}</p>
+      <p role="status" data-testid="policy-status">{{ t(`policy.status.${preparing ? 'processing' : selection.document.status}`) }}</p>
+      <p>{{ t(selection.document.status === 'ready' ? "policy.preparedNotUsed" : "policy.notUsed") }}</p>
+      <p v-if="selection.document.status === 'ready'" data-testid="policy-counts">{{ t("policy.preparedCounts", { pages: selection.document.page_count || 0, passages: selection.document.passage_count || 0 }) }}</p>
+      <p v-if="selection.document.status === 'failed' && !preparing" role="alert">{{ preparationError(selection.document.error) }}</p>
+      <button v-if="selection.document.status !== 'ready'" class="btn" data-testid="prepare-policy" :disabled="busy || preparing || uploading" @click="prepare">{{ t(selection.document.status === 'processing' ? "policy.checkPreparation" : selection.document.status === 'failed' ? "policy.retryPreparation" : "policy.prepare") }}</button>
     </template>
     <form v-else-if="selection && canUpload" @submit.prevent="upload">
       <label for="policy-file">{{ t("policy.choose") }}</label>
