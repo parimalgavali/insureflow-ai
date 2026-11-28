@@ -42,8 +42,22 @@ test("file a motor claim by conversation and send it to an adjuster", async ({ p
   await expect(page.getByTestId("risk-missing")).toContainText("Police informed");
   await expect(page.getByTestId("risk")).toHaveCount(0);
 
+  // Lose the terminal response after a message with a file has been saved.
+  let savedConversationUrl = "";
+  await page.route("**/api/conversations/*/messages", async (route) => {
+    savedConversationUrl = route.request().url().replace(/\/messages$/, "");
+    const response = await route.fetch();
+    const body = await response.text();
+    await route.fulfill({ response, body: body.slice(0, body.lastIndexOf("event: done")) });
+  }, { times: 1 });
+  await page.locator('input[type="file"]').setInputFiles({ name: "claim.pdf", mimeType: "application/pdf", buffer: Buffer.from("Sample claim document") });
   await composer.fill(MSG2);
   await composer.press("Enter");
+  await expect(page.getByRole("alert")).toContainText("same text and attachment", { timeout: 60_000 });
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  const canonical = await (await page.request.get(savedConversationUrl)).json();
+  expect(canonical.messages.filter((m: { content: string }) => m.content.startsWith(MSG2))).toHaveLength(1);
 
   const card = page.getByLabel("Claim card");
   await expect(card.getByTestId("coverage")).toBeVisible({ timeout: 60_000 });

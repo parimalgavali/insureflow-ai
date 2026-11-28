@@ -13,6 +13,7 @@ const showEval = ref(location.hash === "#eval");
 const showReviewer = ref(location.hash === "#review");
 const historyId = ref(location.hash.startsWith("#history/") ? location.hash.slice(9) : null);
 const retrySubmission = ref(false);
+const messageNeedsRetry = ref(false);
 let pendingMessage: { text: string; file: File | null; language: Language; id: string; before: typeof store.messages } | null = null;
 const retryCorrection = ref<{ patch: Record<string, unknown>; refresh: boolean } | null>(null);
 function navigate() {
@@ -24,7 +25,7 @@ function navigate() {
 window.addEventListener("hashchange", navigate);
 onUnmounted(() => window.removeEventListener("hashchange", navigate));
 
-const canSend = computed(() => store.conversationId !== null && ["collecting", "information_needed"].includes(store.status));
+const canSend = computed(() => store.conversationId !== null && !messageNeedsRetry.value && ["collecting", "information_needed"].includes(store.status));
 
 async function start(language: Language) {
   try {
@@ -35,7 +36,7 @@ async function start(language: Language) {
 }
 
 async function send(text: string, file: File | null, retrying = false) {
-  if (!store.conversationId || store.busy) return;
+  if (!store.conversationId || store.busy || (pendingMessage && !retrying)) return;
   retryCorrection.value = null;
   retrySubmission.value = false;
   if (!retrying || !pendingMessage) {
@@ -53,10 +54,12 @@ async function send(text: string, file: File | null, retrying = false) {
     if (!store.error) {
       loadConversation(store, await getConversation(store.conversationId));
       pendingMessage = null;
+      messageNeedsRetry.value = false;
     }
   } catch {
     store.error = t("chat.sendFailed");
   } finally {
+    messageNeedsRetry.value = !!store.error;
     finishTurn(store);
   }
 }
@@ -145,7 +148,7 @@ onMounted(() => {
     <HistoryPage v-else-if="historyId" :claim-id="historyId" />
     <template v-else>
     <ChatColumn :messages="store.messages" :missing="store.missing" :busy="store.busy" :error="store.error" :can-send="canSend" @send="send" @retry="retry" />
-    <ClaimCard :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy" :claim-id="store.claimId" :history="store.history" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
+    <ClaimCard :facts="store.facts" :missing="store.missing" :citations="store.citations" :risk="store.risk" :risk-status="store.riskStatus" :risk-missing="store.riskMissing" :card="store.card" :status="store.status" :busy="store.busy || messageNeedsRetry" :claim-id="store.claimId" :history="store.history" @submit="submit" @customer-correct="correct" @customer-refresh="correct({}, true)" />
     </template>
   </div>
 </template>
